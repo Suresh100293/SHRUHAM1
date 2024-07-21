@@ -1,0 +1,462 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AltNotificationVM
+@using Common;
+@{
+    ViewBag.Title = "Grid View";
+    Layout = null;
+}
+<script type="text/javascript">
+    $(document).ready(function () {
+        loaddocsubtype();
+
+
+        if ('@Model.Visible_Param2'=="True" || '@Model.Visible_Param2'=="true") {
+            $("#SecondParam2td").show();
+        } else {
+            $("#SecondParam2td").hide();
+        }
+
+        $("#UserL").change(function () {
+            $('#hdnUser').val('');
+            var selected = [];
+            $("#UserL :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnUser').val(selected)
+            return false;
+        });
+        $("#BranchL").change(function () {
+            $('#hdnBranch').val('');
+            var selected = [];
+            $("#BranchL :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnBranch').val(selected)
+            return false;
+        });
+        $('.listbox,.listbox1').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '220',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Item',
+        });
+
+        $("#SubType").change(function () {
+
+            // Change the title of the select2 control
+            $('#s2id_SubType').attr('title', $("#SubType").val());
+
+            $('.spinner').show();
+            $("#btnAddtoTable,#btnSaveEdit").prop("disabled", true);
+
+            var ModelData = {};
+            if ($('#SubType').select2('data') != null) {
+                ModelData["SubType"] = $('#SubType').select2('data').text;
+            }
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DynamicParameter")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#EditParam1').html(data.Html);
+                    if (data.SecondParameterReq) {
+                        $("#SecondParam2td").show();
+                    } else {
+                        $("#SecondParam2td").hide();
+                    }
+
+                    $("#hdnVisible_Param2").val(data.SecondParameterReq);
+                    $("#hdnParam1List").val(data.Param1List);
+                    $("#btnAddtoTable,#btnSaveEdit").prop("disabled", false);
+                    $("#hdnNoParameter").val(data.NoParameter);
+
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnAddtoTable").click(function (event) {
+            event.preventDefault();
+
+            if ($("#Notification").is(":checked") == false && $("#Email").is(":checked") == false) {
+                alert('Please Select ' + $('#SubType').select2('data').text +' Notification Or Email ...!');
+                return;
+            } else {
+                if ($("#hdnUser").val() == null || $("#hdnUser").val() == "") {
+                    alert('Please Select ' + $('#SubType').select2('data').text +' Users...!');
+                    return;
+                }
+            }
+
+            var ModelData = {};
+            ModelData["SrNo"] = $('#SrNo').val();
+
+            ModelData["Type"] = $('#Type').val();
+            ModelData["SubType"] = $('#SubType').val();
+            ModelData["SubTypeText"] = $('#SubType').select2('data').text;
+
+            ModelData["Notification"] = $('#Notification').is(':checked');
+            ModelData["Email"] = $('#Email').is(':checked');
+            ModelData["Priority"] = $('#Priority').is(':checked');
+            ModelData["Self"] = $('#Self').is(':checked');
+
+            ModelData["User"] = $('#hdnUser').val();
+            ModelData["Branch"] = $('#hdnBranch').val();
+            debugger;
+            ModelData["Param1List"] = $('#hdnParam1List').val();
+            if ($('#hdnParam1List').val() == "true" || $('#hdnParam1List').val() == "True") {
+                var selected = [];
+                $(".Dynamiclistbox :selected").each(function () {
+                    selected.push($(this).val());
+                });
+                ModelData["Param1"] = selected.toString();
+            } else {
+                ModelData["Param1"] = $('#Param1').val();
+            }
+
+            ModelData["Visible_Param2"] = $('#hdnVisible_Param2').val();
+            if ($('#hdnVisible_Param2').val() == "true" || $('#hdnVisible_Param2').val() == "True") {
+                ModelData["Param2"] = $('#Param2').val();
+            }
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddNew")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message);
+                    }
+                    $('#griddatatable').html(data.Html);
+                    ResetControls();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="editgriddatarow"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["SrNo"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("Edit")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#griddatatable').html(data.Html);
+                    $("#btnAddtoTable").prop("disabled", true);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $("#btnSaveEdit").click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["SrNo"] = $('#SrNo').val();
+
+            ModelData["Type"] = $('#Type').val();
+            ModelData["SubType"] = $('#SubType').val();
+            ModelData["SubTypeText"] = $('#SubType').select2('data').text;
+
+            ModelData["Notification"] = $('#Notification').is(':checked');
+            ModelData["Email"] = $('#Email').is(':checked');
+            ModelData["Priority"] = $('#Priority').is(':checked');
+            ModelData["Self"] = $('#Self').is(':checked');
+
+            ModelData["User"] = $('#hdnUser').val();
+            ModelData["Branch"] = $('#hdnBranch').val();
+            debugger;
+            ModelData["Param1List"] = $('#hdnParam1List').val();
+            if ($('#hdnParam1List').val() == "true" || $('#hdnParam1List').val() == "True" ) {
+                debugger;
+                var selected = [];
+                $(".Dynamiclistbox :selected").each(function () {
+                    debugger;
+                    selected.push($(this).val());
+                });
+                ModelData["Param1"] = selected.toString();
+            } else {
+                ModelData["Param1"] = $('#Param1').val();
+            }
+
+            ModelData["Visible_Param2"] = $('#hdnVisible_Param2').val();
+            if ($('#hdnVisible_Param2').val() == "true" || $('#hdnVisible_Param2').val() == "True" ) {
+                ModelData["Param2"] = $('#Param2').val();
+            }
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("Update")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#griddatatable').html(data.Html);
+                    $("#btnAddtoTable").prop("disabled", false);
+                    ResetControls();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('button[action|="deletegriddatarow"]').click(function (event) {
+            event.preventDefault(event);
+            var url = '@Url.Action("DeleteGrid")?SrNo=' + $(this).val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#griddatatable').html(data.Html);
+                    $("#btnAddtoTable").prop("disabled", false);
+                    ResetControls();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+    function loaddocsubtype() {
+        var url = '@Url.Action("PopulateSubType")';
+        $('#SubType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Type: $("#Type").val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.SubType', text: '@Model.SubTypeText' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    }
+    function ResetControls() {
+        $("#Notification,#Email,#Priority,#Self").prop("checked", false);
+        $("#hdnParam1List,#hdnVisible_Param2").val(false);
+        $("#hdnParam1,#hdnUser,#hdnBranch").val("");
+        $('#SubType').val(null).trigger('change');
+        $("#SrNo").val("0");
+    }
+</script>
+
+<div class="grid" id="griddatatable" style="min-height: 300px; max-height: 300px;padding: 6px; ">
+    <table id="gridtable" class="zui-table">
+        <thead>
+            <tr role="row" style="font-family:Verdana;font-size:10pt;">
+                <th style="width: 5%;vertical-align:inherit;">Sr.</th>
+                <th style="width: 12%;vertical-align:inherit;">Sub Type</th>
+                <th style="width: 6%;vertical-align:inherit;">Notification</th>
+                <th style="width: 6%;vertical-align:inherit;">Email</th>
+                <th style="width: 6%;vertical-align:inherit;">Priority</th>
+                <th style="width: 6%;vertical-align:inherit;">Self</th>
+                <th style="width: 15%;vertical-align:inherit;" title="Users">User</th>
+                <th style="width: 15%;vertical-align:inherit;" title="Branch">Branch</th>
+                <th style="width: 15%;vertical-align:inherit;" title="Parameter 1">Para 1</th>
+                <th style="width: 12%;vertical-align:inherit;" title="Parameter 2">Para 2</th>
+                <th style="width: 3%;"></th>
+                <th style="width: 3%;"></th>
+            </tr>
+
+            <tr style="background-color:gainsboro">
+                <td style="border: 1px solid #0000002e;">
+                    @Html.TextBoxFor(x => x.SrNo, new { @class = "form-control", @readonly = "readonly", @style = "text-align:right;", @Name = "SrNo", @Id = "SrNo" })
+                </td>
+                <td style="text-align:left;padding: 0px 0px 0px 2px;border: 1px solid #0000002e;">
+                    @Html.TextBoxFor(x => x.SubType, new { @title = Model.SubType, @class = "input-large search-query", @Name = "SubType", @Id = "SubType", @Style = "width:100%;height:26px;" })
+                </td>
+                <td style="text-align:center;border: 1px solid #0000002e;">
+                    @Html.CheckBoxFor(x => x.Notification, new { @id = "Notification", @Name = "Notification", @style = "height:16px;width:16px;" })
+                </td>
+                <td style="text-align:center;border: 1px solid #0000002e;">
+                    @Html.CheckBoxFor(x => x.Email, new { @id = "Email", @Name = "Email", @style = "height:16px;width:16px;" })
+                </td>
+                <td style="text-align:center;border: 1px solid #0000002e;">
+                    @Html.CheckBoxFor(x => x.Priority, new { @id = "Priority", @Name = "Priority", @style = "height:16px;width:16px;" })
+                </td>
+                <td style="text-align:center;border: 1px solid #0000002e;">
+                    @Html.CheckBoxFor(x => x.Self, new { @id = "Self", @Name = "Self", @style = "height:16px;width:16px;" })
+                </td>
+                <td style="text-align:left;border: 1px solid #0000002e;">
+                    @Html.ListBoxFor(x => Model.UserL, Model.Users.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = Model.User == null ? false : Model.User.Contains(y.Value) }), new { @class = "listbox", @id = "UserL", @style = "margin-left:10% !important;" })
+                </td>
+                <td style="text-align:left;border: 1px solid #0000002e;">
+                    @Html.ListBoxFor(x => Model.BranchL, Model.Branches.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = Model.Branch == null ? false : Model.Branch.Contains(y.Value) }), new { @class = "listbox", @id = "BranchL", @style = "margin-left:10% !important;" })
+                </td>
+                <td style="text-align:right;border: 1px solid #0000002e;" id="EditParam1">
+                    @Html.Partial("_DynamicParameter", Model)
+                </td>
+                <td style="text-align:center;border: 1px solid #0000002e;" id="EditParam2">
+                    <div id="SecondParam2td">
+                        @Html.TextBoxFor(x => x.Param2, new { @class = "form-control", @style = "text-align:right;", @Name = "Param2", @Id = "Param2", @Value = Model.Param2.ToString("F2") })
+                    </div>
+                </td>
+                <td style="vertical-align:inherit;border: 1px solid #0000002e;" colspan="1">
+                    @if (Model.Mode != "Delete")
+                    {
+                        <button type="button" id="btnAddtoTable" class="btn btn-primary btn-sm" title="Add" style="margin-left:7px;width:25px;height:25px;border:1px solid black;"><i class="fa fa-plus" style="color:black;"></i></button>
+                    }
+                </td>
+                <td style="border: 1px solid #0000002e;">
+                    @if (Model.Mode != "Delete")
+                    {
+                        <button type="button" id="btnSaveEdit" class="btn btn-primary btn-sm" title="Save" style="margin-left:7px;width:25px;height:25px;border:1px solid black;"><i class="fa fa-save" style="color:black;"></i></button>
+                    }
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.list != null)
+            {
+                foreach (var item in @Model.list.OrderByDescending(x => x.SrNo).ToList())
+                {
+                    <tr style="font-family:Verdana;font-size:10pt;">
+                        <td style="vertical-align:inherit;">@item.SrNo</td>
+                        <td style="text-align:left;vertical-align:inherit;" title="@item.SubType">@item.SubTypeText</td>
+                        <td style="text-align:left;vertical-align:inherit;">@(item.Notification ? "Yes" : "No")</td>
+                        <td style="text-align:left;vertical-align:inherit;">@(item.Email ? "Yes" : "No")</td>
+                        <td style="text-align:left;vertical-align:inherit;">@(item.Priority ? "Yes" : "No")</td>
+                        <td style="text-align:left;vertical-align:inherit;">@(item.Self ? "Yes" : "No")</td>
+                        <td style="text-align:left;vertical-align:inherit;">
+                            @Html.ListBoxFor(x => item.User, Model.Users.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = item.User == null ? false : item.User.Contains(y.Value) }), new { @class = "listbox" })
+                        </td>
+                        <td style="text-align:left;vertical-align:inherit;">
+                            @Html.ListBoxFor(x => item.Branch, Model.Branches.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = item.Branch == null ? false : item.Branch.Contains(y.Value) }), new { @class = "listbox" })
+                        </td>
+                        <td style="text-align:right;vertical-align:inherit;" id="SaveParam1">
+                            @if (item.Param1List)
+                            {
+                                @Html.ListBoxFor(x => item.Param1, item.Dynamiclist.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = item.Param1 == null ? false : item.Param1.Contains(y.Value) }), new { @class = "listbox" })
+                            }
+                            else
+                            {
+                                if (item.Param1Type != "NA")
+                                {
+                                    @item.Param1
+                                }
+                            }
+                        </td>
+                        <td style="text-align:center;vertical-align:inherit;" id="SaveParam2">
+                            @if (item.Visible_Param2)
+                            {
+                                <span>@item.Param2.ToString("F2")</span>
+                            }
+                        </td>
+                        <td>
+                            @if (Model.Mode != "Delete")
+                            {
+                                <button type="button" action="editgriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-warning btn-sm" value="@item.SrNo" title="Edit"><i class="fa fa-edit"></i></button>
+                            }
+                        </td>
+                        <td>
+                            @if (Model.Mode != "Delete")
+                            {
+                                <button type="button" action="deletegriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-danger btn-sm" value="@item.SrNo" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+@Html.HiddenFor(x => x.NoParameter, new { @id = "hdnNoParameter" })
+@Html.HiddenFor(x => x.Param1List, new { @id = "hdnParam1List" })
+@Html.HiddenFor(x => x.Visible_Param2, new { @id = "hdnVisible_Param2" })
+@Html.HiddenFor(x => x.User, new { @id = "hdnUser" })
+@Html.HiddenFor(x => x.Branch, new { @id = "hdnBranch" })
+
+
+

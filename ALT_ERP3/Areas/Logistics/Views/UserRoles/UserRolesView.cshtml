@@ -1,0 +1,206 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.UserRolesVM
+@using Common;
+@{
+    ViewBag.Title = "User Roles";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        GetMyFavorites('@Model.ViewDataId');
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#UserRoles').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                UserRoles_Code: {required: true,},
+                UserRoles_Name: {required: true,},
+               },
+            messages: {
+                UserRoles_Code: {required: 'Code is Required',},
+                UserRoles_Name: {required: 'Name is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#UserRoles_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#UserRoles_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#UserRoles").validate().form() == false)
+            //    return;
+
+            if ($("#UserRoles_Code").val() == null || $("#UserRoles_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Role: is Required..');
+                return;
+            }
+            if ($("#UserRoles_Name").val() == null || $("#UserRoles_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Role Name: is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["UserRoles_Code"] = $("#UserRoles_Code").val();
+            ModelData["UserRoles_Name"] = $("#UserRoles_Name").val();
+            ModelData["UserRoles_Sun"] = $("#UserRoles_Sun").is(':checked');
+            ModelData["UserRoles_Mon"] = $("#UserRoles_Mon").is(':checked');
+            ModelData["UserRoles_Tue"] = $("#UserRoles_Tue").is(':checked');
+            ModelData["UserRoles_Wed"] = $("#UserRoles_Wed").is(':checked');
+            ModelData["UserRoles_Thu"] = $("#UserRoles_Thu").is(':checked');
+            ModelData["UserRoles_Fri"] = $("#UserRoles_Fri").is(':checked');
+            ModelData["UserRoles_Sat"] = $("#UserRoles_Sat").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="UserRoles" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Role:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.UserRoles_Code, new { @maxlength = "15", @readonly = "readonly", @class = "form-control", @Name = "UserRoles_Code", @Id = "UserRoles_Code" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.UserRoles_Code, new { @maxlength = "15", @class = "form-control", @Name = "UserRoles_Code", @Id = "UserRoles_Code" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Role Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.UserRoles_Name, new { @maxlength = "40", @class = "form-control", @Name = "UserRoles_Name", @Id = "UserRoles_Name" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">Access rights on Days..</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Sun:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.UserRoles_Sun, new { @value = Model.UserRoles_Sun, @id = "UserRoles_Sun", @name = "UserRoles_Sun", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Mon:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.UserRoles_Mon, new { @value = Model.UserRoles_Mon, @id = "UserRoles_Mon", @name = "UserRoles_Mon", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Tue:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.UserRoles_Tue, new { @value = Model.UserRoles_Tue, @id = "UserRoles_Tue", @name = "UserRoles_Tue", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Wed:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.UserRoles_Wed, new { @value = Model.UserRoles_Wed, @id = "UserRoles_Wed", @name = "UserRoles_Wed", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Thu:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.UserRoles_Thu, new { @value = Model.UserRoles_Thu, @id = "UserRoles_Thu", @name = "UserRoles_Thu", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Fri:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.UserRoles_Fri, new { @value = Model.UserRoles_Fri, @id = "UserRoles_Fri", @name = "UserRoles_Fri", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Sat:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.UserRoles_Sat, new { @value = Model.UserRoles_Sat, @id = "UserRoles_Sat", @name = "UserRoles_Sat", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Sat 09-Mar-2019 07:31 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 16
+    by Team Suchan, T.FAT *@
+

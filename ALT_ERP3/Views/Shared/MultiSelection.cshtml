@@ -1,0 +1,262 @@
+﻿@{
+    ViewBag.Title = "MultiSelection";
+    Layout = "";
+}
+
+<style>
+    .ui-jqgrid .ui-jqgrid-hdiv {
+        height:25px;
+        font-size:8pt;
+        overflow: hidden;
+        padding-right: 4px;
+        padding-top: 0px;
+        padding-bottom: 2px;
+        position: relative;
+        vertical-align: middle !important;
+        white-space: normal !important;
+    }
+
+    .ui-jqgrid tr.jqgrow td {
+        /*font-family:Verdana, Geneva, Tahoma, sans-serif;*/
+        font-size:9pt;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        gridreload();
+
+        $('#txtsearch').change(function () {
+            if ($('#txtsearch').val().length>2)
+            {
+                $('#list').jqGrid('clearGridData');
+                $('#list').jqGrid("GridUnload");
+                $('#list').trigger('reloadGrid');
+                gridreload();
+            }
+            // search in jqgrid
+            //var rowIds = $(this).jqGrid('Name');
+            //for (i = 1; i <= rowIds.length; i++) {
+            //    rowData = $(this).jqGrid('Name', i);
+            //    if (rowData['Id'] == $('#txtsearch').val() ) {
+            //        $(this).jqGrid('setSelection',i);
+            //    }
+            //}
+        });
+
+        $("#SubmitSelect").click(function (event) {
+            event.preventDefault();
+            var mstr = $("#EmailTo").val();
+            debugger;
+            $(".divselected").each(function () {
+                debugger;
+                if ($(this).find(".labelselected").val() != undefined)
+                {
+                    var mchild = $(this).find(".labelselected").val();
+                    mstr += mchild + ",";
+                }
+                
+            });
+            $('#selectedparties').val(mstr);
+            //$('#EmailTo').val(mstr);
+            var url = '@Url.Action("SaveSelectedValues")?SelectContent=' + mstr + '&ViewDataId=' + $('#hdnViewDataId').val();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(url),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    $(data.View).html(data.Html);
+                    //$('#multipartymodel').modal('hide');
+                },
+            });
+            //location.reload();
+            $('#multipartymodel').modal('hide');
+
+            //getselectedvalues();
+        });
+    });
+
+    //function getselectedvalues(){
+    //    alert(mselindex.length);
+    //    var i;
+    //    var mstr;
+    //    for (i = 2; i < mselindex.length; i++) {
+    //        var element = document.getElementById("Div_"+i)
+    //        var element = document.getElementById("Div_"+i)
+
+    //        alert(element);
+    //        mstr+=element.val()+ "~";
+    //    }
+    //    $("#selectedparties").val(mstr);
+    //}
+
+    function gridreload() {
+        debugger;
+        var ColName, Coldata;
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("GetGridStructure", "MultiSelection")?id=' + $('#hdnViewDataId').val();
+        var sUrlpath = '@Url.Action("GetGridData", "MultiSelection")?ViewDataId=' + $('#hdnViewDataId').val() + '&textsearch=' + $('#txtsearch').val() + '&filterfield=' + $('#colname').val();
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: 375,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: false,
+                onCellSelect: function(row, col, content, event) {
+                    var cm = jQuery("#list").jqGrid("getGridParam", "colModel");
+                    $('#colname').val(cm[col].name);
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#list');
+                    var cellVal = $('#list').jqGrid('getCell', id, 'Email');
+                    addselected(cellVal);
+                }
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, print: false, search: false, refresh: false, searchtext: "Search" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+</script>
+
+<script>
+    var mselindex = [];
+    // Array starts with 0 but the id start with 0 so push a dummy value
+    mselindex.push(0);
+    // Push 1 at index 1 since one child element is already created
+    mselindex.push(1)
+    function addselected(mpara) {
+        var div = document.createElement('div');
+        var id = getID();
+        // Set this attritube id so that we can access this element using Id 
+        div.setAttribute("id","Div_"+id);
+        div.setAttribute("class","divselected");
+        div.removeAttribute("hidden");
+        div.innerHTML = '<input style="font-size:8pt;width:190px;" class="labelselected" type="label" value="' + mpara + '" name="child_' + id + '"/>' + ' <input style="background-color:transparent;border-width:0px;" type="button" id="rem_selected()_' + id + '" onclick="remselected('+id+')" value="x" />';
+        // inside of passing this parameter in remselected we pass id number
+        document.getElementById('selected').appendChild(div);
+    }
+   
+    function remselected(id) {
+        // use the id arugment to get the div element using unique id set in addselected
+        try{
+            var element = document.getElementById("Div_"+id)
+            element.parentNode.removeChild(element);
+            mselindex[id] = -1;
+            //id number is = mselindex of the array so we set to -1 to indicate its empty
+        }
+        catch(err){
+            alert("id: Div_"+id)
+            alert(err)
+        }
+    }  
+
+    function getID(){
+        var emptyIndex = mselindex.indexOf(-1);
+        if (emptyIndex != -1){
+            mselindex[emptyIndex] = emptyIndex
+            return emptyIndex
+        } else {
+            emptyIndex = mselindex.length
+            mselindex.push(emptyIndex)
+            return emptyIndex
+        }
+    }
+</script>
+
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">Select List</h4>
+    </div>
+    <div class="modal-body" style="height:475px;padding-left:0px;padding-right:0px;padding-top:5px;">
+        <div class="col-sm-9" style="padding-left:0px;">
+            <div class="form-horizontal" id="multiselectform" style="margin-left:15px;">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Search:</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="colname" name="colname" class="form-control" style="width:100%;" />
+                    </div>
+                    <div class="col-sm-8">
+                        <input type="text" id="txtsearch" name="txtsearch" class="form-control" style="width:100%;" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div id="page-contentgrid">
+                        <div class="jqGrid">
+                            <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="width:300px;border-collapse:unset;"></table>
+                            <div id="pager" style="height:34px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-3" style="padding-right:0px;">
+            <div class="form-group" style="margin-top:32px;height:430px;overflow:scroll;">
+                <div id="selected" class="">
+                    <input type="text" class="labelselected" name="child_1" style="width:95%;" hidden="hidden">
+                    <input type="button" id="add_selected()_1" style="background-color:transparent;width:5%;" hidden="hidden" onclick="addselected()" value="+" />
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc;padding-top: 6px;padding-bottom: 5px;padding-right: 10px;height: 43px;">
+        <button type="button" class="btn btn-success" id="SubmitSelect">Select</button>
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Discard</button>
+    </div>
+</div>
+<input type="hidden" id="SelectedDocument" />

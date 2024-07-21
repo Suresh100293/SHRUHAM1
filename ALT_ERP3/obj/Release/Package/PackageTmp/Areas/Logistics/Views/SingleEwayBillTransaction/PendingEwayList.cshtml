@@ -1,0 +1,264 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.EwayBillVM
+@using Common;
+@{
+    ViewBag.Title = "LRSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<style>
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+        /*Suresh*/
+        text-align: center;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .btncolor {
+        background-color: slategray;
+        color: white;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        gridreload();
+    });
+    function gridreload() {
+        //event.preventDefault();
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var mDate = ('@Model.FromDate' + ':' + '@Model.ToDate');
+
+        var sPathUrl = "/Logistics/MasterGrid/GetGridStructureRecords/?Date=" + mDate + "&id=PendingEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Logistics/MasterGrid/GetMasterGridData/?Date=" + mDate + "&ViewDataId=PendingEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    debugger;
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#list');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    var ConsignmenVal = myGrid.jqGrid('getCell', id, 'Doc NO');
+
+                    var ModelData = {};
+                    ModelData["Document"] = cellVal;
+                    var url = '@Url.Action("GetEwayBill")';
+                    var DTO = { Model: ModelData };
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json; charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            $("#ErrorMessage").hide();
+                            $('.spinner').hide();
+                            if (data.Status == "Success")
+                            {
+                                debugger;
+                                var LoadDownLoadFiles = $("#DivGenEway");
+                                LoadDownLoadFiles.html('');
+                                LoadDownLoadFiles.html(data.Html);
+                                $("#btnGenEway").show();
+                            }
+                            else
+                            {
+                                alert(data.Errmsg);
+                                var LoadDownLoadFiles = $("#DivGenEway");
+                                LoadDownLoadFiles.html('');
+                                LoadDownLoadFiles.html(data.Html);
+                                $("#btnGenEway").hide();
+                            }
+                            $("#ConsignmentKey").val(cellVal);
+                            $("#GenDocument").val(ConsignmenVal);
+                            $('#PendingEwayModal').modal('hide');
+                        },
+                    });
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+
+                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        
+                        $("#list").jqGrid('setCell', rowId, 'Edit', '0');
+                        var btn = "<button type='button' id='btnClearEway" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Clear' , title='clear' , attr='" + rowId + "'>Clear</button>";
+                        jQuery("#list").jqGrid('setRowData', rowId, { Clear: btn });
+                        
+                    }
+                    $("button").click(function (event)
+                    {
+                        debugger;
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#list');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        //var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        //var DocNo = myGrid.jqGrid('getCell', curRowId, 'FMNO');
+
+                        switch (btntype)
+                        {
+                            case "btnClearEway":
+                                ClearEway(curRowId);
+                                break;
+                        }
+                    });
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+
+    function ClearEway(id) {
+        debugger;
+        var myGrid = $('#list');
+        var value = myGrid.jqGrid('getCell', id, 'Document')
+        $('#' + $.jgrid.jqID(id)).addClass('hidden');
+        var url = '@Url.Action("ClearEwayDocument")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+</script>
+<div class="panel-body" style="height:auto;padding-left:0px;padding-right:0px;padding-top:5px;">
+    <div id="page-contentgrid">
+        <div class="jqGrid">
+            <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+            <div id="pager" style="height:34px;"></div>
+        </div>
+    </div>
+</div>

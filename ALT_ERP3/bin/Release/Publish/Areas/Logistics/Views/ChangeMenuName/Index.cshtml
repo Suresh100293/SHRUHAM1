@@ -1,0 +1,153 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.ChangeMenuNameVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        LoadModuleName();
+
+        $("#btnGetModuleList").click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("ModuleList")';
+                var ModelData = {};
+
+            if ($("#ModuleName").val()!="") {
+
+                ModelData["ModuleName"] = $("#ModuleName").val();
+                var DTO = { mModel: ModelData };
+
+                $.ajax({
+
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#ModuleDiv");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                    },
+                });
+            }
+        });
+
+
+
+    });
+    function LoadModuleName() {
+
+        var url = '@Url.Action("GetModuleName")'
+        $('#ModuleName').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+            url: url,
+            dataType: 'json',
+            quietMillis: 100,
+            enableFiltering: true,
+            allowClear: true,
+            minimumInputLength: 0,
+            multiple: true,
+            width: 300,
+            data: function (term, page) {
+                return {
+                    types: ["exercise"],
+                    limit: -1,
+                    term: term
+                };
+            },
+            results: function (data, page) {
+                clientObj = JSON.stringify(data);
+                return {
+                    results: $.map(data, function (item) {
+                        return {
+                            text: item.Name,
+                            id: item.Code
+                        }
+                    })
+                };
+            }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ModuleName', text: '@Model.ModuleName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">Change Menu Name</b>
+        <span class="tools pull-right">
+            <a href="~/" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">Update Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="CountryMaster" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Module:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ModuleName, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.ModuleName })
+                </div>
+                <div class="col-sm-2">
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnGetModuleList">Fetch Module</button>
+                </div>
+            </div>
+            <div class="form-group" id="ModuleDiv">
+                @Html.Partial("_ModuleList",Model)
+            </div>
+
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                
+
+                <a href="~/Logistics/MasterGrid" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>

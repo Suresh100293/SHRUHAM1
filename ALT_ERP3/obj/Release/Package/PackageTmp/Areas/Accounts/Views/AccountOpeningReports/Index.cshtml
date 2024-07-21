@@ -1,0 +1,451 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AccountOpeningReportVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        //$("#LrGenetate").val("");
+
+        $('#Fromdate,#ToDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+
+        $('input[type=radio][name=GroupListbox]').change(function () {
+            $('#CustomerMaster').prop('checked', false);
+            $("#CustomerMaster").attr("disabled", "disabled");
+            if (this.value == 'Master')
+            {
+                $.ajax({
+                    type: 'GET',
+                    url: '/AccountOpeningReports/GetMaster',
+                    success: function (result) {
+                        $("#MasterL").empty();
+                        $('#MasterL').multiselect('destroy');
+
+                        $.each(result, function (i, state) {
+                            $("#MasterL").append('<option value="' + state.Value + '">' + state.Text + '</option>');
+                        });
+                        $('#MasterL').multiselect({
+                            selectAllValue: 'multiselect-all',
+                            includeSelectAllOption: true,
+                            enableCaseInsensitiveFiltering: true,
+                            enableFiltering: true,
+                            maxHeight: '300',
+                            buttonWidth: '235',
+                            numberDisplayed: 2,
+                            nonSelectedText: 'Select Master',
+                        });
+                    }
+                });
+            }
+            else if (this.value == 'MasterGroup')
+            {
+                $.ajax({
+                    type: 'GET',
+                    url: '/AccountOpeningReports/GetMasterGroup',
+                    success: function (result) {
+                        $("#MasterL").empty();
+                        $('#MasterL').multiselect('destroy');
+
+                        $.each(result, function (i, state) {
+                            $("#MasterL").append('<option value="' + state.Value + '">' + state.Text + '</option>');
+                        });
+                        $('#MasterL').multiselect({
+                            selectAllValue: 'multiselect-all',
+                            includeSelectAllOption: true,
+                            enableCaseInsensitiveFiltering: true,
+                            enableFiltering: true,
+                            maxHeight: '300',
+                            buttonWidth: '235',
+                            numberDisplayed: 2,
+                            nonSelectedText: 'Select MasterGroup',
+                        });
+                    }
+                });
+            }
+        });
+
+
+
+        $('#MasterL').multiselect({
+            selectAllValue: 'multiselect-all',
+            includeSelectAllOption: true,
+            enableCaseInsensitiveFiltering: true,
+            enableFiltering: true,
+            maxHeight: '300',
+            buttonWidth: '235',
+            numberDisplayed: 2,
+            nonSelectedText: 'Select Master',
+        });
+        $('#CustomerL').multiselect({
+            selectAllValue: 'multiselect-all',
+            includeSelectAllOption: true,
+            enableCaseInsensitiveFiltering: true,
+            enableFiltering: true,
+            maxHeight: '300',
+            buttonWidth: '235',
+            numberDisplayed: 2,
+            nonSelectedText: 'Select Customer',
+        });
+        $("#MasterL").change(function () {
+            debugger;
+
+            var countryId = $("#MasterL").val();
+            var str2 = "000000023";
+            if (countryId.indexOf(str2) != -1) {
+                //Show CheckBox
+                $("#CustomerMaster").removeAttr("disabled");
+            } else {
+                //Disabled CheckBox
+                $("#CustomerMaster").attr("disabled", "disabled");
+            }
+        });
+    });
+    function SetDates(value)
+    {
+        if (value == 1)
+        {
+            $('#Fromdate').datepicker("setDate", '@Session["StartDate"].ToString().Trim()');
+            $('#ToDate').datepicker("setDate", '@Session["LastDate"].ToString().Trim()');
+        }
+        else if (value == 2)
+        {
+            var d = new Date();
+            var Month = d.getMonth() + 1;
+            var LastDate = "";
+            var days = daysInMonth();
+            if (days < 9) {
+                LastDate = "0" + days.toString().trim() + "/";
+            } else {
+                LastDate = days.toString().trim() + "/";
+            }
+
+            var SDD = "01/" + Month + "/" + d.getFullYear();
+            var LDD = LastDate + Month + "/" + d.getFullYear();
+
+            $('#Fromdate').datepicker("setDate", SDD);
+            $('#ToDate').datepicker("setDate", LDD);
+        }
+        else if (value == 3)
+        {
+            var d = new Date();
+            var Month = d.getMonth() + 1;
+            var day = d.getDate();
+            var LastDate = "";
+            if (day < 9) {
+                LastDate = "0" + day.toString().trim() + "/";
+            } else {
+                LastDate = day.toString().trim() + "/";
+            }
+            var SDD = LastDate + Month + "/" + d.getFullYear();
+
+
+            $('#Fromdate').prop("disabled", false);
+            $('#ToDate').prop("disabled", false);
+            $('#Fromdate').datepicker("setDate", SDD);
+            $('#ToDate').datepicker("setDate", SDD);
+        }
+    }
+    function daysInMonth() {
+
+        var d = new Date();
+        var month = d.getMonth() + 1;
+        var year = d.getFullYear();
+
+        return new Date(year, month, 0).getDate();
+    }
+    function clickPrint(mwhat) {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val() + '&mWhat=' + mwhat, '_blank');
+    };
+
+    function PrintReport() {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var murl="/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=" + mformat + "&mopening="+ $('#openb').val()+"&mRunning=true&mParaString=Code^" + $('#Account').val()+ '&Code=' + $('#Account').val();
+        window.open(murl,'_blank');
+    };
+    function clickRefresh() {
+
+        $('#acledger').jqGrid('clearGridData');
+        $("#acledger").jqGrid("GridUnload");
+        $('#acledger').trigger('reloadGrid');
+        GridReload();
+    }
+
+    function GridReload() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val($("#viewcode").val());
+        var selected = [];
+        $("#MasterL :selected").each(function () {
+            debugger;
+            selected.push($(this).val());
+        });
+        if (selected.length == 0) {
+            alert("Please Select Account....!");
+            return false;
+        }
+        var ModelData = {};
+        var url = '@Url.Action("GetGridStructureRecords")';
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?ViewDataId=@Model.ViewDataId' + '&MasterShow=' + $("#Master").is(":checked") + '&CustomerMaster=' + $("#CustomerMaster").is(":checked")+'&MasterList=' + selected.toString();
+        var sUrlpath = '@Url.Action("GetGridData")?ViewDataId=@Model.ViewDataId' + '&MasterShow=' + $("#Master").is(":checked") ;
+
+        ModelData["ViewDataId"] = '@Model.ViewDataId';
+        ModelData["MasterShow"] = $("#Master").is(":checked");
+        ModelData["CustomerMaster"] = $("#CustomerMaster").is(":checked");
+        ModelData["MasterList"] = selected;
+        var DTO = { Model: ModelData };
+        $.ajax({
+            url: url,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                $('#openb').val(obj[2]);
+                $('#closeb').val(obj[3]);
+                $('#tcredit').val(obj[4]);
+                $('#tdebit').val(obj[5]);
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#acledger').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                //data: JSON.stringify(DTO),
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 300,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#acledger');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'LrNo');
+                    GetURL(cellVal);
+                    //location.href = "Ledgers/Index?Document=" + cellVal + "&ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    //window.location.href = "/Transactions/CashBank/Index?Document=" & cellVal + "&Mode=Edit&ChangeLog=Edit&ViewDataId=ViewData-Ledger&Header=Bank%20Payments&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankPayments&Controller2=CashBank";
+                    //http://localhost:52070/Transactions/CashBank/Index?Document=HO0000BRC0018000003&Mode=View&ChangeLog=View&ViewDataId=ViewData-Ledger&Header=Bank%20Receipts&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankReceipts&Controller2=CashBank
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    //var J = 1;
+                    //var ids = jQuery("#acledger").jqGrid('getDataIDs');
+                    //for (var i = 0; i < ids.length; i++)
+                    //{
+                    //    var rowId = ids[i];
+                    //    if (jQuery("#acledger").getCell(rowId, "SrNo") == "0")
+                    //    {
+                    //        $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+                    //    }
+                    //}
+                    $('.spinner').hide();
+                    $('#pager1').height = 5;
+                },
+            });
+            jQuery("#acledger").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#acledger").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+</script>
+<header class="header fixed-top" id="infofooter" style="position:fixed;background-color:lightgray;padding:5px;width:100%;margin-top:0%;height:41px;">
+    <div class="fixhead">
+        <div class="col-md-3" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt">@Model.Header</b>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <div class="col-md-2 pull-right" style="padding-right:0px; padding-top:-3px;float:right;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="clickRefresh()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;padding-right:15px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="ClickPara()" class="fa fa-cogs" style="font-size:20px;cursor:pointer" title="Parameters"></a>
+            </div>
+            <div class="btn-group" style="float:left;">
+                <button data-toggle="dropdown" class="btn btn-primary dropdown-toggle" type="button">Report  <span class="caret"></span></button>
+                <ul class="dropdown-menu" style="font-family:Tahoma; border-left:1px thin;box-shadow:3px 3px 15px 1px rgba(0,0,0,0.2) !important; margin-top:2px;min-height:322px;padding-top:10px; max-height:322px;width:205px;left:-75px;background-color:whitesmoke;">
+                    <li><a onclick="PrintReport()">&nbsp;&nbsp;&nbsp;Report Viewer</a></li>
+                    <li><a onclick="clickPrint('RPDF')">&nbsp;&nbsp;&nbsp;Export to PDF-Portrait</a></li>
+                    <li><a onclick="clickPrint('RPDL')">&nbsp;&nbsp;&nbsp;Export to PDF-Landscape</a></li>
+                    <li><a onclick="clickPrint('RXLS')">&nbsp;&nbsp;&nbsp;Export to Excel</a></li>
+                    <li><a onclick="clickPrint('RWRD')">&nbsp;&nbsp;&nbsp;Export to Word</a></li>
+                    <li><a onclick="clickPrint('CRPDF')">&nbsp;&nbsp;&nbsp;Report to PDF-Crystal</a></li>
+                    <li class="divider"></li>
+                    <li><a onclick="clickPrint('PDF')">&nbsp;&nbsp;&nbsp;Export Data to PDF-Portrait</a></li>
+                    <li><a onclick="clickPrint('PDL')">&nbsp;&nbsp;&nbsp;Export Data to PDF-Landscape</a></li>
+                    <li><a onclick="clickPrint('XLS')">&nbsp;&nbsp;&nbsp;Export Data to Excel</a></li>
+                    <li class="divider"></li>
+                    <li><a onclick="clickPrint('EPDF')">&nbsp;&nbsp;&nbsp;Send PDF in Email</a></li>
+                    <li><a onclick="clickPrint('EXLS')">&nbsp;&nbsp;&nbsp;Send Excel in Email</a></li>
+                    <li><a onclick="clickPrint('EWRD')">&nbsp;&nbsp;&nbsp;Send Word in Email</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-3 pull-right" style="padding-right:unset;">
+            <div>
+
+                <div class="col-md-10 pull-right">
+                    @*<div class="col-sm-1" style="padding-left:0px;padding-right:0px;padding-top:4px;">
+                        <a data-toggle="dropdown" data-hover="dropdown" class="dropdown-toggle" href=""><b style="font-size:20px;" class="fa fa-clock-o"></b></a>
+                        <ul class="dropdown-menu" style="font-family: Verdana;border-left: 1px thin;box-shadow: 3px 3px 15px 1px rgba(0,0,0,0.2) !important;margin-top: -1px;min-height: 200px;max-height: 200px;width: 220px;background-color: whitesmoke;">
+                            <li><a class="lidaterange" onclick="SetDates(1)" style="text-align:left;color:black;margin-left:20px;" href="#">Current A/C Period</a></li>
+                            <li><a onclick="SetDates(2)" style="text-align:left;color:black;margin-left:20px;" href="#">This Month</a></li>
+                            <li><a onclick="SetDates(3)" style="text-align:left;color:black;margin-left:20px;" href="#">Today</a></li>
+                            <li><a onclick="SetDates(3)" style="text-align:left;color:black;margin-left:20px;" href="#">Yesterday</a></li>
+                            <li><a onclick="SetDates(4)" style="text-align:left;color:black;margin-left:20px;" href="#">This Week</a></li>
+                            <li><a onclick="SetDates(5)" style="text-align:left;color:black;margin-left:20px;" href="#">This Week to Date</a></li>
+
+                            <li><a onclick="SetDates(7)" style="text-align:left;color:black;margin-left:20px;" href="#">This Month to Date</a></li>
+                            <li><a onclick="SetDates(8)" style="text-align:left;color:black;margin-left:20px;" href="#">This Quarter</a></li>
+                            <li><a onclick="SetDates(9)" style="text-align:left;color:black;margin-left:20px;" href="#">This Quarter to Date</a></li>
+                            <li><a onclick="SetDates(10)" style="text-align:left;color:black;margin-left:20px;" href="#">This Year</a></li>
+                            <li><a onclick="SetDates(11)" style="text-align:left;color:black;margin-left:20px;" href="#">This Year to Date</a></li>
+                            <li><a onclick="SetDates(12)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Week</a></li>
+                            <li><a onclick="SetDates(13)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Month</a></li>
+                            <li><a onclick="SetDates(14)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Month to Date</a></li>
+                            <li><a onclick="SetDates(15)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Year</a></li>
+                            <li><a onclick="SetDates(16)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Year to Date</a></li>
+                            <li><a onclick="SetDates(17)" style="text-align:left;color:black;margin-left:20px;" href="#">Next Week</a></li>
+                            <li><a onclick="SetDates(18)" style="text-align:left;color:black;margin-left:20px;" href="#">Next Month</a></li>
+                            <li><a onclick="SetDates(19)" style="text-align:left;color:black;margin-left:20px;" href="#">Next Year</a></li>
+                        </ul>
+                    </div>*@
+                    <div class="col-sm-11" style="padding-left: 0px;">
+                        <div class="input-group input-span" data-date-format="dd/mm/yyyy" style="margin-right: 0px;">
+                            @*<div class="col-sm-5" style="padding-left:0px;padding-right:0px;">
+                                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                            </div>
+                            <div class="col-sm-2" style="padding-left:0px;padding-right:0px;">
+                                <span class="input-group-addon" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">to</span>
+                            </div>
+                            <div class="col-sm-5" style="padding-left:0px;padding-right:0px;">
+                                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                            </div>*@
+                        </div>
+                    </div>
+                </div>
+                @*<div class="col-md-1 pull-right" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt;color:black; width:unset;text-align:right">
+                    Period:
+                </div>*@
+            </div>
+        </div>
+    </div>
+</header>
+<section class="panel">
+    <div class="panel-body" style="margin-top:2%;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="form-group" style="color: black;">
+            <div class="col-sm-2" style="display: flex;width:auto;">
+                <input type="radio" class="form-control" name="GroupListbox" id="Master" value="Master" style="height:20px;width:35px;" checked /><label class=" bold control-label" style="padding: 4px 0px 0px 0px;"> Master</label>
+                <input type="radio" class="form-control" name="GroupListbox" id="MasterGroup" value="MasterGroup" style="height:20px;width:35px;" /><label class=" bold control-label" style="padding: 4px 0px 0px 0px;"> Master Group</label>
+            </div>
+            <label class=" col-sm-1  control-label" style="padding: 4px 0px 0px 0px;width: auto;">Master :</label>
+            <div class="col-sm-3">
+                @Html.ListBoxFor(x => x.MasterL, Model.Masters, new { @class = "MasterL", @id = "MasterL" })
+            </div>
+            <label class=" col-sm-1  control-label" style="padding: 4px 0px 0px 0px;width: auto;">Customer :</label>
+            <div class="col-sm-2">
+                @Html.CheckBoxFor(x => x.CustomerMaster, new { @class = "form-control", @style = "height: 20px; width: 20px; ", @disabled = "disabled", @Value = Model.CustomerMaster })
+            </div>
+        </div>
+        <div class="form-group col-sm-12">
+            <div class="tab">
+                <button class="tablinks" style="width:150px;" onclick="openTab(event, 'tabLedger')" id="Ledger">A/C Opening Reports</button>
+            </div>
+            <div id="tabLedger" class="tabcontent" style="min-height:400px;max-height:400px;padding:0px 0px 0px 0px;">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="acledger" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager1" style="height:32px;width:100%;"></div>
+                </div>
+            </div>
+            <script>
+
+                function openTab(evt, tabName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(tabName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                    //if (tabName == "tabLedger") {
+                    //    $('#acledger').jqGrid('clearGridData');
+                    //    $("#acledger").jqGrid("GridUnload");
+                    //    $('#acledger').trigger('reloadGrid');
+                    //    GridReload();
+                    //} else
+                }
+                document.getElementById("Ledger").click();
+            </script>
+        </div>
+
+    </div>
+</section>
+<div id="myfooter" class="footer-section" style="position:fixed;background-color:rgb(235, 235, 235);padding:2px;color:unset;height:30px;border:solid 1px black;">
+    <center><label class="col-sm-12 control-label" style="padding-top:2px;color:black;">ALT AIR-3.0, Shruham Software</label></center>
+
+</div>
+@Html.HiddenFor(x => x.Document)
+@*@Html.HiddenFor(x => x.MasterList)*@

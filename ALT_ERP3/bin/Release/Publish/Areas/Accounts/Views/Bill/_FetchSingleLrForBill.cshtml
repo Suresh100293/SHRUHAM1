@@ -1,0 +1,212 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.LorryReceipt
+<style>
+    .control-label
+    {
+        font-weight:bold !important;
+    }
+</style>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script>
+    $(document).ready(function () {
+        $("#SaveGrid").click(function (event) {
+            event.preventDefault();
+            var myTableArray = [];
+            var acheckmil = 0;
+            debugger;
+            //if ($('#hdnMileStoneReqd').val() == "True") {
+            if ("True" == "True") {
+
+                var SingleRowCharges = $('.NCalculationTxt').length;
+                //var StartChargesPosition = 10;
+                var ChargeValue = [];
+                $(".NCalculationTxt").each(function () {
+                    ChargeValue.push(this.value );
+                });
+                var myDets = {
+                    LRno: $("#LRno").val(),
+                    BillQty: $("#BillQty").val(),
+                    ChargeValue: ChargeValue,
+                    NewNarr: $("#NewNarr").val(),
+                }
+            }
+            myTableArray.push(myDets);
+
+
+            var ModelData = {};
+            ModelData["NewItemListLR"] = myTableArray;
+            ModelData["SubType"] = $("#hdnSType").val();
+            ModelData["MainType"] = $("#hdnMType").val();
+            ModelData["SourceDoc"] = $("#RefDoc").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["ChangeLog"] = $('#hdnchangelog').val();
+            ModelData["MileStoneReqd"] = $('#hdnMileStoneReqd').val();
+            ModelData["GridEdit"] = true;
+            if ('@Model.AutoSelect' == "True") {
+                ModelData["GridEdit"] = false;
+            }
+            
+            var DTO = { Model: ModelData };
+
+
+                var url = '@Url.Action("PostPickUp")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforesend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        debugger;
+                        if (data.Status == "Success") {
+                            debugger;
+                            $('.spinner').hide();
+                            $('#ErrorMessage').hide();
+                            $('#pickuplist').modal('hide');
+                            $('#FetchSingleLR').modal('hide');
+                            $('#ItemListTable').html(data.Html);
+                            $('#txtf_F001').val(data.Taxable.toFixed(2));
+                            $('#txtb_F001').val(data.Taxable.toFixed(2));
+                            $('#txttottxable').val(data.Taxable.toFixed(2));
+                            $('#txttotcgst').val(data.CGSTAmt.toFixed(2));
+                            $('#txttotsgst').val(data.SGSTAmt.toFixed(2));
+                            $('#txttotigst').val(data.IGSTAmt.toFixed(2));
+                            $('#txtMLSPercent').val(parseFloat(data.MLSPercent).toFixed(2))
+                            if ($('#hdnSType').val() == "RP") {
+                                $('#TDSAble').val(data.Taxable.toFixed(2));
+                            }
+                            //SetValuesInTable()
+                            $('#divLedgerTable :input').prop('disabled', true);
+                            $('#CrPeriod').prop('disabled', false);
+                            //$('#CurrDiv :input').prop('disabled', true);
+                            if ($('#hdnSType').val() == "RP") {
+                                loadValuesTdsAble()
+                            }
+                            //document.getElementById("Sales").click();
+                        }
+                        else if (data.Status == "Fail") {
+                            alert(data.Message)
+                        }
+
+                    },
+                    error: function (err) {
+                        alert(JSON.stringify(err))
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+            
+            
+
+
+        });
+    });
+</script>
+
+@if (Model != null)
+{
+    <div class="modal-body">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+                <h4 class="modal-title">Edit LR Bill </h4>
+            </div>
+            <div class="modal-body" style="display: flex;padding-left:0px;height:300px;">
+                <div class="col-sm-8">
+                    
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">Lr No:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.LRno, new { @class = "form-control ", @Value = Model.LRno, @disabled = "disabled" })
+                        </div>
+
+                        <label class="col-sm-2 control-label" style="">Lr Date:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.LRDate, new { @class = "form-control ", @Value = Model.LRDate.ToString("dd/MM/yyyy"), @disabled = "disabled" })
+                        </div>
+                    </div>
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">Total Qty:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.TotalQty, new { @class = "form-control ", @Value = Model.TotalQty, @disabled = "disabled" })
+                        </div>
+                        <label class="col-sm-2 control-label" style="">Un-Bill Qty:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.UnbillQty, new { @class = "form-control ", @Value = Model.UnbillQty, @disabled = "disabled" })
+                        </div>           
+                    </div>
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">Bill Qty:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.BillQty, new { @class = "form-control ", @Value = Model.BillQty })
+                        </div>
+                    </div>
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">From:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.From, new { @class = "form-control ", @Value = Model.From, @disabled = "disabled" })
+                        </div>
+                        <label class="col-sm-2 control-label" style="">To:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.To, new { @class = "form-control ", @Value = Model.To, @disabled = "disabled" })
+                        </div>
+                    </div>
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">Consignor:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.Consigner, new { @class = "form-control ", @Value = Model.Consigner, @disabled = "disabled" })
+                        </div>
+                        <label class="col-sm-2 control-label" style="">Consignee:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.Consignee, new { @class = "form-control ", @Value = Model.Consignee, @disabled = "disabled" })
+                        </div>
+                    </div>
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">Descriptions:</label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.Descriptions, new { @class = "form-control ", @Value = Model.Descriptions, @disabled = "disabled" })
+                        </div>
+                    </div>
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">Book Narr:</label>
+                        <div class="col-sm-10">
+                            @Html.TextAreaFor(x => x.LrNarr, new { @class = "form-control", @Value = Model.LrNarr, @rows = "1", @maxlength = 100, @disabled = "disabled" })
+                        </div>
+                    </div>
+                    <div class="form-group" style="display: flex;">
+                        <label class="col-sm-2 control-label" style="">Bill Narr:</label>
+                        <div class="col-sm-10">
+                            @Html.TextAreaFor(x => x.NewNarr, new { @class = "form-control", @Value = Model.NewNarr, @rows = "1", @maxlength = 100 })
+                        </div>
+                    </div>
+
+                </div>
+                <div class="col-sm-4" style="overflow:auto;">
+                    @if (Model.ChargeName != null)
+                    {
+                        for (int i = 0; i < Model.ChargeName.Length; i++)
+                        {
+                            if (Model.ChargeName[i] != null)
+                            {
+                                <div class="form-group" style="margin-top:5px;">
+                                    <label class=" bold col-sm-6 control-label" style="margin-left: 0px;">@Model.ChargeName[i] :</label>
+                                    <div class=" col-sm-6">
+                                        @Html.TextBoxFor(x => x.ChargeName[i], new { @class = "form-control NCalculationTxt", @Value = String.Format("{0:0.00}", Model.ChargeValue[i]) })
+                                    </div>
+                                    <label class="hidden Fld">@Model.Fld[i]</label>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+
+            </div>
+            <div class="modal-footer" style="background-color:#cccccc;">
+                <button type="button" class="btn btn-success" id="SaveGrid">OK</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+}

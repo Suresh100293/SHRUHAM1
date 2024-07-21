@@ -1,0 +1,601 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.LorryReceiptQueryVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+    var Querymarkers = [];
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+
+        if ('@Model.Lrno' != null && '@Model.Lrno' != "" ) {
+            GetMultiDocument();
+        }
+
+        $("#btnMasterAddDoc,#btnAlertnote").prop("disabled", true);
+        $("#Lrno").constrain({ allow: { regex: "[0-9]" } });
+        $('#attachdoc,#mapdoc,#AlertNoteModal').modal({
+            backdrop: 'static',
+            keyboard: false
+        })
+        $("#attachdoc,#mapdoc,#AlertNoteModal").modal("hide");
+        $("#btnMasterAddDoc").click(function (event) {
+            event.preventDefault();
+            debugger;
+            var GetLR = $('#Lrno').val();
+            if (GetLR == "" || GetLR == null) {
+                alert("Please Enter Document No To Attachment....!");
+                return;
+            }
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = "Edit";
+            ModelData["Srl"] = $("#ConsignmentKey").val();
+            ModelData["Type"] = "LR000";
+            ModelData["RefType"] = "@Model.Header";
+
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+        $("#btnAddNote").click(function (e) {
+            e.preventDefault();
+
+            if ($("#Lrno").val() == "" || $("#Lrno").val() == null) {
+                alert("Please Enter Consignment No...!");
+                return;
+            }
+            var url = '@Url.Action("GetAllRemarkOfDocument")';
+            var DTO = { LRNO: $("#Lrno").val() };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    $('#addnotemodel').modal('show');
+                    var LoadDownLoadFiles = $("#notemodelRemark");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+        $("#btnAddNarr").click(function (e) {
+            e.preventDefault();
+            if ($("#ConsignmentKey").val() == '' || $("#ConsignmentKey").val() == null) {
+                alert('Document Not Found...');
+                return;
+            }
+
+            $("#AlertNoteDiv,#btnAddNarr").addClass("hidden");
+            $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").removeClass("hidden");
+            
+            var url = '/Logistics/AlertNote/PartialView';
+            var ModelData = {};
+            ModelData["AType"] = "LR000";
+            ModelData["DocReceived"] = $("#Lrno").val();
+            ModelData["DocumentKey"] = $("#ConsignmentKey").val();
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    debugger;
+                    var AttachDoc = $("#AddAlertNoteDiv");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                },
+            });
+        });
+        $("#btnNarrList").click(function (e) {
+            e.preventDefault();
+            $("#AlertNoteDiv,#btnAddNarr").removeClass("hidden");
+            $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").addClass("hidden");
+        });
+        $('#btnNarrSave').click(function (event) {
+            event.preventDefault();
+            debugger;
+            if ($("#AType").val() == null || $("#AType").val() == '') {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Type is required..');
+                return;
+            }
+            if ($("#TypeCode").val() == null || $("#TypeCode").val() == '') {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Reference No is required..');
+                return;
+            }
+
+            if ($("#CommonRemark").val() == null || $("#CommonRemark").val() == '') {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Remark is required..');
+                return;
+            }
+            if ($("#ConsignmentKey").val() == '' || $("#ConsignmentKey").val() == null) {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Document Not Found...');
+                return;
+            }
+
+            var AlertRefType = [];
+            debugger;
+            $('#ALerttbl > tbody  > tr').each(function () {
+                var tds = $(this).find('td');
+                if ($(this).find(".chkfvalue").prop("checked") == true || $(this).find(".chkfvalueStop").prop("checked")) {
+                    var myDets =
+                    {
+                        Code: tds.eq(1).text(),
+                        select: $(this).find(".chkfvalue").prop("checked"),
+                        stop: $(this).find(".chkfvalueStop").prop("checked"),
+                    }
+                    AlertRefType.push(myDets);
+                }
+            });
+            var url = '/Logistics/AlertNote/SaveDataGetList';
+            var ModelData = {};
+            ModelData["AType"] = $("#AType").val();
+            ModelData["TypeCode"] = $("#TypeCode").val();
+            ModelData["RefersType"] = AlertRefType;
+            ModelData["Remark"] = $("#CommonRemark").val();
+            ModelData["DocumentKey"] = $("#ConsignmentKey").val();
+            ModelData["Bling"] = $("#Bling").is(":checked");
+            ModelData["PartyNarr"] = $("#PartyNarr").is(":checked");
+            ModelData["Mode"] = 'Edit';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message);
+                    } else
+                    {
+                        var LoadDownLoadFiles = $("#AlertNoteDiv");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#AlertNoteDiv,#btnAddNarr").removeClass("hidden");
+                        $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").addClass("hidden");
+                    }
+                },
+            });
+        });
+    });
+    function TrackVehicle(value) {
+        var url = '@Url.Action("TrackID")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var markers = [];
+                if (data.TrackReq == false)
+                {
+                    alert(data.Msg);
+                }
+                else if (data.Status =="Error") {
+                    alert("Vehicle Not Found...!");
+                }
+                else {
+                    var map1 = new google.maps.Map(document.getElementById('QueryMapDiv'), {
+                        center: { lat: 21.145800, lng: 79.088158 },
+                        zoom: 4
+                    });
+                    for (var i = 0; i < Querymarkers.length; i++) {
+                        Querymarkers[i].setMap(null);
+                    }
+                    Querymarkers = [];
+                    var markerQ = new google.maps.Marker({
+                        position: { lat: parseFloat(data.Latitude), lng: parseFloat(data.Longitude) },
+                        map: map1,
+                    });
+                    var contentStringQ = '<div id="content">' +
+                        '<div id="siteNotice">' +
+                        '</div>' +
+                        '<h1 id="firstHeading" class="firstHeading">' + data.Vehicle + '</h1>' +
+                        '<div id="bodyContent">';
+                    var infowindowQ = new google.maps.InfoWindow({
+                        content: contentStringQ
+                    });
+                    var markerValueQ = markerQ;
+                    google.maps.event.addListener(markerQ, 'mouseover', (function (markerValueQ, i) {
+                        return function () {
+                            infowindowQ.open(map1, markerQ);
+                        }
+                    })(markerQ));
+                    google.maps.event.addListener(markerQ, 'mouseout', (function (markerValueQ, i) {
+                        return function () {
+                            infowindowQ.close();
+                        }
+                    })(markerQ));
+
+                    Querymarkers.push(markerQ);
+                    $('#mapdoc').modal('show');
+                }
+                $('.spinner').hide();
+            },
+        });
+    }
+    function ShowMapLocation(value1, value2) {
+        //window.open("https://www.google.com/maps?q=" + value1 + ',' + value2 + '&t=m', "_blank");
+    }
+    function initializeMap(markers) {
+        //you can check your marker data in console
+        console.log(markers);
+        //Create Google map options
+        var GoogleMapOptions = {
+            center: new google.maps.LatLng(markers[0].lat, markers[0].lng),
+            zoom: 6,
+            mapTypeId: google.maps.MapTypeId.ROADMAP
+        };
+        document.getElementById('MapDiv').innerHTML = ''; // removal
+        document.getElementById('MapDiv').innerHTML = '<div id="inner_map_div" style="width: 100%; height: 350px;"></div>';
+        //create a variable of InfoWindow type to show data on clicking map icon
+        var infoWindow = new google.maps.InfoWindow();
+        var map = new google.maps.Map(document.getElementById("inner_map_div"), GoogleMapOptions);
+
+
+
+        //loop through each marker data
+        for (i = 0; i < markers.length; i++) {
+            var data = markers[i]
+            //set lat long of current marker
+            var myLatlng = new google.maps.LatLng(data.lat, data.lng);
+
+            var marker = new google.maps.Marker({
+                position: myLatlng,
+                map: map,
+                title: data.title
+            });
+
+            (function (marker, data) {
+                // add a on marker click event
+                google.maps.event.addListener(marker, "click", function (e) {
+                    //show description
+                    infoWindow.setContent(data.description);
+                    infoWindow.open(map, marker);
+                });
+            })(marker, data);
+        }
+
+    }
+    function AlertNoteMaster() {
+        debugger;
+        event.preventDefault();
+        var GetLR = $('#Lrno').val();
+        if (GetLR == "" || GetLR == null) {
+            alert("Please Enter Document No To AlertNote....!");
+            return;
+        }
+        var GetLR1 = $('#ConsignmentKey').val();
+        if (GetLR1 == "" || GetLR1 == null) {
+            alert("Document Not Found....!");
+            return;
+        }
+
+        var url = '/Logistics/AlertNote/ShoWAlertNoteList';
+        var myTableArray = [];
+        myTableArray.push($('#ConsignmentKey').val());
+        var DTO = { Type: "LR000", TypeCode: myTableArray, DocTpe: "LR000" };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+
+
+                    var AttachDoc = $("#AlertNoteDiv");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#AlertNoteModal').modal('show');
+                    $("#AlertNoteDiv,#btnAddNarr").removeClass("hidden");
+                    $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").addClass("hidden");
+
+
+            },
+        });
+    }
+
+    function clickRefresh() {
+        var url = '@Url.Action("GetReport")';
+            var ModelData = {};
+            ModelData["Lrno"] = $("#Lrno").val();
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == "Error") {
+                        alert("Document Not Found......!");
+                    }
+                    var AttachDoc = $("#ReportDetails");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $("#AttchCount").html(data.AttachC);
+                    $("#AlertCount").html(data.AlertC);
+                },
+            });
+    }
+
+    function GetMultiDocument()
+    {
+        if ($("#Lrno").val() != null && $("#Lrno").val() != "")
+        {
+            var ModelData = {};
+            ModelData["Lrno"] = $("#Lrno").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("FetchDocumentList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    if (data.Status == "ValidError")
+                    {
+                        alert(data.Message);
+                        $("#btnMasterAddDoc,#btnAlertnote").prop("disabled", true);
+                        return;
+                    }
+                    else if (data.Status == "Processed")
+                    {
+                        $("#btnMasterAddDoc,#btnAlertnote").prop("disabled", false);
+                        GetConsignmentDetails(data.Message);
+                    }
+                    else
+                    {
+                        var AttachDoc = $("#consignmentmodels");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                        $('#ConsignmentModels').modal('show');
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        }
+    }
+    function GetConsignmentDetails(value) {
+        $('#ConsignmentModels').modal('hide');
+        $("#ConsignmentKey").val(value);
+        var url = '@Url.Action("GetReport")';
+        var ModelData = {};
+        ModelData["ConsignmentKey"] = value;
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                debugger;
+                if (data.Status == "Error")
+                {
+                    alert("Document Not Found......!");
+                    $("#btnMasterAddDoc,#btnAlertnote").prop("disabled", true);
+                } else {
+                    $("#btnMasterAddDoc,#btnAlertnote").prop("disabled", false);
+                }
+                var AttachDoc = $("#ReportDetails");
+                AttachDoc.html('');
+                AttachDoc.html(data.Html);
+                $("#AttchCount").html(data.AttachC);
+                $("#AlertCount").html(data.AlertC);
+                $("#btnVehicleTracking").val(data.TrackID);
+                debugger;
+                $("#TrackButtonReq").val(data.TrackButton);
+                $("#TrackErrorMsg").val(data.TrackButtonMsg);
+            },
+        });
+    }
+</script>
+<header class="header fixed-top" id="infofooter" style="position:fixed;background-color:lightgray;padding:5px;width:100%;margin-top:0%;height:41px;">
+    <div class="fixhead">
+        <div class="col-md-2" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt">@Model.Header</b>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <label class=" bold col-sm-1 control-label">LR No :</label>
+        <div class="col-sm-2">
+            @Html.TextBoxFor(x => x.Lrno, new { @class = "form-control", @style = "width:100%;", @Value = Model.Lrno })
+        </div>
+        <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+            <a onclick="GetMultiDocument()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+        </div>
+        <div class="col-sm-3 pull-right" style="margin-top: 3px;">
+            <button type="button" class="btn btn-primary" id="btnMasterAddDoc" style="padding: 4px 12px!important;">
+                Attachment <span class="badge badge-light" id="AttchCount">0</span>
+            </button>
+            <button type="button" id="btnAlertnote" class="btn btn-primary" onclick="AlertNoteMaster()" style="padding: 4px 12px!important;">
+                AlertNote <span class="badge badge-light" id="AlertCount">0</span>
+            </button>
+        </div>
+    </div>
+</header>
+<section class="panel">
+    <div class="panel-body" style="margin-top:2%;padding-left:0px;padding-right:5px;overflow-x:hidden;">
+        <div id="ReportDetails" class="form-horizontal" role="form" style="margin-top:5px; padding-left:10px;">
+
+        </div>
+    </div>
+</section>
+@*<div id="myfooter" class="footer-section" style="position:fixed;background-color:rgb(235, 235, 235);padding:2px;color:unset;height:30px;border:solid 1px black;">
+        ALT AIR-3.0, Shruham Software
+    </div>*@
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            @*<button class="btn btn-info" id="btnAddNote" style="background-color: #b6dd1a;color: #0044cc;border-color: #b6dd1a;font-size: 13px;padding:3px 12px;" name="Command">Add Note</button>*@
+        </div>
+        <div class="col-sm-3" style="text-align:center; margin-top:5px;color:white;font-family:Helvetica;font-size:9pt;padding-top:0px;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+        </div>
+    </div>
+</footer>
+@*Suchan Attachment*@
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="attachdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="AttachDoc">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!--AlertNote Modal -->
+<div class="example-modal">
+    <div id="AlertNoteModal" class="modal modal-primary" style="margin-top:1%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+
+            <div class="modal-body">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title"><b>Alert Note System</b></h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group" id="AlertNoteDiv" style="min-height:430px;max-height:430px;overflow:auto;">
+
+                        </div>
+                        <div class="form-group hidden" id="AddAlertNoteDiv" style="min-height:430px;max-height:430px;overflow:auto;">
+
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                        <button class="btn btn-success" type="button" id="btnAddNarr">Add Note</button>
+                        <button class="btn btn-info hidden" type="button" id="btnNarrList">Show List</button>
+                        <button class="btn btn-success hidden" type="button" id="btnNarrSave">Save</button>
+                        <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@*Shruham Map*@
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="mapdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+
+            <div class="modal-body">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title"><b>Location</b></h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="QueryMapDiv" style="height:300px;width:100%;background-color:rebeccapurple;">
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                        <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x => x.ConsignmentKey)
+<!--Consignment Multi Document Modal -->
+<div class="example-modal">
+    <div id="ConsignmentModels" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="consignmentmodels">
+            </div>
+        </div>
+    </div>
+</div>

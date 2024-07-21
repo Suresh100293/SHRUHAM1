@@ -1,0 +1,1764 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.PODSendVM
+@using Common;
+@{
+    ViewBag.Title = "Delivery";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<style>
+    .span6 {
+        display: none !important;
+    }
+
+    .toggle {
+        border-radius: 15px !important;
+        margin-top: -35px !important;
+    }
+
+        .toggle.btn {
+            min-width: 77px !important;
+            min-height: 34px;
+        }
+
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    .example {
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        width: max-content;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .example th {
+            background-color: #F7F7F7;
+            font-weight: bold;
+        }
+
+        .example th, .example td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .example, .example table td {
+            border: 0px solid #ccc;
+        }
+
+
+    .Unauthorise {
+        background-color: #5079d4 !important;
+        color: white;
+    }
+
+    .rejected {
+        background-color: #bf6860 !important;
+        color: white;
+    }
+
+
+    .SearchRow {
+        background-color: coral;
+    }
+</style>
+
+
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        GetMyFavorites('@Model.ViewDataId');
+        if (('@Model.Mode' == "View") || ('@Model.Mode' == "Delete"))
+        {
+            $('.form-group :input').prop("disabled", true);
+        }
+        if ('@Model.BlockPOD'=="True") {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").html("This POD Will Be Closed Or Pod Not In Current Branch...\n So Cant Edit Delete Of This POD....");
+            $('.form-group :input').prop("disabled", true);
+            $('.btn').prop("disabled", true);
+        }
+        $('#changebranch :input').prop("disabled", false);
+        $('#changeperiod :input').prop("disabled", false);
+        LoadBranch();
+        LoadCustomer();
+        $(".tablinks").prop("disabled", false);
+
+        $('#lstAll').click(function (event)
+        {
+            event.preventDefault();
+            GridReloadSendBranch();
+        });
+        // Search all columns
+        $('#Search').keyup(function () {
+            var value = $(this).val();
+            $("#example1 > tbody > tr").filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        $("#DeselectAll").click(function () {
+            var CheckBox = $("#DeselectAll").prop("checked");
+            if (!(CheckBox)) {
+                $(".PODSendBranchDebitGrid").prop('checked', false);
+            }
+        });
+        $('#SearchLrnoForPodSend').blur(function (event) {
+            if ($('#SearchLrnoForPodSend').val() != "" && $('#SearchLrnoForPodSend').val() != null)
+            {
+                var ModelData = {};
+                ModelData["Lrno"] = $("#SearchLrnoForPodSend").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError") {
+                            $("#SearchLrnoForPodSend").val("");
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed") {
+                            AddPODInBranchTab(data.Message);
+                        }
+                        else
+                        {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+        $('#btnGetLc').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            var myTableArray = [];
+            $("#example1 > tbody  > tr").each(function () {
+                var CheckBox = $(this).find('.PODSendBranchDebitGrid').prop("checked");
+                if (CheckBox) {
+                    var myDets =
+                    {
+                        PODRefTablekey: $(this).find('td:eq(4)').text(),
+                        Authorise: $(this).find('td:eq(5)').text(),
+                        PODNO: $(this).find('td:eq(7)').text(),
+                        Lrno: $(this).find('td:eq(8)').text(),
+                        //RecePODRemark: $(this).find(".PODNarr").val(),
+                        LRDate: $(this).find('td:eq(9)').text(),
+                        LRTime: $(this).find('td:eq(10)').text(),
+                        ConsignerName: $(this).find('td:eq(11)').text(),
+                        ConsigneeName: $(this).find('td:eq(12)').text(),
+                        FromName: $(this).find('td:eq(13)').text(),
+                        ToName: $(this).find('td:eq(14)').text(),
+                        Remark: $(this).find('td:eq(15)').text(),
+                        LRRefTablekey: $(this).find('td:eq(16)').text(),
+                    }
+                    myTableArray.push(myDets);
+                }
+            });
+
+            ModelData["PODSendList"] = myTableArray;
+            var url = '@Url.Action("GridView")';
+
+            var check = $('#example1').find('input[name="PODSendBranchDebitGrid"]:checked').length;
+            if (check > 0)
+            {
+                $("#GetLRLIst").modal("hide");
+                var DTO = { mModel: ModelData };
+                $.ajax({
+
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles1 = $("#SelectedPODShow");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles1.html('');
+                        LoadDownLoadFiles1.html(data.Html);
+                        $("#Search").val("");
+                        $("#SelectedPODShowFile").html('');
+                        $("#SelectedPODShowCust").html('');
+                    },
+                });
+            }
+            else
+            {
+                alert("Atleast One POD Required...");
+            }
+        });
+        $('#lstAll1').click(function (event) {
+            event.preventDefault();
+            GridReloadFile();
+        });
+        $('#SearchFile').keyup(function () {
+            var value = $(this).val();
+            $("#example1File > tbody > tr").filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        $("#FDeselectAll").click(function () {
+            var CheckBox = $("#FDeselectAll").prop("checked");
+            if (CheckBox) {
+                $(".PODSendFileDebitGrid").prop('checked', true);
+            } else {
+                $(".PODSendFileDebitGrid").prop('checked', false);
+            }
+        });
+        //$("#FDUneselectAll").click(function () {
+        //    var CheckBox = $("#FDUneselectAll").prop("checked");
+        //    if (!(CheckBox)) {
+        //        $(".PODSendFileDebitGrid").prop('checked', true);
+        //    }
+        //});
+
+        $('#SearchLrnoForFile').blur(function (event) {
+            if ($('#SearchLrnoForFile').val() != "" && $('#SearchLrnoForFile').val() != null)
+            {
+
+                var ModelData = {};
+                ModelData["Lrno"] = $("#SearchLrnoForPodSend").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError") {
+                            $("#SearchLrnoForPodSend").val("");
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed") {
+                            AddPODInFileTab(data.Message);
+                        }
+                        else
+                        {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+        $('#btnGetLcFile').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            var myTableArray = [];
+            $("#example1File > tbody  > tr").each(function () {
+                var CheckBox = $(this).find('.PODSendFileDebitGrid').prop("checked");
+                if (CheckBox) {
+                    var myDets =
+                    {
+                        PODRefTablekey: $(this).find('td:eq(4)').text(),
+                        Authorise: $(this).find('td:eq(5)').text(),
+                        PODNO: $(this).find('td:eq(7)').text(),
+                        Lrno: $(this).find('td:eq(8)').text(),
+                        //RecePODRemark: $(this).find(".PODNarr").val(),
+                        LRDate: $(this).find('td:eq(9)').text(),
+                        LRTime: $(this).find('td:eq(10)').text(),
+                        ConsignerName: $(this).find('td:eq(11)').text(),
+                        ConsigneeName: $(this).find('td:eq(12)').text(),
+                        FromName: $(this).find('td:eq(13)').text(),
+                        ToName: $(this).find('td:eq(14)').text(),
+                        Remark: $(this).find('td:eq(15)').text(),
+                        LRRefTablekey: $(this).find('td:eq(16)').text(),
+                    }
+                    myTableArray.push(myDets);
+                }
+            });
+            ModelData["PODSendList"] = myTableArray;
+            var url = '@Url.Action("GridView")';
+            var check = $('#example1File').find('input[name="PODSendFileDebitGrid"]:checked').length;
+            if (check > 0)
+            {
+                $("#GetLRLIstFile").modal("hide");
+                var DTO = { mModel: ModelData };
+                $.ajax({
+
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles1 = $("#SelectedPODShowFile");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles1.html('');
+                        LoadDownLoadFiles1.html(data.Html);
+                        $("#SearchFile").val("");
+                        $("#SelectedPODShowCust").html('');
+                        $("#SelectedPODShow").html('');
+                    },
+                });
+            }
+            else
+            {
+                alert("Atleast One POD Required...");
+            }
+        });
+        $('#lstAll2').click(function (event)
+        {
+            event.preventDefault();
+            GridReloadSendCustomer();
+        });
+        $('#SearchCust').keyup(function () {
+            var value = $(this).val();
+            $("#example1Cust > tbody > tr").filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        $("#CDeselectAll").click(function () {
+            var CheckBox = $("#CDeselectAll").prop("checked");
+            if (!(CheckBox)) {
+                $(".PODSendCustomerDebitGrid").prop('checked', false);
+            }
+        });
+        $('#SearchLrnoForCustomer').blur(function (event) {
+            if ($('#SearchLrnoForCustomer').val() != "" && $('#SearchLrnoForCustomer').val() != null)
+            {
+
+                var ModelData = {};
+                ModelData["Lrno"] = $("#SearchLrnoForPodSend").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError") {
+                            $("#SearchLrnoForPodSend").val("");
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed") {
+                            AddPODInCustomerTab(data.Message);
+                        }
+                        else
+                        {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+        $('#btnGetLcCust').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            var myTableArray = [];
+            $("#example1Cust > tbody  > tr").each(function () {
+                var CheckBox = $(this).find('.PODSendCustomerDebitGrid').prop("checked");
+                if (CheckBox) {
+                    var myDets =
+                    {
+                        PODRefTablekey: $(this).find('td:eq(4)').text(),
+                        Authorise: $(this).find('td:eq(5)').text(),
+                        PODNO: $(this).find('td:eq(7)').text(),
+                        Lrno: $(this).find('td:eq(8)').text(),
+                        //RecePODRemark: $(this).find(".PODNarr").val(),
+                        LRDate: $(this).find('td:eq(9)').text(),
+                        LRTime: $(this).find('td:eq(10)').text(),
+                        ConsignerName: $(this).find('td:eq(11)').text(),
+                        ConsigneeName: $(this).find('td:eq(12)').text(),
+                        FromName: $(this).find('td:eq(13)').text(),
+                        ToName: $(this).find('td:eq(14)').text(),
+                        Remark: $(this).find('td:eq(15)').text(),
+                        LRRefTablekey: $(this).find('td:eq(16)').text(),
+                    }
+                    myTableArray.push(myDets);
+                }
+            });
+            ModelData["PODSendList"] = myTableArray;
+            var url = '@Url.Action("GridView")';
+
+            var check = $('#example1Cust').find('input[name="PODSendCustomerDebitGrid"]:checked').length;
+            if (check > 0)
+            {
+                $("#GetLRLIstCust").modal("hide");
+                var DTO = { mModel: ModelData };
+                $.ajax({
+
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles1 = $("#SelectedPODShowCust");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles1.html('');
+                        LoadDownLoadFiles1.html(data.Html);
+                        $("#SearchCust").val("");
+                        $("#SelectedPODShowFile").html('');
+                        $("#SelectedPODShow").html('');
+                    },
+                });
+            }
+            else
+            {
+                alert("Atleast One POD Required...");
+            }
+        });
+        
+
+
+        $('#btnDeleteDoc').click(function (event) {
+            event.preventDefault();
+            var result = confirm("Are you sure you want to delete POD ?");
+            if (result) {
+
+                var url = '@Url.Action("SaveData")';
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = '@Model.Mode';
+                ModelData["Header"] = '@Model.Header';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").hide();
+                        if (data.Status == 'Success') {
+                            window.location.href = "/Logistics/PODSend/Index?ViewDataId=PODSend&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=PODSend&Header=POD&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        }
+                        else {
+                            alert(data.Message);
+                        }
+                    },
+                });
+            }
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+             debugger;
+             var ModelData = {};
+             var Task = $("#TaskOfPODSend").val();
+             var RecordList = "";
+
+             if (Task == "Branch")
+             {
+                 if ($("#SendToBRanch").val() == '' || $("#SendToBRanch").val() == null)
+                 {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Select Branch......!');
+                    return;
+                 }
+                 var check = $('#example tbody tr').length;
+                 if (check == 0)
+                 {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Select POD......!');
+                    return;
+                 }
+                 var ChargeList = [];
+                 $("#example > tbody  > tr").each(function ()
+                 {
+                     var tds = $(this).find('td');
+                     var myDets =
+                     {
+                         PODRefTablekey: tds.eq(0).text(),
+                         PODNO: tds.eq(2).text(),
+                         Lrno: tds.eq(3).text(),
+                         LRRefTablekey: tds.eq(12).text(),
+                     }
+                     ChargeList.push(myDets);
+                 });
+                 ModelData["PODSendList"] = ChargeList;
+             }
+             else if (Task == "File")
+             {
+                 debugger;
+                 var check = $('#example tbody tr').length;
+                 if (check == 0)
+                 {
+                     $("#ErrorMessage").show();
+                     $("#ErrorMessage").text('Please Select POD......!');
+                     return;
+                 }
+                 var ChargeList = [];
+                 $("#example > tbody  > tr").each(function ()
+                 {
+                     debugger;
+                     var tds = $(this).find('td');
+                     var myDets =
+                     {
+                         PODRefTablekey: tds.eq(0).text(),
+                         PODNO: tds.eq(2).text(),
+                         Lrno: tds.eq(3).text(),
+                         LRRefTablekey: tds.eq(12).text(),
+                     }
+                     ChargeList.push(myDets);
+                 });
+                 ModelData["PODSendList"] = ChargeList;
+             }
+             else
+             {
+                 if ($("#CustoCode").val() == '' || $("#CustoCode").val() == null) {
+                     $("#ErrorMessage").show();
+                     $("#ErrorMessage").text('Please Select CustoCode......!');
+                     return;
+                 }
+
+                 var check = $('#example tbody tr').length;
+                 if (check == 0)
+                 {
+                     $("#ErrorMessage").show();
+                     $("#ErrorMessage").text('Please Select POD......!');
+                     return;
+                 }
+                 var ChargeList = [];
+                 $("#example > tbody  > tr").each(function ()
+                 {
+                     var tds = $(this).find('td');
+                     var myDets =
+                     {
+                         PODRefTablekey: tds.eq(0).text(),
+                         PODNO: tds.eq(2).text(),
+                         Lrno: tds.eq(3).text(),
+                         LRRefTablekey: tds.eq(12).text(),
+                     }
+                     ChargeList.push(myDets);
+                 });
+                 ModelData["PODSendList"] = ChargeList;
+                 ModelData["CustoCode"] = $("#CustoCode").val();;
+             }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+
+             ModelData["Document"] = $("#Document").val();
+            ModelData["Task"] = Task;
+             ModelData["BranchCode"] = $("#SendToBRanch").val();
+            ModelData["PODNo"] = $("#PODNo").val();
+            ModelData["Date"] = $("#Date").val();
+            ModelData["Time"] = $("#Time").val();
+             ModelData["Mode"] = '@Model.Mode';
+             ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/PODSend/Index?ViewDataId=PODSend&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=PODSend&Header=POD&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+    function AddPODInBranchTab(value) {
+        var ModelData = {};
+        ModelData["SearchLrnoForPodSend"] = value;
+        var url = '@Url.Action("SearchLRNOInBranch")';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var LoadDownLoadFiles1 = $("#SelectedPODShow");
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+                LoadDownLoadFiles1.html('');
+                LoadDownLoadFiles1.html(data.Html);
+                $("#SearchLrnoForPodSend").val("");
+                $("#SelectedPODShowFile").html('');
+                $("#SelectedPODShowCust").html('');
+            },
+        });
+    }
+    function AddPODInFileTab(value) {
+        var ModelData = {};
+        ModelData["SearchLrnoForPodSend"] = value;
+        var url = '@Url.Action("SearchLRNOInBranch")';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var LoadDownLoadFiles1 = $("#SelectedPODShowFile");
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+                LoadDownLoadFiles1.html('');
+                LoadDownLoadFiles1.html(data.Html);
+                $("#SearchLrnoForFile").val("");
+                $("#SelectedPODShowCust").html('');
+                $("#SelectedPODShow").html('');
+            },
+        });
+    }
+    function AddPODInCustomerTab(value)
+    {
+        var ModelData = {};
+        ModelData["SearchLrnoForPodSend"] = value;
+        var url = '@Url.Action("SearchLRNOInBranch")';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var LoadDownLoadFiles1 = $("#SelectedPODShowCust");
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+                LoadDownLoadFiles1.html('');
+                LoadDownLoadFiles1.html(data.Html);
+                $("#SearchLrnoForCustomer").val("");
+                $("#SelectedPODShowFile").html('');
+                $("#SelectedPODShow").html('');
+            },
+        });
+    }
+    function GridReloadSendBranch()
+    {
+        $('#example1').jqGrid('clearGridData');
+        $("#example1").jqGrid("GridUnload");
+        $('#example1').trigger('reloadGrid');
+
+        $('#GetLRLIst').modal('show');
+
+        $("#Search").val("");
+        $("#SelectLR").val("");
+
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=PendingPODSendTOBranch';
+        var sUrlpath = '@Url.Action("GetPODBranchSendGridData")?ViewDataId=PendingPODSendTOBranch&Age1=' + $('#SendToBRanch').val();
+        var ModelData = {};
+        ModelData["ViewDataId"] = "CurrentBranchStock";
+        //ModelData["searchString"] = $('#txtDataSearch1').val();
+        $('#txtDataSearch1').val("");
+        var DTO = { Model: ModelData };
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#example1').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#example1pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                //scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    var myGrid = $('#example1');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Authorise');
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function ()
+                {
+                    var ids = jQuery("#example1").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++)
+                    {
+                        var rowId = ids[i];
+                        //loop through grid rows
+                        var Auth = jQuery("#example1").getCell(rowId, "Authorise");
+                        if (Auth == "A")
+                        {
+                        }
+                        else if (Auth == "N")
+                        {
+                            jQuery("#example1").jqGrid('setRowData', ids[i], false, { background: 'rgb(80 121 212)' });
+                        }
+                        else if (Auth == "R")
+                        {
+                            jQuery("#example1").jqGrid('setRowData', ids[i], false, { background: 'rgb(191 104 96)' });
+                        }
+                        var beChecked = "<input type ='checkbox' onclick='BranchChkSelect();'  id='" + rowId + "' value='" + jQuery("#example1").getCell(rowId, "PODRefTablekey") + "'  class='PODSendBranchDebitGrid' name='PODSendBranchDebitGrid'  style='height: 22px;width: 19px;' />";
+                        //var Narr = "<textarea class='PODNarr' name='w3review' rows='2' cols='30' disabled></textarea>";
+                        jQuery("#example1").jqGrid('setRowData', rowId, { 'Select': beChecked });
+                    }
+                    $("#Search")[0].focus();
+                },
+            });
+            jQuery("#example1").jqGrid('navGrid', "#example1pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#example1").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            //$('#GetLRLIst').modal('show');
+        };
+        $("#Search")[0].focus();
+    }
+
+    function BranchChkSelect() {
+        $("#Search")[0].focus();
+    }
+
+
+    function GridReloadFile()
+    {
+        $('#example1File').jqGrid('clearGridData');
+        $("#example1File").jqGrid("GridUnload");
+        $('#example1File').trigger('reloadGrid');
+
+        $('#GetLRLIstFile').modal('show');
+
+        $("#SearchFile").val("");
+
+        
+
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=PendingPODSendTOBranch';
+        var sUrlpath = '@Url.Action("GetPODBranchSendGridData")?ViewDataId=PendingPODSendTOBranch';
+        var ModelData = {};
+        ModelData["ViewDataId"] = "CurrentBranchStock";
+        //ModelData["searchString"] = $('#txtDataSearch1').val();
+        $('#txtDataSearch1').val("");
+        var DTO = { Model: ModelData };
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#example1File').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#example1Filepager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                //scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    var myGrid = $('#example1File');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Authorise');
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function ()
+                {
+                    var ids = jQuery("#example1File").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++)
+                    {
+                        var rowId = ids[i];
+                        //loop through grid rows
+                        var Auth = jQuery("#example1File").getCell(rowId, "Authorise");
+                        if (Auth == "A")
+                        {
+                        }
+                        else if (Auth == "N")
+                        {
+                            jQuery("#example1File").jqGrid('setRowData', ids[i], false, { background: 'rgb(80 121 212)' });
+                        }
+                        else if (Auth == "R")
+                        {
+                            jQuery("#example1File").jqGrid('setRowData', ids[i], false, { background: 'rgb(191 104 96)' });
+                        }
+                        var beChecked = "<input type ='checkbox' onclick = 'FileChkSelect();' id='" + rowId + "' value='" + jQuery("#example1File").getCell(rowId, "PODRefTablekey") + "'  class='PODSendFileDebitGrid' name='PODSendFileDebitGrid'  style='height: 22px;width: 19px;' />";
+                        //var Narr = "<textarea class='PODNarr' name='w3review' rows='2' cols='30' disabled></textarea>";
+                        jQuery("#example1File").jqGrid('setRowData', rowId, { 'Select': beChecked });
+                    }
+                    $("#SearchFile")[0].focus();
+                },
+            });
+            jQuery("#example1File").jqGrid('navGrid', "#example1Filepager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#example1File").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            //$('#GetLRLIst').modal('show');
+        };
+        $("#SearchFile")[0].focus();
+    }
+    
+    function FileChkSelect() {
+        $("#SearchFile")[0].focus();
+    }
+
+
+    function GridReloadSendCustomer()
+    {
+        $('#example1Cust').jqGrid('clearGridData');
+        $("#example1Cust").jqGrid("GridUnload");
+        $('#example1Cust').trigger('reloadGrid');
+
+        $('#GetLRLIstCust').modal('show');
+
+        $("#SearchCust").val("");
+        
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=PendingPODSendTOBranch';
+        var sUrlpath = '@Url.Action("GetPODBranchSendGridData")?ViewDataId=PendingPODSendTOBranch&Age1=' + $('#SendToBRanch').val();
+        var ModelData = {};
+        ModelData["ViewDataId"] = "CurrentBranchStock";
+        //ModelData["searchString"] = $('#txtDataSearch1').val();
+        $('#txtDataSearch1').val("");
+        var DTO = { Model: ModelData };
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#example1Cust').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#example1Custpager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                //scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    var myGrid = $('#example1Cust');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Authorise');
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function ()
+                {
+                    var ids = jQuery("#example1Cust").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++)
+                    {
+                        var rowId = ids[i];
+                        //loop through grid rows
+                        var Auth = jQuery("#example1Cust").getCell(rowId, "Authorise");
+                        if (Auth == "A")
+                        {
+                        }
+                        else if (Auth == "N")
+                        {
+                            jQuery("#example1Cust").jqGrid('setRowData', ids[i], false, { background: 'rgb(80 121 212)' });
+                        }
+                        else if (Auth == "R")
+                        {
+                            jQuery("#example1Cust").jqGrid('setRowData', ids[i], false, { background: 'rgb(191 104 96)' });
+                        }
+                        var beChecked = "<input type ='checkbox' onclick = 'CustChkSelect();' id='" + rowId + "' value='" + jQuery("#example1Cust").getCell(rowId, "PODRefTablekey") + "'  class='PODSendCustomerDebitGrid' name='PODSendCustomerDebitGrid'  style='height: 22px;width: 19px;' />";
+                        //var Narr = "<textarea class='PODNarr' name='w3review' rows='2' cols='30' disabled></textarea>";
+                        jQuery("#example1Cust").jqGrid('setRowData', rowId, { 'Select': beChecked });
+                    }
+                    $("#SearchCust")[0].focus();
+                },
+            });
+            jQuery("#example1Cust").jqGrid('navGrid', "#example1Custpager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#example1Cust").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            //$('#GetLRLIst').modal('show');
+        };
+        $("#SearchCust")[0].focus();
+    }
+
+    
+    function CustChkSelect() {
+        $("#SearchCust")[0].focus();
+    }
+    function LoadBranch() {
+        var url = '@Url.Action("BranchList")'
+        $('#SendToBRanch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BranchCode', text: '@Model.BranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadCustomer() {
+        var url = '@Url.Action("CustmoerList")'
+        $('#CustoCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CustoCode', text: '@Model.CustoName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/PODSend/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<form class="form-horizontal" id="frmaccountLedger" role="form" style="margin-top:0px;">
+    <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+</form>
+<section class="panel" style="margin-bottom:10px;margin-top:2%;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LRMaster" role="form" style="">
+            <fieldset class=" col-sm-12" style="margin-top: 0px;">
+                <legend>@Model.Header</legend>
+                <div class="panel panel-default" style="height:370px;">
+                    <div class="panel-body " style="padding-left: 0px !important;padding-top:5px!important;">
+                        <div class="col-sm-12" id="">
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">POD No:</label>
+                                <div class="col-sm-1 ">
+                                    @Html.TextBoxFor(x => x.PODNo, new { @class = "form-control", @style = "width:100%;", @Value = Model.PODNo, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Date:</label>
+                                <div class="col-sm-1 ">
+                                    @Html.TextBoxFor(x => x.Date, new { @class = "form-control", @style = "width:100%;", @Value = Model.Date, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Time:</label>
+                                <div class="col-sm-2 ">
+                                    @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.Time, @disabled = "disabled" })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class="tab">
+                                    @if (Model.Mode == "Add")
+                                    {
+                                        <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="Branch">Branch</button>
+                                        <button class="tablinks" onclick="openCity(event, 'divLedgerTable1')" id="File">File</button>
+                                        <button class="tablinks" onclick="openCity(event, 'divLedgerTable2')" id="Customer">Customer</button>
+                                    }
+                                    else
+                                    {
+
+                                        if (Model.Task == "Branch")
+                                        {
+                                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="Branch">Branch</button>
+                                        }
+                                        else if (Model.Task == "File")
+                                        {
+                                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable1')" id="File">File</button>
+                                        }
+                                        else
+                                        {
+                                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable2')" id="Customer">Customer</button>
+                                        }
+                                    }
+
+                                </div>
+
+                                @if (Model.Mode == "Add")
+                                {
+                                    <div id="divLedgerTable" style="height:300px;overflow: auto;" class="tabcontent">
+                                        <div class="form-group">
+                                            <label class=" bold   col-sm-1  control-label" style="width:auto;">To Branch:</label>
+                                            <div class="col-sm-2 " id="">
+                                                @if (Model.Mode == "Add")
+                                                {
+                                                    @Html.TextBoxFor(x => x.BranchCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.BranchCode, @id = "SendToBRanch" })
+                                                }
+                                                else
+                                                {
+                                                    @Html.TextBoxFor(x => x.BranchCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.BranchCode, @id = "SendToBRanch", @disabled = "disabled" })
+                                                }
+                                            </div>
+                                            <div class="col-sm-1" style="width:auto;">
+                                                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="lstAll">Pick Document</button>
+                                            </div>
+                                            @if (Model.GlobalSearch == true)
+                                            {
+                                                <div class="col-sm-2">
+                                                    @Html.TextBoxFor(x => x.SearchLrnoForPodSend, new { @placeholder = "Search Consignment NO", @class = "form-control", @style = "width:100%;", @Value = Model.SearchLrnoForPodSend })
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="grid" id="SelectedPODShow" style="overflow: auto;width: 100%;display: block !important;max-height:340px;min-height:340px; width:auto;">
+                                                @Html.Partial("PODGrid", Model.PODSendList)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="divLedgerTable1" style="height:300px;overflow: auto;" class="tabcontent">
+                                        <div class="form-group">
+                                            <div class="col-sm-1" style="width:auto;">
+                                                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="lstAll1">Pick Document</button>
+                                            </div>
+                                            @if (Model.GlobalSearch == true)
+                                            {
+                                                <div class="col-sm-2">
+                                                    @Html.TextBoxFor(x => x.SearchLrnoForPodSend, new { @id = "SearchLrnoForFile", @placeholder = "Search Consignment NO", @class = "form-control", @style = "width:100%;", @Value = Model.SearchLrnoForPodSend })
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="grid" id="SelectedPODShowFile" style="overflow: auto;width: 100%;display: block !important;max-height:340px;min-height:340px; width:auto;">
+                                                @Html.Partial("PODGrid", Model.PODSendList)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div id="divLedgerTable2" style="height:300px;overflow: auto;" class="tabcontent">
+                                        <div class="form-group">
+                                            <label class=" bold   col-sm-1  control-label" style="width:auto;">Customer:</label>
+                                            <div class="col-sm-3 " id="">
+                                                @if (Model.Mode == "Add")
+                                                {
+                                                    @Html.TextBoxFor(x => x.CustoCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.CustoCode })
+                                                }
+                                                else
+                                                {
+                                                    @Html.TextBoxFor(x => x.CustoCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.CustoCode, @disabled = "disabled" })
+                                                }
+                                            </div>
+                                            <div class="col-sm-1" style="width:auto;">
+                                                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="lstAll2">Pick Document</button>
+                                            </div>
+                                            @if (Model.GlobalSearch == true)
+                                            {
+                                                <div class="col-sm-2">
+                                                    @Html.TextBoxFor(x => x.SearchLrnoForPodSend, new { @id = "SearchLrnoForCustomer", @placeholder = "Search Consignment NO", @class = "form-control", @style = "width:100%;", @Value = Model.SearchLrnoForPodSend })
+                                                </div>
+                                            }
+                                        </div>
+                                        <div class="form-group">
+                                            <div class="grid" id="SelectedPODShowCust" style="overflow: auto;width: 100%;display: block !important;max-height:340px;min-height:340px; width:auto;">
+                                                @Html.Partial("PODGrid", Model.PODSendList)
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else
+                                {
+
+                                    if (Model.Task == "Branch")
+                                    {
+                                        <div id="divLedgerTable" style="height:300px;overflow: auto;" class="tabcontent">
+                                            <div class="form-group">
+                                                <label class=" bold   col-sm-1  control-label" style="width:auto;">To Branch:</label>
+                                                <div class="col-sm-2 " id="">
+                                                    @if (Model.Mode == "Add")
+                                                    {
+                                                        @Html.TextBoxFor(x => x.BranchCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.BranchCode, @id = "SendToBRanch" })
+                                                    }
+                                                    else
+                                                    {
+                                                        @Html.TextBoxFor(x => x.BranchCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.BranchCode, @id = "SendToBRanch", @disabled = "disabled" })
+                                                    }
+                                                </div>
+                                                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="lstAll">Add Pod</button>
+
+                                            </div>
+                                            <div class="form-group">
+                                                <div class="grid" id="SelectedPODShow" style="overflow: auto;width: 100%;display: block !important;max-height:340px;min-height:340px; width:auto;">
+                                                    @Html.Partial("PODGrid", Model.PODSendList)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    }
+                                    else if (Model.Task == "File")
+                                    {
+                                        <div id="divLedgerTable1" style="height:300px;overflow: auto;" class="tabcontent">
+                                            <div class="form-group">
+                                                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="lstAll1">Add Pod</button>
+                                            </div>
+                                            <div class="form-group">
+                                                <div class="grid" id="SelectedPODShowFile" style="overflow: auto;width: 100%;display: block !important;max-height:340px;min-height:340px; width:auto;">
+                                                    @Html.Partial("PODGrid", Model.PODSendList)
+                                                </div>
+                                            </div>
+                                        </div> }
+                                    else
+                                    {
+                                        <div id="divLedgerTable2" style="height:300px;overflow: auto;" class="tabcontent">
+                                            <div class="form-group">
+                                                <label class=" bold   col-sm-1  control-label" style="width:auto;">To Branch:</label>
+                                                <div class="col-sm-2 " id="">
+                                                    @Html.TextBoxFor(x => x.CustoCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.CustoCode, @disabled = "disabled" })
+                                                </div>
+                                                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="lstAll2">Add Pod</button>
+
+                                            </div>
+                                            <div class="form-group">
+                                                <div class="grid" id="SelectedPODShowCust" style="overflow: auto;width: 100%;display: block !important;max-height:340px;min-height:340px; width:auto;">
+                                                    @Html.Partial("PODGrid", Model.PODSendList)
+                                                </div>
+                                            </div>
+                                        </div>}
+                                }
+
+
+
+
+                                <script>
+                                    function openCity(evt, cityName) {
+                                            debugger;
+                                            if (cityName =="divLedgerTable") {
+                                        $("#TaskOfPODSend").val("Branch");
+                                            } else if (cityName =="divLedgerTable1") {
+                                        $("#TaskOfPODSend").val("File");
+                                            } else {
+                                        $("#TaskOfPODSend").val("Customer");
+                                            }
+                                            var i, tabcontent, tablinks;
+                                            tabcontent = document.getElementsByClassName("tabcontent");
+                                            for (i = 0; i < tabcontent.length; i++) {
+
+                                                tabcontent[i].style.display = "none";
+                                            }
+                                            tablinks = document.getElementsByClassName("tablinks");
+                                            for (i = 0; i < tablinks.length; i++) {
+
+                                                tablinks[i].className = tablinks[i].className.replace(" active", "");
+                                            }
+                                            document.getElementById(cityName).style.display = "block";
+                                            evt.currentTarget.className += " active";
+                                        }
+                                    if ('@Model.Mode' == "Add")
+                                    {
+
+                                    document.getElementById("Branch").click();
+
+                                } else {
+                                    if ('@Model.Task' == "Branch") {
+                                        document.getElementById("Branch").click();
+                                    } else if ('@Model.Task' == "File"){
+                                        document.getElementById("File").click();
+                                    } else {
+                                        document.getElementById("Customer").click();
+                                    }
+                                }
+                                </script>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+
+
+
+
+</section>
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+
+            </div>
+        </div>
+        <div class="col-sm-offset-1 col-sm-2" style="">
+            <div class="pull-left">
+
+            </div>
+        </div>
+        <div class="col-sm-4" style="padding-right: 20px;">
+            <div class="pull-right">
+                @if (Model.Mode == "Delete")
+                {
+                    <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDeleteDoc">Delete</button>
+                    @*<button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete5">Delete</button>*@
+
+                }
+                else
+                {
+                    <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    @*<button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="SubmitClear">Save And Clear</button>*@
+                }
+                @*<button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Edit" onclick="EditEntry();"><i class="glyphicon glyphicon-edit" style="font-size: 2em;"></i><br /> Edit</button>*@
+                @*<button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete"><i class="glyphicon glyphicon-trash" style="font-size: 2em;"></i><br />Delete</button>*@
+                <a href="~/Logistics/PODSend/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+
+<!--View Modal -->
+<div class="example-modal">
+    <div id="updTfatsearch1" class="modal modal-default">
+        <div class="modal-dialog" style="width:1080px;">
+            <div id="updTfatsearchDiv1">
+                @*@Html.Partial("ImageView")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="GetLRLIst" style="margin-top:2%;width: 100%;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 3%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-2">
+                        <h4 class="modal-title">
+                            <b>Add POD</b>
+                        </h4>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="col-md-4" style="width: auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;">Unselect All :</label>
+                        </div>
+                        <div class="col-md-1">
+                            <input type="checkbox" tabindex="1" id="DeselectAll" style="height:20px;width:20px;" />
+                        </div>
+                        <div class="col-md-3">
+                            @*<label class=" bold control-label" style="margin-top: 5px;">Auto Retrive :</label>*@
+                        </div>
+                        <div class="col-md-1">
+                            @*<input type="checkbox" id="AutoRetrive" style="height:20px;width:20px;" />*@
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="col-md-2">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="text" id="Search" class="form-control" placeholder="Search Here" />
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div id="divLedgerTable1" style="height:440px;overflow: auto;">
+                    @*@Html.Partial("PodPendingListPartialView", Model.CurrentBranch)*@
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="example1" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="example1pager" style="height:32px;width:100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="form-group">
+                    <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                        <label class="col-sm-12 control-label" style="width:auto;color:black;">Rejected POD :</label>
+                        <svg width="20" height="20">
+                            <title>Rejected POD</title>
+                            @*<a onclick="SVGClear();">*@
+                            <rect width="20" height="20" style="fill:#bf6860;stroke-width:3;stroke:rgb(0,0,0)" />
+                            @*</a>*@
+                        </svg>
+                    </div>
+                    <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                        <label class="col-sm-12 control-label" style="width:auto;color:black;">Un-Authorise POD:</label>
+                        <svg width="20" height="20">
+                            <title>Un-Authorise POD</title>
+                            @*<a onclick="SVGComplete();">*@
+                            <rect width="20" height="20" style="fill:#5079d4;stroke-width:3;stroke:rgb(0,0,0)" />
+                            @*</a>*@
+                        </svg>
+                    </div>
+
+                </div>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnGetLc">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="GetLRLIstFile" style="margin-top:2%;width: 100%;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 3%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-2">
+                        <h4 class="modal-title">
+                            <b>Add POD</b>
+                        </h4>
+                    </div>
+                    <div class="col-md-4">
+                        @*<div class="col-md-4" style="width: auto;">
+                                <label class=" bold control-label" style="margin-top: 5px;">select All :</label>
+                            </div>
+                            <div class="col-md-1">
+                                <input type="checkbox" tabindex="1" id="FDUneselectAll" style="height:20px;width:20px;" />
+                            </div>*@
+                        <div class="col-md-4" style="width: auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;">select All :</label>
+                        </div>
+                        <div class="col-md-1">
+                            <input type="checkbox" tabindex="1" id="FDeselectAll" style="height:20px;width:20px;" />
+                        </div>
+
+                    </div>
+                    <div class="col-md-5">
+                        <div class="col-md-2">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="text" id="SearchFile" class="form-control" placeholder="Search Here" />
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div id="divLedgerTable1" style="height:440px;overflow: auto;">
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="example1File" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="example1Filepager" style="height:32px;width:100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="form-group">
+                    <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                        <label class="col-sm-12 control-label" style="width:auto;color:black;">Rejected POD :</label>
+                        <svg width="20" height="20">
+                            <title>Rejected POD</title>
+                            @*<a onclick="SVGClear();">*@
+                            <rect width="20" height="20" style="fill:#bf6860;stroke-width:3;stroke:rgb(0,0,0)" />
+                            @*</a>*@
+                        </svg>
+                    </div>
+                    <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                        <label class="col-sm-12 control-label" style="width:auto;color:black;">Un-Authorise POD:</label>
+                        <svg width="20" height="20">
+                            <title>Un-Authorise POD</title>
+                            @*<a onclick="SVGComplete();">*@
+                            <rect width="20" height="20" style="fill:#5079d4;stroke-width:3;stroke:rgb(0,0,0)" />
+                            @*</a>*@
+                        </svg>
+                    </div>
+
+                </div>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnGetLcFile">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="GetLRLIstCust" style="margin-top:2%;width: 100%;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 3%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-2">
+                        <h4 class="modal-title">
+                            <b>Add POD</b>
+                        </h4>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="col-md-4" style="width: auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;">Unselect All :</label>
+                        </div>
+                        <div class="col-md-1">
+                            <input type="checkbox" tabindex="1" id="CDeselectAll" style="height:20px;width:20px;" />
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="col-md-2">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="text" id="SearchCust" class="form-control" placeholder="Search Here" />
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div id="divLedgerTable1" style="height:440px;overflow: auto;">
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="example1Cust" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="example1Custpager" style="height:32px;width:100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="form-group">
+                    <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                        <label class="col-sm-12 control-label" style="width:auto;color:black;">Rejected POD :</label>
+                        <svg width="20" height="20">
+                            <title>Rejected POD</title>
+                            @*<a onclick="SVGClear();">*@
+                            <rect width="20" height="20" style="fill:#bf6860;stroke-width:3;stroke:rgb(0,0,0)" />
+                            @*</a>*@
+                        </svg>
+                    </div>
+                    <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                        <label class="col-sm-12 control-label" style="width:auto;color:black;">Un-Authorise POD:</label>
+                        <svg width="20" height="20">
+                            <title>Un-Authorise POD</title>
+                            @*<a onclick="SVGComplete();">*@
+                            <rect width="20" height="20" style="fill:#5079d4;stroke-width:3;stroke:rgb(0,0,0)" />
+                            @*</a>*@
+                        </svg>
+                    </div>
+
+                </div>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnGetLcCust">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+@*<div class="example-modal">
+        <div id="GetLRLIst" class="modal modal-primary" style="z-index:2500;">
+            <div class="modal-dialog" style="width:650px;">
+                <div id="ShowLRList">
+                </div>
+            </div>
+        </div>
+    </div>*@
+
+@*@Html.HiddenFor(x => x.RecordKey, new { @id = "DeliverLrRecordKey" })*@
+
+@Html.HiddenFor(x => x.Task, new { @id = "TaskOfPODSend" })
+
+
+
+
+
+<!--Consignment Multi Document Modal -->
+<div class="example-modal">
+    <div id="ConsignmentModels" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="consignmentmodels">
+            </div>
+        </div>
+    </div>
+</div>

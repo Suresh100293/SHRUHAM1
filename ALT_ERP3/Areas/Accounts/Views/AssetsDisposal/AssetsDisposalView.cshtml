@@ -1,0 +1,371 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AssetsDisposalVM
+@using Common;
+@{
+    ViewBag.Title = "Assets Disposal";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+
+        $('#AssetDisposal_DocDate').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadAssetID();
+        LoadBranch();
+        LoadStore();
+
+        @* iX9: Date Picker Code *@
+        $('#AssetDisposal_DocDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#AssetsDisposal').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                AssetDisposal_DocDate: {required: true,},
+                AssetDisposal_AssetID: {required: true,},
+                AssetDisposal_Branch: {required: true,},
+                AssetDisposal_Qty: {required: true,},
+                AssetDisposal_Qty2: {required: true,},
+               },
+            messages: {
+                AssetDisposal_DocDate: {required: 'DocDate is Required',},
+                AssetDisposal_AssetID: {required: 'AssetID is Required',},
+                AssetDisposal_Branch: {required: 'Branch is Required',},
+                AssetDisposal_Qty: {required: 'Qty is Required',},
+                AssetDisposal_Qty2: {required: 'Qty2 is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#AssetDisposal_AssetID").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#AssetDisposal_AssetValue").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetDisposal_Branch").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#AssetDisposal_Store").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetDisposal_Qty").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetDisposal_Qty2").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#AssetsDisposal").validate().form() == false)
+            //    return;
+
+            if ($("#AssetDisposal_AssetID").val() == null || $("#AssetDisposal_AssetID").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('AssetID is Required..');
+                return;
+            }
+            if ($("#AssetDisposal_Branch").val() == null || $("#AssetDisposal_Branch").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Branch is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["AssetDisposal_Srl"] = $("#AssetDisposal_Srl").val();
+            ModelData["DocDateVM"] = $("#AssetDisposal_DocDate").val();
+            ModelData["AssetDisposal_AssetID"] = $("#AssetDisposal_AssetID").val();
+            ModelData["AssetDisposal_AssetValue"] = $("#AssetDisposal_AssetValue").val();
+            ModelData["AssetDisposal_Branch"] = $("#AssetDisposal_Branch").val();
+            ModelData["AssetDisposal_Store"] = $("#AssetDisposal_Store").val();
+            ModelData["AssetDisposal_Qty"] = $("#AssetDisposal_Qty").val();
+            ModelData["AssetDisposal_Qty2"] = $("#AssetDisposal_Qty2").val();
+            ModelData["AssetDisposal_Reason"] = $("#AssetDisposal_Reason").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadAssetID() {
+        var url = '@Url.Action("AutoCompleteAssetID")'
+        $('#AssetDisposal_AssetID').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetDisposal_AssetID', text: '@Model.AssetIDName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadBranch() {
+        var url = '@Url.Action("AutoCompleteBranch")'
+        $('#AssetDisposal_Branch').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetDisposal_Branch', text: '@Model.BranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadStore() {
+        var url = '@Url.Action("AutoCompleteStore")'
+        $('#AssetDisposal_Store').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetDisposal_Store', text: '@Model.StoreName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="AssetsDisposal" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Doc. Serial:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetDisposal_Srl, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "AssetDisposal_Srl", @readonly = "readonly", @Id = "AssetDisposal_Srl" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Doc. Date:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.DocDateVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "AssetDisposal_DocDate", @id = "AssetDisposal_DocDate", @Value = Model.AssetDisposal_DocDate.ToString("dd/MM/yyyy") })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">AssetID:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetDisposal_AssetID, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetDisposal_AssetID", @Name = "AssetDisposal_AssetID" })
+                </div>
+                <label class="col-sm-1 control-label">Asset Value:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetDisposal_AssetValue, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "AssetDisposal_AssetValue", @Id = "AssetDisposal_AssetValue" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Branch:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetDisposal_Branch, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetDisposal_Branch", @Name = "AssetDisposal_Branch" })
+                </div>
+                <label class="col-sm-1 control-label">Store:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetDisposal_Store, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetDisposal_Store", @Name = "AssetDisposal_Store" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Quantity:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetDisposal_Qty, new { @maxlength = "10", @class = "form-control", @Name = "AssetDisposal_Qty", @Id = "AssetDisposal_Qty" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Qty-2:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetDisposal_Qty2, new { @maxlength = "10", @class = "form-control", @Name = "AssetDisposal_Qty2", @Id = "AssetDisposal_Qty2" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Reason:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetDisposal_Reason, new { @maxlength = "10", @class = "form-control", @Name = "AssetDisposal_Reason", @Id = "AssetDisposal_Reason" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Sat 02-Mar-2019 12:37 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 11
+    by Team Shruham Software *@
+
+

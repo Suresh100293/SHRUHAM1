@@ -1,0 +1,1024 @@
+﻿@model ALT_ERP3.Models.UserProfileVM
+@using Common;
+@{
+    ViewBag.Title = "User Profile";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+<style>
+    .multiselect-container {
+        width: 100% !important;
+    }
+
+    .multiselect {
+        width: 340px !important;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        if ('@Model.FreightMemoQueryBranch' == "true" || '@Model.FreightMemoQueryBranch' == "True") {
+            $("#FMTUSERBRANCH").prop("checked", true);
+            $("#FMTALLBRANCH").prop("checked", false);
+        }
+        else
+        {
+            $("#FMTUSERBRANCH").prop("checked", false);
+            $("#FMTALLBRANCH").prop("checked", true);
+        }
+        if ('@Model.ConsignmenyQueryBranch' == "true" || '@Model.ConsignmenyQueryBranch' == "True")
+        {
+            $("#CTUSERBRANCH").prop("checked", true);
+            $("#CTALLBRANCH").prop("checked", false);
+        }
+        else
+        {
+            $("#CTUSERBRANCH").prop("checked", false);
+            $("#CTALLBRANCH").prop("checked", true);
+        }
+
+        GetMyFavorites('@Model.ViewDataId');
+        FillTreeView();
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        $('#TfatPass_Expiry').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadUserRole();
+        LoadDept();
+        LoadLanguage();
+        LoadAssistant();
+        LoadDefaultLoginBranch();
+
+        var values = $('#ChildUsers').val();
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $("#ChildUser option[value='" + e + "']").prop("selected", true);
+            });
+        }
+        $("#ChildUser").change(function () {
+            $('#ChildUsers').val('');
+            var selected = [];
+            $("#ChildUser :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#ChildUsers').val(selected)
+            return false;
+        });
+        //$('#ChildUser').multiselect({ includeSelectAllOption: true })
+        $('#ChildUser').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select User',
+        })
+
+        @* iX9: Multi-Select Controls *@
+        //var values = $('#hdnAppBranch').val();
+        //$("#hdnAppBranchArray").val(values);
+        //if (values == "") {
+        //}
+        //else {
+        //    $.each(values.split(","), function (i, e) {
+        //    $(".AppBranchlistbox option[value='" + e + "']").prop("selected", true);
+        //    });
+        //}
+        //$(".AppBranchlistbox").change(function () {
+        //    $('#hdnAppBranchArray').val('');
+        //    var selected = [];
+        //    $(".AppBranchlistbox :selected").each(function () {
+        //        selected.push($(this).val());
+        //    });
+        //    $('#hdnAppBranchArray').val(selected)
+        //    return false;
+        //});
+        //$('.AppBranchlistbox').multiselect({ includeSelectAllOption: true })
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatPass_GridRows').val('@Model.TfatPass_GridRows').attr("selected", "selected");
+        @* iX9: Date Picker Code *@
+        $('#TfatPass_Expiry').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#UserProfile').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TfatPass_Code: {required: true,},
+                TfatPass_AppBranch: {required: true,},
+                TfatPass_Name: {required: true,},
+               },
+            messages: {
+                TfatPass_Code: {required: 'Code is Required',},
+                TfatPass_AppBranch: {required: 'AppBranch is Required',},
+                TfatPass_Name: {required: 'Name is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#TfatPass_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatPass_GridRows").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatPass_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatPass_MinItem").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatPass_MinAcc").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatPass_MinOthers").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatPass_Dept").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatPass_Language").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatPass_SMTPPort").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#UserProfile").validate().form() == false)
+            //    return;
+
+            if ($("#TfatPass_Code").val() == null || $("#TfatPass_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('User ID is Required..');
+                return;
+            }
+            var BranchList = "";
+            $('#treeviewcontrol').each(function () {
+                $(this).find('li').each(function () {
+                    var current = $(this);
+                    if (current.hasClass("jstree-checked")) {
+                        BranchList += current.context.id + ",";
+                    }
+                });
+            });
+            BranchList = BranchList.substr(0, BranchList.length - 1);
+            if (BranchList == '' || BranchList == null) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('App.Branch is Required..');
+                return;
+            }
+            //if ($("#TfatPass_AppBranch").val() == null || $("#TfatPass_AppBranch").val() == '')
+            //{
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('App.Branch is Required..');
+            //    return;
+            //}
+            if ($("#TfatPass_Name").val() == null || $("#TfatPass_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["TfatPass_Mobile"] = $("#TfatPass_Mobile").val();
+            ModelData["TfatPass_Code"] = $("#TfatPass_Code").val();
+            ModelData["ChildUsers"] = $('#ChildUsers').val();
+            ModelData["TfatPass_AppBranch"] = BranchList;
+            ModelData["TfatPass_GridRows"] = $("#TfatPass_GridRows").val();
+            ModelData["TfatPass_CorpID"] = $("#TfatPass_CorpID").val();
+            ModelData["TfatPass_Email"] = $("#TfatPass_Email").val();
+            ModelData["TfatPass_Name"] = $("#TfatPass_Name").val();
+            ModelData["TfatPass_MinItem"] = $("#TfatPass_MinItem").val();
+            ModelData["TfatPass_PrintControl"] = $("#TfatPass_PrintControl").is(':checked');
+            ModelData["TfatPass_IsHead"] = $("#TfatPass_IsHead").is(':checked');
+            ModelData["TfatPass_MinAcc"] = $("#TfatPass_MinAcc").val();
+            ModelData["TfatPass_Telephone"] = $("#TfatPass_Telephone").val();
+            ModelData["TfatPass_Hide"] = $("#TfatPass_Hide").is(':checked');
+            ModelData["TfatPass_Locked"] = $("#TfatPass_Locked").is(':checked');
+            ModelData["TfatPass_DontChangePassword"] = $("#TfatPass_DontChangePassword").is(':checked');
+            ModelData["TfatPass_MinOthers"] = $("#TfatPass_MinOthers").val();
+            ModelData["TfatPass_UserRole"] = $("#TfatPass_UserRole").val();
+            ModelData["TfatPass_DashboardActive"] = $("#TfatPass_DashboardActive").is(':checked');
+            ModelData["TfatPass_LogIns"] = $("#TfatPass_LogIns").val();
+            ModelData["TfatPass_POPServer"] = $("#TfatPass_POPServer").val();
+            ModelData["TfatPass_ExpiryVM"] = $("#TfatPass_Expiry").val();
+            ModelData["TfatPass_PassWords"] = $("#TfatPass_PassWords").val();
+            ModelData["TfatPass_SMTPServer"] = $("#TfatPass_SMTPServer").val();
+            ModelData["TfatPass_Dept"] = $("#TfatPass_Dept").val();
+            ModelData["TfatPass_PassRead"] = $("#TfatPass_PassRead").val();
+            ModelData["TfatPass_Language"] = $("#TfatPass_Language").val();
+            ModelData["TfatPass_DailyPassword"] = $("#TfatPass_DailyPassword").is(':checked');
+            ModelData["TfatPass_SMTPUser"] = $("#TfatPass_SMTPUser").val();
+            ModelData["TfatPass_RecMsg"] = $("#TfatPass_RecMsg").is(':checked');
+            ModelData["TfatPass_Sun"] = $("#TfatPass_Sun").is(':checked');
+            ModelData["TfatPass_RecSMS"] = $("#TfatPass_RecSMS").is(':checked');
+            ModelData["TfatPass_SMTPPassword"] = $("#TfatPass_SMTPPassword").val();
+            ModelData["TfatPass_Assistant"] = $("#TfatPass_Assistant").val();
+            ModelData["DefaultLoginBranch"] = $("#DefaultLoginBranch").val();
+            ModelData["TfatPass_Mon"] = $("#TfatPass_Mon").is(':checked');
+            ModelData["TfatPass_Tue"] = $("#TfatPass_Tue").is(':checked');
+            ModelData["TfatPass_Photograph"] = $("#TfatPass_Photograph").val();
+            ModelData["TfatPass_SMTPPort"] = $("#TfatPass_SMTPPort").val();
+            ModelData["TfatPass_Wed"] = $("#TfatPass_Wed").is(':checked');
+            ModelData["TfatPass_Thu"] = $("#TfatPass_Thu").is(':checked');
+            ModelData["TfatPass_Signature"] = $("#TfatPass_Signature").val();
+            ModelData["TfatPass_Fri"] = $("#TfatPass_Fri").is(':checked');
+            ModelData["TfatPass_Sat"] = $("#TfatPass_Sat").is(':checked');
+            ModelData["TfatPass_StrictIP"] = $("#TfatPass_StrictIP").val();
+            ModelData["FreightMemoQueryBranch"] = $("#FMTUSERBRANCH").is(':checked');
+            ModelData["ConsignmenyQueryBranch"] = $("#CTUSERBRANCH").is(':checked');
+
+            var myLederArray = [];
+            $("input:checkbox[class=CPanel]:checked").each(function () {
+                var myDets = {
+                    Code: $(this).attr("id"),
+                    Check: true,
+                }
+                myLederArray.push(myDets);
+            });
+            ModelData["ConsignmentPanels"] = myLederArray;
+            myLederArray = [];
+            $("input:checkbox[class=FMPanel]:checked").each(function () {
+                var myDets = {
+                    Code: $(this).attr("id"),
+                    Check: true,
+                }
+                myLederArray.push(myDets);
+            });
+            ModelData["FreightMemoPanels"] = myLederArray;
+
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadUserRole() {
+        var url = '@Url.Action("AutoCompleteUserRole")'
+        $('#TfatPass_UserRole').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatPass_UserRole', text: '@Model.UserRoleName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadDept() {
+        var url = '@Url.Action("AutoCompleteDept")'
+        $('#TfatPass_Dept').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatPass_Dept', text: '@Model.DeptName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadLanguage() {
+        var url = '@Url.Action("AutoCompleteLanguage")'
+        $('#TfatPass_Language').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatPass_Language', text: '@Model.LanguageName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadAssistant() {
+        var url = '@Url.Action("AutoCompleteAssistant")'
+        $('#TfatPass_Assistant').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatPass_Assistant', text: '@Model.AssistantName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadDefaultLoginBranch() {
+        var url = '@Url.Action("SetDefaultBranch")'
+        $('#DefaultLoginBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        UserId: $("#TfatPass_Code").val(),
+                        Mode:'@Model.Mode'
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DefaultLoginBranch', text: '@Model.DefaultLoginBranchN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;margin-top:0%;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="UserProfile" role="form" style="margin-top:0%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Headers *@
+            <div class="tab">
+                <button class="tablinks" onclick="OpenTab(event, 'divGeneral')" id="FirstTab">General</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divLogins')">Logins</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divMailing')">Mailing</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divPreferences')">Preferences</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divAppBranch')">Area Access</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divQuery')" style="width:130px;">Tracking Access</button>
+            </div>
+            @* iX9: Tab Body Panels *@
+            <div id="divGeneral" style="overflow-x:hidden;overflow-y:auto;height:450px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">User ID:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.TfatPass_Code, new { @maxlength = "15", @readonly = "readonly", @class = "form-control", @Name = "TfatPass_Code", @Value = Model.TfatPass_Code, @Id = "TfatPass_Code" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.TfatPass_Code, new { @maxlength = "15", @class = "form-control", @Name = "TfatPass_Code", @Value = Model.TfatPass_Code, @Id = "TfatPass_Code" })
+                        }
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Name:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Name, new { @maxlength = "40", @class = "form-control", @Name = "TfatPass_Name", @Value = Model.TfatPass_Name, @Id = "TfatPass_Name" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">IsHead:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_IsHead, new { @value = Model.TfatPass_IsHead, @id = "TfatPass_IsHead", @name = "TfatPass_IsHead", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Head Of (Users):</label>
+                    <div class="col-sm-3">
+                        @Html.ListBoxFor(x => Model.Users, Model.UserList, new { @class = "ChildUser", @id = "ChildUser", @style = "margin-left:10% !important;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">User Role:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_UserRole, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatPass_UserRole", @Value = Model.TfatPass_UserRole, @Name = "TfatPass_UserRole" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Dept:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Dept, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatPass_Dept", @Value = Model.TfatPass_Dept, @Name = "TfatPass_Dept" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Language:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Language, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatPass_Language", @Value = Model.TfatPass_Language, @Name = "TfatPass_Language" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Assistant:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Assistant, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatPass_Assistant", @Value = Model.TfatPass_Assistant, @Name = "TfatPass_Assistant" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Default Login Branch:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DefaultLoginBranch, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DefaultLoginBranch", @Value = Model.DefaultLoginBranch, @Name = "DefaultLoginBranch" })
+                    </div>
+                </div>
+                <div class="form-group" style="display:none;">
+                    <label class="col-sm-1 control-label">Photograph:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Photograph, new { @maxlength = "150", @class = "form-control", @Name = "TfatPass_Photograph", @Value = Model.TfatPass_Photograph, @Id = "TfatPass_Photograph" })
+                    </div>
+                </div>
+                <div class="form-group" style="display:none;">
+                    <label class="col-sm-1 control-label">Signature:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Signature, new { @maxlength = "150", @class = "form-control", @Name = "TfatPass_Signature", @Value = Model.TfatPass_Signature, @Id = "TfatPass_Signature" })
+                    </div>
+                </div>
+            </div>
+            <div id="divLogins" style="overflow-x:hidden;overflow-y:auto;height:450px;" class="tabcontent">
+                @*<div class="form-group">
+                        <label class="col-sm-1 control-label">App.Branch:</label>
+                        <div class="col-sm-3">
+                            @Html.ListBoxFor(x => x.AppBranchItemX, Model.AppBranchMultiX, new { @class = "AppBranchlistbox", @id = "TfatPass_AppBranch" })
+                        </div>
+                    </div>*@
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Corporate ID:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_CorpID, new { @maxlength = "10", @class = "form-control", @Name = "TfatPass_CorpID", @Value = Model.TfatPass_CorpID, @Id = "TfatPass_CorpID" })
+                    </div>
+                    <label class="col-sm-1 control-label">Active Print Control?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_PrintControl, new { @value = Model.TfatPass_PrintControl, @id = "TfatPass_PrintControl", @name = "TfatPass_PrintControl", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Mark InActive:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Hide, new { @value = Model.TfatPass_Hide, @id = "TfatPass_Hide", @name = "TfatPass_Hide", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Lock Login:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Locked, new { @value = Model.TfatPass_Locked, @id = "TfatPass_Locked", @name = "TfatPass_Locked", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Dont Change Password:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_DontChangePassword, new { @value = Model.TfatPass_DontChangePassword, @id = "TfatPass_DontChangePassword", @name = "TfatPass_DontChangePassword", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">No.of Logins:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_LogIns, new { @maxlength = "4", @class = "form-control", @Name = "TfatPass_LogIns", @Value = Model.TfatPass_LogIns, @Id = "TfatPass_LogIns" })
+                    </div>
+                    <label class="col-sm-1 control-label">Login Expiry:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_ExpiryVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "TfatPass_Expiry", @id = "TfatPass_Expiry", @Value = Model.TfatPass_Expiry.ToString("dd/MM/yyyy") })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Login Password:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_PassWords, new { @maxlength = "150", @class = "form-control", @Name = "TfatPass_PassWords", @Value = Model.TfatPass_PassWords, @Id = "TfatPass_PassWords" })
+                    </div>
+                    <label class="col-sm-1 control-label">Readonly Password:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_PassRead, new { @maxlength = "150", @class = "form-control", @Name = "TfatPass_PassRead", @Value = Model.TfatPass_PassRead, @Id = "TfatPass_PassRead" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Daily Password?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_DailyPassword, new { @value = Model.TfatPass_DailyPassword, @id = "TfatPass_DailyPassword", @name = "TfatPass_DailyPassword", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">working days</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Sun:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Sun, new { @value = Model.TfatPass_Sun, @id = "TfatPass_Sun", @name = "TfatPass_Sun", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Mon:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Mon, new { @value = Model.TfatPass_Mon, @id = "TfatPass_Mon", @name = "TfatPass_Mon", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Tue:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Tue, new { @value = Model.TfatPass_Tue, @id = "TfatPass_Tue", @name = "TfatPass_Tue", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Wed:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Wed, new { @value = Model.TfatPass_Wed, @id = "TfatPass_Wed", @name = "TfatPass_Wed", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Thu:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Thu, new { @value = Model.TfatPass_Thu, @id = "TfatPass_Thu", @name = "TfatPass_Thu", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Fri:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Fri, new { @value = Model.TfatPass_Fri, @id = "TfatPass_Fri", @name = "TfatPass_Fri", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Sat:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_Sat, new { @value = Model.TfatPass_Sat, @id = "TfatPass_Sat", @name = "TfatPass_Sat", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">StrictIP:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_StrictIP, new { @maxlength = "50", @class = "form-control", @Name = "TfatPass_StrictIP", @Value = Model.TfatPass_StrictIP, @Id = "TfatPass_StrictIP" })
+                    </div>
+                </div>
+            </div>
+            <div id="divMailing" style="overflow-x:hidden;overflow-y:auto;height:450px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Mobile:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Mobile, new { @maxlength = "35", @class = "form-control", @Name = "TfatPass_Mobile", @Value = Model.TfatPass_Mobile, @Id = "TfatPass_Mobile" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Email:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Email, new { @maxlength = "50", @class = "form-control", @Name = "TfatPass_Email", @Value = Model.TfatPass_Email, @Id = "TfatPass_Email" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Password:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_SMTPPassword, new { @maxlength = "25", @class = "form-control", @Name = "TfatPass_SMTPPassword", @Value = Model.TfatPass_SMTPPassword, @Id = "TfatPass_SMTPPassword" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Telephone:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_Telephone, new { @maxlength = "15", @class = "form-control", @Name = "TfatPass_Telephone", @Value = Model.TfatPass_Telephone, @Id = "TfatPass_Telephone" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">POP Server:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_POPServer, new { @maxlength = "50", @class = "form-control", @Name = "TfatPass_POPServer", @Value = Model.TfatPass_POPServer, @Id = "TfatPass_POPServer" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">SMTP Server:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_SMTPServer, new { @maxlength = "50", @class = "form-control", @Name = "TfatPass_SMTPServer", @Value = Model.TfatPass_SMTPServer, @Id = "TfatPass_SMTPServer" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">SMTP User:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatPass_SMTPUser, new { @maxlength = "50", @class = "form-control", @Name = "TfatPass_SMTPUser", @Value = Model.TfatPass_SMTPUser, @Id = "TfatPass_SMTPUser" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">SMTP Port:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatPass_SMTPPort, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatPass_SMTPPort", @Value = Model.TfatPass_SMTPPort, @Id = "TfatPass_SMTPPort" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+            </div>
+            <div id="divPreferences" style="overflow-x:hidden;overflow-y:auto;height:450px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Show Grid Rows:</label>
+                    <div class="col-sm-1">
+                        @Html.DropDownListFor(m => m.TfatPass_GridRows, Model.GridRowsList, new { @class = "form-control", @Id = "TfatPass_GridRows", @Name = "TfatPass_GridRows", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Min. Chars for Item List:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatPass_MinItem, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatPass_MinItem", @Value = Model.TfatPass_MinItem, @Id = "TfatPass_MinItem" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Min. Chars for Acc List:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatPass_MinAcc, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatPass_MinAcc", @Value = Model.TfatPass_MinAcc, @Id = "TfatPass_MinAcc" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Min. Chars for All List:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatPass_MinOthers, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatPass_MinOthers", @Value = Model.TfatPass_MinOthers, @Id = "TfatPass_MinOthers" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Dashboard Active?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_DashboardActive, new { @value = Model.TfatPass_DashboardActive, @id = "TfatPass_DashboardActive", @name = "TfatPass_DashboardActive", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Receive Msg?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_RecMsg, new { @value = Model.TfatPass_RecMsg, @id = "TfatPass_RecMsg", @name = "TfatPass_RecMsg", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Receive SMS:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatPass_RecSMS, new { @value = Model.TfatPass_RecSMS, @id = "TfatPass_RecSMS", @name = "TfatPass_RecSMS", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            <div id="divAppBranch" style="overflow-x:hidden;overflow-y:auto;height:450px;" class="tabcontent">
+                <div class="form-group">
+
+                    <div class="col-sm-6">
+                        <div id="treeviewcontrol" style=" min-height:400px;overflow-y:auto;max-height:400px;position: relative;"></div>
+
+                    </div>
+                </div>
+            </div>
+            <div id="divQuery" style="overflow-x:hidden;overflow-y:auto;height:450px;" class="tabcontent">
+                <div class="form-group">
+                    
+                    <div class="col-sm-4" style="border: 1px solid;margin-left: 15px;height:430px;overflow-x:hidden;overflow-y:auto;">
+                        <div class="form-group">
+                            <label class="col-sm-12 control-label" style="color:#0e5a9d;text-align: center;font-size: 12px;font-weight: bold;">CONSIGNMENT TRACKING</label>
+                        </div>
+                        <div class="form-group " style="">
+                            <label class=" bold   col-sm-4 control-label">Branch :</label>
+                            <div class="col-sm-8" style="display: flex;">
+                                <input type="radio" class="form-control" name="CTBranch" id="CTUSERBRANCH"  title="Consignment Show Only User Branch..." value="TR" style="height:20px;width:35px;"><label class=" bold control-label"> User Branch</label>
+                                <input type="radio" class="form-control" name="CTBranch" id="CTALLBRANCH"   title="Consignment Show Of All Branch..."    value="No" style="height:20px;width:35px;"><label class=" bold control-label"> All Branch</label>
+                            </div>
+                        </div>
+                        @foreach (var item in Model.ConsignmentPanels)
+                        {
+                            <div class="form-group">
+                                <label class="col-sm-4 control-label" style="font-size: 12px;font-weight: bold;">@item.Name:</label>
+                                <div class="col-sm-4">
+                                    @Html.CheckBoxFor(x => item.Check, new { @value = item.Check, @id = item.Code, @class = "CPanel", @name = "CPanel", @style = "height:18px;width:20px;" })
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <div class="col-sm-4" style="border: 1px solid;margin-left: 15px;height:430px;overflow-x:hidden;overflow-y:auto;">
+                        <div class="form-group">
+                            <label class="col-sm-12 control-label" style="color:#0e5a9d;text-align: center;font-size: 12px;font-weight: bold;">FREIGHT MEMO TRACKING</label>
+                        </div>
+                        <div class="form-group " style="">
+                            <label class=" bold   col-sm-5 control-label">Branch :</label>
+                            <div class="col-sm-7" style="display: flex;">
+                                <input type="radio" class="form-control" name="FMTBranch" id="FMTUSERBRANCH" title="Freight Memo Show Only User Branch..." value="TR" style="height:20px;width:35px;"><label class=" bold control-label"> User Branch</label>
+                                <input type="radio" class="form-control" name="FMTBranch" id="FMTALLBRANCH"  title="Freight Memo Show Of All Branch..."    value="No" style="height:20px;width:35px;"><label class=" bold control-label"> All Branch</label>
+                            </div>
+                        </div>
+                        @foreach (var item in Model.FreightMemoPanels)
+                        {
+                            <div class="form-group">
+                                <label class="col-sm-5 control-label" style="font-size: 12px;font-weight: bold;">@item.Name:</label>
+                                <div class="col-sm-4">
+                                    @Html.CheckBoxFor(x => item.Check, new { @value = item.Check, @id = item.Code,@class= "FMPanel", @name = "FMPanel", @style = "height:18px;width:20px;" })
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                </div>
+
+
+
+
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            <script>
+                function FillTreeView() {
+        var Document = $("#Document").val();
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/UserProfile/TreeView?Mode=@Model.Mode&Document=" + Document,
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+        });
+
+    }
+    function CheckUncheckTree(check) {
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/UserProfile/CheckUncheckTree?Check=" + check,
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+        });
+
+    }
+                function OpenTab(evt, tabName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(tabName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                }
+                document.getElementById("FirstTab").click();
+            </script>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="hdnAppBranchArray" />
+@Html.HiddenFor(x => x.TfatPass_AppBranch, new { @id = "hdnAppBranch" })
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Fri 09-Aug-2019 12:06 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 49
+    by Team Suchan, T.FAT *@
+
+@Html.HiddenFor(x => x.ChildUsers, new { @id = "ChildUsers" })

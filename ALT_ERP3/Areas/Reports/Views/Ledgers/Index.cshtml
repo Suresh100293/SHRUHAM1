@@ -1,0 +1,1686 @@
+﻿@model GridOption
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<head>
+    <script type="text/javascript" src="~/Content/js/chart-js/Chart.min.js"></script>
+</head>
+<script type="text/javascript">
+    var mvalues;
+    var mmth;
+    var mcurrentrow=-1;
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        //if ($("#hdntabformat").val() != null && $("#hdntabformat").val() != "") {
+        //    $("#viewcode").val($("#hdntabformat").val());
+        //} else {
+        $("#viewcode").val('@Model.ViewDataId');
+        $("#hdntabformat").val('@Model.ViewDataId');
+        $("#hdnformatname").val($("#hdntabformat").val());
+        //}
+        LoadAccount();
+        var mheight = $(window).innerHeight() - 150;
+        $('#tabInfo').height(mheight);
+        $('#tabLedger').height(mheight);
+        $('#tabMthSummary').height(mheight);
+        $('#tabDailySummary').height(mheight);
+        $('#tabSales').height(mheight);
+        $('#tabOrders').height(mheight);
+        $('#tabInventory').height(mheight);
+        $('#tabOSAgeing').height(mheight);
+        $('#ParaDialog').modal('show');
+        //$('#acledger').jqGrid('clearGridData');
+        //$("#acledger").jqGrid("GridUnload");
+        //$('#acledger').trigger('reloadGrid');
+        //GridReload();
+    });
+
+    $(document).on('keydown', function (e) {
+        if (e.ctrlKey && e.altKey) {
+            //if (e.which == 76 || e.which == 108) {          // L
+            //    window.open("/Reports/Ledgers/Index?Document=&ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=&ToDate=&LocationCode=100001", '_blank');
+            //} else if (e.which == 66 || e.which == 98) {    // B
+            //    window.open("/Reports/BalanceSheet?ViewDataId=BalanceSheet&MainType=BS&Module=Finance&optiontype=R&optioncode=StandardBS&Header=Balance%20Sheet%20%28Standard%29&Controller2=BalanceSheet", '_blank');
+            //} else if (e.which == 79 || e.which == 111) {   // O
+            //    window.open("/Reports/ReportCentrePlus?ViewDataId=StockStateBasicAdvanced&Module=Inventory&TableName=Stock&optiontype=R&optioncode=StockStatementsValuations&Header=Item%20wise%20Stock%20Statements%20%2F%20Valuations&Controller2=ReportCentrePlus", '_blank');
+            //} else
+            if (mcurrentrow > 0) {
+                var selecteddocument = $('#acledger').jqGrid('getCell', mcurrentrow, 'Document');
+                if (e.which == 86 || e.which == 118) {   // V for Edit
+                    GetURL(selecteddocument);
+                } else if (e.which == 68 || e.which == 100) {   // D
+                    GetURL('%' + selecteddocument);
+                } else if (e.which == 73 || e.which == 105) {
+                    var mviewcode = "SubGrid-ItemDetails";
+                    // HO0000ISL00XX000123
+                    document.getElementById("headercaptionx").innerHTML = "Items used in: " + selecteddocument.substring(6, 11) + "-" + selecteddocument.substring(13);
+                    $('#hdnSelectIdOnCtrlV').val(selecteddocument);
+                    $('#hdnViewCtrlV').val(mviewcode);
+                    $("#displaylistmodal").modal('show');
+                    $('#DisplayList').jqGrid('clearGridData');
+                    $('#DisplayList').jqGrid("GridUnload");
+                    $('#DisplayList').trigger('reloadGrid');
+                    gridListReload();
+                }
+            }
+        }
+    });
+
+    // reportprintoptions
+    function clickPrint() {
+        var mop=$('#openb').val();
+        var mmop=mop;
+        var x=mop.indexOf(" ");
+        if (x!=0){
+            mop=mop.substring(0,x);
+            if (mmop.indexOf("Cr")!=-1){
+                mop=mop*-1;
+            }
+        }
+        var mx = mop + ""; // "" is used to convert the variable to string, but still it doesnt work effectively
+        if (mx.indexOf(',') != -1) {
+            mx = mx.replace(',', '');
+        }
+
+        var mclose = $('#closeb').val();
+        var mmclose = mclose;
+        var x = mclose.indexOf(" ");
+        if (x != 0) {
+            mclose= mclose.substring(0, x);
+            if (mmclose.indexOf("Cr") != -1) {
+                mclose = mclose * -1;
+            }
+        }
+        var mxc = mclose + ""; // "" is used to convert the variable to string, but still it doesnt work effectively
+        if (mxc.indexOf(',') != -1) {
+            mxc = mxc.replace(',', '');
+        }
+        $("#hiddenvalues").val($('#Account').val());
+        $("#hdnparastring").val("&Closing=" + mxc + "&Opening=" + mx + "&mRunning=true&mParaString=Code^" + $('#Account').val() + "&Code=" + $('#Account').val());
+        $('#dialogprint').modal('show');
+    };
+
+    function clickRefresh() {
+        $('#acledger').jqGrid('clearGridData');
+        $("#acledger").jqGrid("GridUnload");
+        $('#acledger').trigger('reloadGrid');
+        GridReload();
+    }
+
+    @*function GetURL(mdocument) {
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        //var mURL = '@Url.Action("GetURL")?mDate=' + mDate + '&mdocument=' + mdocument;
+        var mURL = '@Url.Action("GetURL")?mdocument=' + mdocument;
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $('.spinner').hide();
+                if (result.url != "") {
+                    window.open(result.url, '_blank');
+                } else {
+                    alert("Error! Can't Zoom into the Transaction!");
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };*@
+
+    function LoadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Text, id: item.Value }
+                        })
+                    };
+                }
+            },
+            //initSelection: function (element, callback) {
+            //    var elementText = $(element).attr('data-init-text');
+            //    xcallback({ "term": elementText });
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Document', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    // reportprintoptions
+    function GetEmail() {
+          $.ajax({
+            url: "/Base/GetEmail",
+            data: {
+              mcode: $('#Account').val()
+            },
+            success: function( result ) {
+            $('#emailid').val(result.data);
+            }
+          });
+    }
+
+    //function getdate(mthserial) {
+    //    var mstr = $('#Fromdate').val();
+    //    var mdate = new Date(mstr.substring(6, 10) + "-" + mstr.substring(3, 5) + "-1");
+    //    mdate.setDate(mdate.getDate() + (31 * (mthserial-1)));
+    //    return new Date(mdate.getFullYear(), mdate.getMonth(), 1).getTime();
+    //}
+
+    function GridReload() {
+        event.preventDefault();
+        // reportprintoptions
+        GetEmail();
+        $("#hiddenvalues").val($('#Account').val());
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&Code=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                var minfox = obj[4].split("|");
+                $('#openb').val(minfox[0]);
+                $('#closeb').val(minfox[1]);
+                $('#tcredit').val(minfox[2]);
+                $('#tdebit').val(minfox[3]);
+                var minfo = obj[5].split('|');
+                $('#acname').val(minfo[0]);
+                $('#acgroup').val(minfo[1]);
+                $('#acperson').val(minfo[2]);
+                //$('#acbalance').val(minfo[10]);
+                //$('#acsalesrec').val(minfo[11]);
+                $('#acgstno').val(minfo[4]);
+                $('#acrank').val(minfo[9]);
+                $('#accrlimit').val(minfo[7]);
+                $('#accrdays').val(minfo[8]);
+                $('#acaddress').val(minfo[3]);
+                $('#acmobile').val(minfo[5]);
+                $('#acemail').val(minfo[6]);
+                mvalues = minfo[10].split(",");
+                $('.balancespark').sparkline(mvalues, { type: 'line', lineColor: 'darkorange', height: '75px', width: '450px' });
+                var msales = minfo[11].split(",");
+                var mrec = minfo[12].split(",");
+                var mnetarray = [[msales[0], mrec[0]], [msales[1], mrec[1]], [msales[2], mrec[2]], [msales[3], mrec[3]], [msales[4], mrec[4]], [msales[5], mrec[5]], [msales[6], mrec[6]], [msales[7], mrec[7]], [msales[8], mrec[8]], [msales[9], mrec[9]], [msales[10], mrec[10]], [msales[11], mrec[11]]];
+                $('.acsalesrec').sparkline(mnetarray, { type: 'bar', barWidth: '35px', height: '75px', width: '450px' });
+
+                mmth = obj[6].split(','); // used in monthly summary
+
+                //var mmth = obj[7].split(',');
+                //// line chart - flot charts
+                ////var data = [[mmth[0], mvalues[0]], [mmth[1], mvalues[1]], [mmth[2], mvalues[2]], [mmth[3], mvalues[3]], [mmth[4], mvalues[4]], [mmth[5], mvalues[5]], [mmth[6], mvalues[6]], [mmth[7], mvalues[7]], [mmth[8], mvalues[8]], [mmth[9], mvalues[9]], [mmth[10], mvalues[10]], [mmth[11], mvalues[11]]];
+                ////var dataset = [{ data: mvalues }];
+                ////var options = { series: { lines: { show: true }, points: { radius: 3, show: true } } };
+                ////var mwidth = $(window).innerWidth() * 8 / 12;
+                ////document.getElementById("mthchart").width = mwidth;
+                ////$('#mthchart').height = 200;
+                ////$.plot($("#mthchart"), dataset, options);
+
+                //// pie charts - flot
+                ////var data = [[mmth[0], mvalues[0]], [mmth[1], mvalues[1]], [mmth[2], mvalues[2]], [mmth[3], mvalues[3]], [mmth[4], mvalues[4]], [mmth[5], mvalues[5]], [mmth[6], mvalues[6]], [mmth[7], mvalues[7]], [mmth[8], mvalues[8]], [mmth[9], mvalues[9]], [mmth[10], mvalues[10]], [mmth[11], mvalues[11]]];
+                ////var dataset = [{ data: mvalues }];
+                ////var dataSet = [
+                ////    { label: mmth[0], data: mvalues[0], color: "#005CDE" },
+                ////    { label: mmth[1], data: mvalues[1], color: "#00A36A" },
+                ////    { label: mmth[2], data: mvalues[2], color: "#7D0096" },
+                ////    { label: mmth[3], data: mvalues[3], color: "#992B00" },
+                ////    { label: mmth[4], data: mvalues[4], color: "#DE000F" },
+                ////    { label: mmth[5], data: mvalues[5], color: "#ED7B00" },
+                ////    { label: mmth[6], data: mvalues[6], color: "#005CDE" },
+                ////    { label: mmth[7], data: mvalues[7], color: "#00A36A" },
+                ////    { label: mmth[8], data: mvalues[8], color: "#7D0096" },
+                ////    { label: mmth[9], data: mvalues[9], color: "#992B00" },
+                ////    { label: mmth[10], data: mvalues[10], color: "#DE000F" },
+                ////    { label: mmth[11], data: mvalues[11], color: "#ED7B00" }
+                ////];
+                ////var options = { series: { pie: { show: true, label: { show: true, radius: 0.8, formatter: function (label, series) { return '<div style="border:1px solid grey;font-size:8pt;text-align:center;padding:5px;color:white;">' + label + ' : ' + Math.round(series.percent) + '%</div>'; }, background: { opacity: 0.8, color: '#000' } } } } };
+                ////var mwidth = $(window).innerWidth() * 8 / 12;
+                ////document.getElementById("mthchart").width = mwidth;
+                ////$('#mthchart').height = 200;
+                ////$.plot($("#mthchart"), dataset, options);
+
+                //// chartjs
+                ////var ctx = $('#mthchart');
+                ////var chartx = document.getElementById('mthchart').getContext('2d');
+                ////data: [{
+                ////    labels: [mmth[0], mmth[1], mmth[2], mmth[3], mmth[4], mmth[5], mmth[6], mmth[7], mmth[8], mmth[9], mmth[10], mmth[11]],
+                ////    datasets: [{ barPercentage: 0.5, barThickness: 6, maxBarThickness: 8, minBarLength: 2, data: mvalues }]
+                ////}];
+                ////moptions = { scales: { xAxes: [{ gridLines: { offsetGridLines: true } }] } };
+                ////  type: 'line' 'radar' 'doughnut' 'pie' 'polarArea' 'bubble' 'scatter' 'bar' 'horizontalBar'
+
+                ////var myBarChart = new Chart(chartx, {
+                ////    "type": 'bar', data: {
+                ////        "labels": [mmth[0], mmth[1], mmth[2], mmth[3], mmth[4], mmth[5], mmth[6], mmth[7], mmth[8], mmth[9], mmth[10], mmth[11]],
+                ////        "datasets": [{ barPercentage: 0.5, barThickness: 6, maxBarThickness: 8, minBarLength: 2, data: mvalues }]
+                ////    }, "options": { scales: { xAxes: [{ gridLines: { offsetGridLines: true } }] }, yAxes: [{ ticks: { beginAtZero: true } }] }
+                ////});
+
+                //var data = {
+                //    "labels": [mmth[0], mmth[1], mmth[2], mmth[3], mmth[4], mmth[5], mmth[6], mmth[7], mmth[8], mmth[9], mmth[10], mmth[11]],
+                //    "datasets": [{
+                //        fillColor: "rgba(172,194,132,0.4)",
+                //        strokeColor: "#ACC26D",
+                //        pointColor: "#fff",
+                //        pointStrokeColor: "#9DB86D",
+                //        data: mvalues
+                //    }]
+                //}
+                //var mwidth = $(window).innerWidth() * 8 / 12;
+                //document.getElementById("mthchart").width = mwidth-10;
+                //var chartx = document.getElementById('mthchart').getContext('2d');
+                //var chartDisplay = new Chart(chartx).Line(data);
+                ////chartDisplay = new Chart(chartx).Line(data);
+                ////$('#mthchart').height = 200;
+
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#acledger').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 215,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    mcurrentrow = id;
+                    $('#list2').jqGrid('clearGridData');
+                    $('#list2').jqGrid("GridUnload");
+                    $('#list2').trigger('reloadGrid');
+                    GridReload2($('#acledger').jqGrid('getCell', id, 'Document'));
+                    $('#listattach').jqGrid('clearGridData');
+                    $('#listattach').jqGrid("GridUnload");
+                    $('#listattach').trigger('reloadGrid');
+                    GridReload3($('#acledger').jqGrid('getCell', id, 'Document'));
+                    //$('#SelectedDocument').val($('#acledger').jqGrid('getCell', id, 'Document'));
+                },
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#acledger');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    GetURL(cellVal);
+                    //http://localhost:52070/Transactions/CashBank/Index?Document=HO0000BRC0018000003&Mode=View&ChangeLog=View&ViewDataId=ViewData-Ledger&Header=Bank%20Receipts&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankReceipts&Controller2=CashBank
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pager1').height = 5;
+                },
+            });
+            jQuery("#acledger").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#acledger").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function GridReload2(mDocument) {
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetSubGridStructure")?ViewDataId=' + $("#hdntabformat").val();
+        var sUrlpath = '@Url.Action("GetSubGridData")?Document=' + mDocument + '&Date=' + mDate + '&Type=' + '@Model.Type' + '&ViewDataId=' + $("#hdntabformat").val();
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData2();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridData2() {
+            $('#list2').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager2'),
+                rowNum: 50000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: ($(window).height() - 111 - 85 - 20)*0.75,/*38 for search panel*/
+                //height: $(window).height() - 111 - 35 - 50,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            //jQuery("#list2").jqGrid('navGrid', "#pager2",
+            //    { edit: false, add: false, del: false, print: false, search: true, refresh: false, searchtext: "Search" });
+            jQuery("#list2").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    }
+
+    function GridReload3(mDocument) {
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetSubGridStructure")?ViewDataId=ListofAttachments';
+        var sUrlpath = '@Url.Action("GetSubGridData")?Document=' + mDocument + '&Date=' + mDate + '&Type=' + '@Model.Type' + '&ViewDataId=ListofAttachments';
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData3();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridData3() {
+            $('#listattach').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager2'),
+                rowNum: 50000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: (($(window).height() - 111 - 85 - 20)*0.25)-30,/*38 for search panel*/
+                //height: $(window).height() - 111 - 35 - 50,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            jQuery("#listattach").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    }
+
+    // grid functions for slaesgrid
+    function GridReloadSales() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        //$("#hdnformatname").val("LedSalesRegister");
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?Date=' + mDate + '&ViewDataId=' + 'LedSalesRegister' + '&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Date=' + mDate + '&ViewDataId=' + 'LedSalesRegister' + '&Code=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataSales();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataSales() {
+            $('#salesgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager3'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 215,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#salessubgrid').jqGrid('clearGridData');
+                    $('#salessubgrid').jqGrid("GridUnload");
+                    $('#salessubgrid').trigger('reloadGrid');
+                    GridReloadSalesSub($('#salesgrid').jqGrid('getCell', id, 'Document'));
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#salesgrid").jqGrid('navGrid', "#pager3",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#salesgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function GridReloadSalesSub(mDocument) {
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?ViewDataId=SubGrid-ItemDetails';
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Document=' + mDocument + '&Date=' + mDate + '&Type=' + '@Model.Type' + '&ViewDataId=SubGrid-ItemDetails';
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridSaesSub();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridSaesSub() {
+            $('#salessubgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager2'),
+                rowNum: 50000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: $(window).height() - 111 - 85 - 20,/*38 for search panel*/
+                //height: $(window).height() - 111 - 35 - 50,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            //jQuery("#list2").jqGrid('navGrid', "#pager2",
+            //    { edit: false, add: false, del: false, print: false, search: true, refresh: false, searchtext: "Search" });
+            jQuery("#salessubgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    }
+
+    // grid functions for ordersGrid
+    function GridReloadOrders() {
+        event.preventDefault();
+        var ColName, Coldata;
+        //$("#hdnformatname").val("LedSalesOrders");
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?Date=' + mDate + '&ViewDataId='+'LedSalesOrders'+'&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Date=' + mDate + '&ViewDataId=' + 'LedSalesOrders' + '&Code=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataOrders();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataOrders() {
+            $('#ordersgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager4'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 215,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#ordersgrid").jqGrid('navGrid', "#pager4",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#ordersgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    // grid functions for LedSalesStockReg
+    function GridReloadStock() {
+        event.preventDefault();
+        var ColName, Coldata;
+        //$("#hdnformatname").val("LedSalesStockReg");
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?Date=' + mDate + '&ViewDataId=' + 'LedSalesStockReg' + '&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Date=' + mDate + '&ViewDataId=' + 'LedSalesStockReg' + '&Code=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataStock();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataStock() {
+            $('#inventorygrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager5'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 215,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#inventorygrid").jqGrid('navGrid', "#pager5",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#inventorygrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    // grid functions for LedOSAgeing
+    function GridReloadOSAgeing() {
+        event.preventDefault();
+        var ColName, Coldata;
+        //$("#hdnformatname").val("LedOSAgeing");
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?Date=' + mDate + '&ViewDataId=' + 'LedOSAgeing' + '&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Date=' + mDate + '&ViewDataId=' + 'LedOSAgeing' + '&Code=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataOS();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataOS() {
+            $('#osgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager7'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 215,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+                loadComplete: function () {
+                    var mcolindex = -1;
+                    var cm = $('#osgrid').jqGrid('getGridParam', 'colModel');
+                    for (var i = 0, l = cm.length; i < l; i++) {
+                        if (cm[i].name === 'OS%') {
+                            mcolindex = i;
+                        }
+                    }
+                    // if OS% column is found then only generate sparkline graph
+                    if (mcolindex != -1) {
+                        $('tr.jqgrow td:nth-child(' + (mcolindex + 1) + ')').each(function (index, value) {
+                            //var ar;
+                            try {
+                                //ar = $.parseJSON('['+$(this).text()+']');
+                                //if (ar && ar.length > 0) {
+                                //$(this).sparkline($.parseJSON('[' + $(this).text() + ']'));
+
+                                //$(this).sparkline($.parseJSON('[' + $(this).text() + ']'), { type: 'line', minSpotColor: 'red', maxSpotColor: 'green', spotColor: false, width: 200 });
+                                //#F47922-orange, #7C167F-purple (two values x and 100-x)
+                                //$(this).sparkline($.parseJSON('[' + Number($(this).text()) + ',' + (100 - Number($(this).text())) + ']'), { type: 'pie', sliceColors: ['#F47922', '#7C167F'], borderWidth: 0.4 });
+                                // box plot
+                                $(this).sparkline($.parseJSON('[' + Number($(this).text()) + ',' + (100 - Number($(this).text())) + ']'), { type: 'pie', sliceColors: ['#F47922', '#7C167F'], borderWidth: 0.4 });
+                            } catch (e) { }
+                        });
+                    }
+                }
+            });
+            jQuery("#osgrid").jqGrid('navGrid', "#pager7",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#osgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    // grid functions for MthlyAccSummary
+    function GridReloadMthSummary() {
+        event.preventDefault();
+        var ColName, Coldata;
+        //$("#hdnformatname").val("LedgerMonthlySummary");
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?Date=' + mDate + '&ViewDataId=' + 'LedgerMonthlySummary' + '&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Date=' + mDate + '&ViewDataId=' + 'LedgerMonthlySummary' + '&Code=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                //var mmth = obj[7].split(',');
+                // line chart - flot charts
+                //var data = [[mmth[0], mvalues[0]], [mmth[1], mvalues[1]], [mmth[2], mvalues[2]], [mmth[3], mvalues[3]], [mmth[4], mvalues[4]], [mmth[5], mvalues[5]], [mmth[6], mvalues[6]], [mmth[7], mvalues[7]], [mmth[8], mvalues[8]], [mmth[9], mvalues[9]], [mmth[10], mvalues[10]], [mmth[11], mvalues[11]]];
+                //var dataset = [{ data: mvalues }];
+                //var options = { series: { lines: { show: true }, points: { radius: 3, show: true } } };
+                //var mwidth = $(window).innerWidth() * 8 / 12;
+                //document.getElementById("mthchart").width = mwidth;
+                //$('#mthchart').height = 200;
+                //$.plot($("#mthchart"), dataset, options);
+
+                // pie charts - flot
+                //var data = [[mmth[0], mvalues[0]], [mmth[1], mvalues[1]], [mmth[2], mvalues[2]], [mmth[3], mvalues[3]], [mmth[4], mvalues[4]], [mmth[5], mvalues[5]], [mmth[6], mvalues[6]], [mmth[7], mvalues[7]], [mmth[8], mvalues[8]], [mmth[9], mvalues[9]], [mmth[10], mvalues[10]], [mmth[11], mvalues[11]]];
+                //var dataset = [{ data: mvalues }];
+                //var dataSet = [
+                //    { label: mmth[0], data: mvalues[0], color: "#005CDE" },
+                //    { label: mmth[1], data: mvalues[1], color: "#00A36A" },
+                //    { label: mmth[2], data: mvalues[2], color: "#7D0096" },
+                //    { label: mmth[3], data: mvalues[3], color: "#992B00" },
+                //    { label: mmth[4], data: mvalues[4], color: "#DE000F" },
+                //    { label: mmth[5], data: mvalues[5], color: "#ED7B00" },
+                //    { label: mmth[6], data: mvalues[6], color: "#005CDE" },
+                //    { label: mmth[7], data: mvalues[7], color: "#00A36A" },
+                //    { label: mmth[8], data: mvalues[8], color: "#7D0096" },
+                //    { label: mmth[9], data: mvalues[9], color: "#992B00" },
+                //    { label: mmth[10], data: mvalues[10], color: "#DE000F" },
+                //    { label: mmth[11], data: mvalues[11], color: "#ED7B00" }
+                //];
+                //var options = { series: { pie: { show: true, label: { show: true, radius: 0.8, formatter: function (label, series) { return '<div style="border:1px solid grey;font-size:8pt;text-align:center;padding:5px;color:white;">' + label + ' : ' + Math.round(series.percent) + '%</div>'; }, background: { opacity: 0.8, color: '#000' } } } } };
+                //var mwidth = $(window).innerWidth() * 8 / 12;
+                //document.getElementById("mthchart").width = mwidth;
+                //$('#mthchart').height = 200;
+                //$.plot($("#mthchart"), dataset, options);
+
+                // chartjs
+                //var ctx = $('#mthchart');
+                //var chartx = document.getElementById('mthchart').getContext('2d');
+                //data: [{
+                //    labels: [mmth[0], mmth[1], mmth[2], mmth[3], mmth[4], mmth[5], mmth[6], mmth[7], mmth[8], mmth[9], mmth[10], mmth[11]],
+                //    datasets: [{ barPercentage: 0.5, barThickness: 6, maxBarThickness: 8, minBarLength: 2, data: mvalues }]
+                //}];
+                //moptions = { scales: { xAxes: [{ gridLines: { offsetGridLines: true } }] } };
+                //  type: 'line' 'radar' 'doughnut' 'pie' 'polarArea' 'bubble' 'scatter' 'bar' 'horizontalBar'
+
+                //var myBarChart = new Chart(chartx, {
+                //    "type": 'bar', data: {
+                //        "labels": [mmth[0], mmth[1], mmth[2], mmth[3], mmth[4], mmth[5], mmth[6], mmth[7], mmth[8], mmth[9], mmth[10], mmth[11]],
+                //        "datasets": [{ barPercentage: 0.5, barThickness: 6, maxBarThickness: 8, minBarLength: 2, data: mvalues }]
+                //    }, "options": { scales: { xAxes: [{ gridLines: { offsetGridLines: true } }] }, yAxes: [{ ticks: { beginAtZero: true } }] }
+                //});
+
+                var data = {
+                    "labels": mmth,
+                    "datasets": [{
+                        fillColor: "rgba(172,194,0,0.4)",
+                        strokeColor: "#ACC26D",
+                        pointColor: "#fff",
+                        pointStrokeColor: "#9DB86D",
+                        data: mvalues
+                    }]
+                }
+                var mwidth = $(window).innerWidth() * 8 / 12;
+                document.getElementById("mthchart").width = mwidth - 10;
+                var chartx = document.getElementById('mthchart').getContext('2d');
+                //var chartDisplay = new Chart(chartx).Line(data);
+                var chartDisplay = new Chart(chartx, { type: 'line', data: data, })
+                //chartDisplay = new Chart(chartx).Line(data);
+                //$('#mthchart').height = 200;
+                CreateGridDataMthSummary();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataMthSummary() {
+            $('#mthsummary').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: false,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager2'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 215 - 200,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: true,
+                autoencode: true,
+                search: false,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#mthsubgrid').jqGrid('clearGridData');
+                    $('#mthsubgrid').jqGrid("GridUnload");
+                    $('#mthsubgrid').trigger('reloadGrid');
+                    GridReloadMthSub($('#mthsummary').jqGrid('getCell', id, 'StartDate'), $('#mthsummary').jqGrid('getCell', id, 'EndDate'));
+                    //$('#SelectedDocument').val($('#acledger').jqGrid('getCell', id, 'Document'));
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            //jQuery("#mthsummary").jqGrid('navGrid', "#pager2",
+            //    { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#mthsummary").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function GridReloadMthSub(mdate1,mdate2) {
+        var ColName, Coldata;
+        var mDate = mdate1 + ':' + mdate2;
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?ViewDataId=LedgerDetails';
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Code=' + $('#Account').val() + '&Date=' + mDate + '&ViewDataId=LedgerDetails';
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridMthSub();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridMthSub() {
+            $('#mthsubgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager2'),
+                rowNum: 50000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: $(window).height() - 111 - 85 - 20,/*38 for search panel*/
+                //height: $(window).height() - 111 - 35 - 50,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            //jQuery("#list2").jqGrid('navGrid', "#pager2",
+            //    { edit: false, add: false, del: false, print: false, search: true, refresh: false, searchtext: "Search" });
+            jQuery("#mthsubgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    }
+
+    // grid functions for DailySummary
+    function GridReloadDailySummary() {
+        event.preventDefault();
+        var ColName, Coldata;
+        //$("#hdnformatname").val("LedgerDailySummary");
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?Date=' + mDate + '&ViewDataId=' + 'LedgerDailySummary' + '&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Date=' + mDate + '&ViewDataId=' + 'LedgerDailySummary' + '&Code=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+
+                var data = {
+                    "labels": mmth,
+                    "datasets": [{
+                        fillColor: "rgba(172,194,132,0.4)",
+                        strokeColor: "#ACC26D",
+                        pointColor: "#fff",
+                        pointStrokeColor: "#9DB86D",
+                        //borderColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)", "rgb(75, 192, 192)", "rgb(54, 162, 235)", "rgb(153, 102, 255)", "rgb(201, 203, 207)"],
+                        borderWidth: 1,
+                        data: mvalues
+                    }]
+                }
+                var mwidth = $(window).innerWidth() * 8 / 12;
+                document.getElementById("dailychart").width = mwidth - 10;
+                var chartx = document.getElementById('dailychart').getContext('2d');
+                var chartDisplay = new Chart(chartx, { type: 'bar', data: data, }, { "options": { responsive: true, showTooltips: true, "scales": { "yAxes": [{ "ticks": { "beginAtZero": true } }] } } });//.Bar(data);
+                //var chartDisplay = new Chart(chartx, { "type": "bar", "data": data, "options": { responsive: true, showTooltips: true, "scales": { "yAxes": [{ "ticks": { "beginAtZero": true } }] } } });
+                //{ type: 'bar', data: barChartData, options: { responsive: true, legend: { position: 'top', }, title: { display: true, text: 'Chart.js Bar Chart' } } }
+
+                CreateGridDataDailySummary();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataDailySummary() {
+            $('#dailysummary').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: false,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pagerd'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 215-200,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: true,
+                autoencode: true,
+                search: false,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#dailysubgrid').jqGrid('clearGridData');
+                    $('#dailysubgrid').jqGrid("GridUnload");
+                    $('#dailysubgrid').trigger('reloadGrid');
+                    GridReloadDailySub($('#dailysummary').jqGrid('getCell', id, 'Date'));
+                    //$('#SelectedDocument').val($('#acledger').jqGrid('getCell', id, 'Document'));
+                },
+                beforeRequest: function () {
+                    $('.spinner').show();
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    $('.spinner').hide();
+                },
+            });
+            //jQuery("#dailysummary").jqGrid('navGrid', "#pagerd",
+            //    { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#dailysummary").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function GridReloadDailySub(mdate1) {
+        var ColName, Coldata;
+        var mDate = mdate1 + ':' + mdate1;
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?ViewDataId=LedgerDetails';
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Code=' + $('#Account').val() + '&Date=' + mDate + '&ViewDataId=LedgerDetails';
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDailySub();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridDailySub() {
+            $('#dailysubgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager2'),
+                rowNum: 50000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: $(window).height() - 111 - 85 - 20,/*38 for search panel*/
+                //height: $(window).height() - 111 - 35 - 50,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            jQuery("#dailysubgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    }
+
+    function ClickPara() {
+        $('#ParaDialog').modal('show');
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:5px;width:100%;margin-top:5px;height:41px;">
+    <div class="fixhead">
+        <div class="col-md-2" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <div class="col-md-2 pull-right" style="padding-right:0px; padding-top:-3px;float:right;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="clickRefresh()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+            @* reportprintoptions*@
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;padding-right:0px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="ClickPara()" class="fa fa-cogs" style="font-size:20px;cursor:pointer" title="Parameters"></a>
+            </div>
+            <div class="col-sm-1"></div>
+            <button class="btn btn-success" onclick="clickPrint()" style="font-size:14px;padding:4px 12px;" id="btnPrint">Print / Export</button>
+        </div>
+        <div class="col-md-3 pull-right" style="padding-right:unset;">
+            <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;color:black;">
+                Period:
+            </div>
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;font-size:10pt;">
+                <span class="input-group-addon">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;font-size:10pt;">
+            </div>
+        </div>
+        <div class="col-md-3 pull-right" style="padding-left:0px;">
+            @Html.TextBoxFor(x => x.Document, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "Account", @name = "Account" })
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;color:black;">
+            Account:
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:33px;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="tab">
+            <button class="tablinks" onclick="openTab(event, 'tabInfo')" id="Ledger">Info</button>
+            <button class="tablinks" onclick="openTab(event, 'tabLedger')" id="Ledger">A/C Ledger</button>
+            <button class="tablinks" style="width:130px;" onclick="openTab(event, 'tabMthSummary')">Monthly Summary</button>
+            <button class="tablinks" style="width:130px;" onclick="openTab(event, 'tabDailySummary')">Daily Summary</button>
+            <button class="tablinks" onclick="openTab(event, 'tabSales')">Sales</button>
+            <button class="tablinks" onclick="openTab(event, 'tabOrders')">Orders</button>
+            <button class="tablinks" onclick="openTab(event, 'tabInventory')">Inventory</button>
+            @*<button class="tablinks" style="width:120px;" onclick="openTab(event, 'tabComm')">Communication</button>*@
+            <button class="tablinks" onclick="openTab(event, 'tabOSAgeing')">OS Ageing</button>
+            @*<button class="tablinks" onclick="openTab(event, 'tabSearch')">Search Info</button>*@
+        </div>
+
+        <div id="tabInfo" class="tabcontent" style="height:485px;padding:0px;padding-left:15px;">
+            <div class="form-horizontal" id="Rmaster" role="form" style="margin-top:0%; overflow-x:hidden; ">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Account Name:</label>
+                    <div class="col-sm-4">
+                        <input type="text" id="acname" class="form-control" style="border:none;text-align:left;font-size:14px;font-weight:bolder;color:darkorange;background-color:white;" disabled="disabled" />
+                    </div>
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Contact Person:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="acperson" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Account Group:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="acgroup" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;padding-top:15px;">Balance:</label>
+                    <div class="col-sm-4">
+                        <span style="text-align:left;height:75px;width:450px;" class="balancespark"></span>
+                        @*<div class="sparkline" style="text-align:left;" id="acbalance" data-type="bar" data-resize="true" data-height="75" data-bar-color="#d4a7f5" data-bar-width="10" data-data="[300,200,500,700,654,987,457,300,876,454,788,300,200,500,700,654,987,457,300,876,454,788]"></div>*@
+                    </div>
+                    @*<input type="text" id="acbalance" class="form-control" style="border:none;text-align:left;font-weight:bolder;" disabled="disabled" />*@
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;padding-top:15px;background-color:white;">Sales/Receipts:</label>
+                    <div class="col-sm-3">
+                        <span style="text-align:left;height:75px;width:300px;" class="acsalesrec"></span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">GST No.:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="acgstno" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Credit Rank:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="acrank" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Credit Limit:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="accrlimit" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Credit Days:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="accrdays" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Address:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="acaddress" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Mobile:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="acmobile" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Email:</label>
+                    <div class="col-sm-3">
+                        <input type="text" id="acemail" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tabLedger" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="col-sm-9" style="padding-left:0px;padding-right:0px;">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                    <table id="acledger" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager1" style="height:32px;width:100%;"></div>
+                </div>
+            </div>
+            <div class="col-sm-3" style="padding-left:0px;padding-right:0px;">
+                <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;width:100%;">
+                    <div class="col-sm-12" style="padding-left:0px;padding-right:0px;overflow:scroll;">
+                        <div id="page-contentgridright">
+                            <div class="jqGrid">
+                                <table id="list2" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;width:100%;">
+                    <div class="col-sm-12" style="padding-left:0px;padding-right:0px;overflow:scroll;">
+                        <div id="page-contentgridright">
+                            <div class="jqGrid">
+                                <table id="listattach" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tabMthSummary" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="col-sm-8" style="padding-left:0px;padding-right:0px;">
+                <div class="form-group" style="padding:5px;">
+                    <canvas id="mthchart" width="1000" height="200"></canvas>
+                </div>
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="mthsummary" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    @*<div id="pager2" style="height:32px;width:100%;"></div>*@
+                </div>
+            </div>
+            <div class="col-sm-4" style="padding-left:0px;overflow:scroll;">
+                <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;">
+                    <div id="mthcontentgridright">
+                        <div class="jqGrid">
+                            <table id="mthsubgrid" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tabDailySummary" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="col-sm-8" style="padding-left:0px;padding-right:0px;">
+                <div class="form-group" style="padding:5px;">
+                    <canvas id="dailychart" width="1000" height="200"></canvas>
+                </div>
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="dailysummary" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    @*<div id="pagerd" style="height:32px;width:100%;"></div>*@
+                </div>
+            </div>
+            <div class="col-sm-4" style="padding-left:0px;overflow:scroll;">
+                <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;">
+                    <div id="dlycontentgridright">
+                        <div class="jqGrid">
+                            <table id="dailysubgrid" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tabSales" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="col-sm-8" style="padding-left:0px;padding-right:0px;">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="salesgrid" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager3" style="height:32px;width:100%;"></div>
+                </div>
+            </div>
+            <div class="col-sm-4" style="padding-left:0px;overflow:scroll;">
+                <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;">
+                    <div id="salescontentgridright">
+                        <div class="jqGrid">
+                            <table id="salessubgrid" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="tabOrders" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="ordersgrid" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pager4" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabInventory" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="inventorygrid" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pager5" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        @*<div id="tabComm" class="tabcontent" style="height:470px;padding:0px 0px 0px 0px;overflow:scroll; ">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                    <table id="commgrid" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager6" style="height:32px;"></div>
+                </div>
+            </div>*@
+        <div id="tabOSAgeing" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="osgrid" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pager7" style="height:32px;"></div>
+            </div>
+        </div>
+        @*<div id="tabSearch" class="tabcontent" style="height:400px;padding:0px 0px 0px 0px;overflow:scroll; ">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                    <table id="searchgrid" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager8" style="height:32px;"></div>
+                </div>
+            </div>*@
+        <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+                if (tabName == "tabLedger") {
+                    $("#hdntabformat").val($("#hdnformatname").val());
+                } else if (tabName == "tabSales") {
+                    $('#salesgrid').jqGrid('clearGridData');
+                    $("#salesgrid").jqGrid("GridUnload");
+                    $('#salesgrid').trigger('reloadGrid');
+                    $("#hdntabformat").val("LedSalesRegister");
+                    GridReloadSales();
+                } else if (tabName == "tabMthSummary") {
+                    $("#hdntabformat").val("LedgerMonthlySummary");
+                    $('#mthsummary').jqGrid('clearGridData');
+                    $("#mthsummary").jqGrid("GridUnload");
+                    $('#mthsummary').trigger('reloadGrid');
+                    GridReloadMthSummary();
+                } else if (tabName == "tabDailySummary") {
+                    $("#hdntabformat").val("LedgerDailySummary");
+                    $('#dailysummary').jqGrid('clearGridData');
+                    $("#dailysummary").jqGrid("GridUnload");
+                    $('#dailysummary').trigger('reloadGrid');
+                    GridReloadDailySummary();
+                } else if (tabName == "tabOrders") {
+                    $("#hdntabformat").val("LedSalesOrders");
+                    $('#ordersgrid').jqGrid('clearGridData');
+                    $("#ordersgrid").jqGrid("GridUnload");
+                    $('#ordersgrid').trigger('reloadGrid');
+                    GridReloadOrders();
+                } else if (tabName == "tabInventory") {
+                    $("#hdntabformat").val("LedSalesStockReg");
+                    $('#inventorygrid').jqGrid('clearGridData');
+                    $("#inventorygrid").jqGrid("GridUnload");
+                    $('#inventorygrid').trigger('reloadGrid');
+                    GridReloadStock();
+                } else if (tabName == "tabOSAgeing") {
+                    $("#hdntabformat").val("LedOSAgeing");
+                    $('#osgrid').jqGrid('clearGridData');
+                    $("#osgrid").jqGrid("GridUnload");
+                    $('#osgrid').trigger('reloadGrid');
+                    GridReloadOSAgeing();
+                }
+            }
+            document.getElementById("Ledger").click();
+        </script>
+    </div>
+</section>
+
+<div id="fixedbottom" class="footer-section" style="position:fixed;background-color:rgb(235, 235, 235);padding:2px;color:unset;height:30px;border:solid 1px black;">
+    <div class="row" style="padding-top:1px;">
+        <label class="col-sm-1 control-label" style="padding-top:2px;padding-left:20px;color:white;">Opening:</label>
+        <div class="col-sm-2">
+            <input type="text" id="openb" alt="" class="form-control" style="width:80%;text-align:right;font-weight:bolder;height:22px;" disabled="disabled" />
+        </div>
+        <label class="col-sm-1 control-label" style="padding-top:2px;color:white;">Total Debit:</label>
+        <div class="col-sm-2">
+            <input type="text" id="tdebit" alt="" class="form-control" style="width:80%;text-align:right;font-weight:bolder;height:22px;" disabled="disabled" />
+        </div>
+        <label class="col-sm-1 control-label" style="padding-top:2px;color:white;">Total Credit:</label>
+        <div class="col-sm-2">
+            <input type="text" id="tcredit" alt="" class="form-control" style="width:80%;text-align:right;font-weight:bolder;height:22px;" disabled="disabled" />
+        </div>
+        <label class="col-sm-1 control-label" style="padding-top:2px;color:white;">Closing:</label>
+        <div class="col-sm-2">
+            <input type="text" id="closeb" alt="" class="form-control" style="width:80%;text-align:right;font-size:11pt;background-color:gray;color:white;font-weight:bolder;height:22px;" disabled="disabled" />
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="ParaDialog" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:1000px;">
+            <div id="Dialog">
+                @Html.Partial("GeneralParameters")
+            </div>
+        </div>
+    </div>
+</div>
+
+@* reportprintoptions*@
+<div class="example-modal">
+    <div id="dialogprint" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:600px;">
+            <div id="dialogtoprint">
+                @Html.Partial("ReportPrintOptions")
+            </div>
+        </div>
+    </div>
+</div>
+
+@* displaylist*@
+<div class="example-modal">
+    <div id="displaylistmodal" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog modal-lg" style="height:500px;width:1000px;">
+            <div id="displaydocmodal">
+                @Html.Partial("DisplayList")
+            </div>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="hdntabformat" />
+@* reportprintoptions - all following three*@
+@Html.HiddenFor(x => x.ViewCode, new { @Id = "viewcode" })
+<input type="hidden" id="hdnparastring" />
+<input type="hidden" id="hiddenvalues" /> 

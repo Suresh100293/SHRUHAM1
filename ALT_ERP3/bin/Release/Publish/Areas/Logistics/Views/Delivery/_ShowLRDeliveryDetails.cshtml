@@ -1,0 +1,345 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.DeliveryVM
+@using Common;
+@{
+    ViewBag.Title = "Delivery Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        
+        if ('@Model.POD' == "NO") {
+            $('#No').prop('checked', true);
+        } else {
+            $('#Yes').prop('checked', true);
+        }
+
+        $('#DeliveryDate,#PODDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+
+        @*if ('@Model.Mode' != 'Add') {
+            $("#DeliveryDate,#PODDate").datepicker("setDate", '@Model.Date');
+        }*@
+        $('#DeliveryDate').change(function (event) {
+            
+            event.preventDefault();
+            var Date;
+            if ($("#DeliveryDate").val()=="") {
+                Date='@Model.DeliveryDate'
+            } else {
+                Date = $("#DeliveryDate").val();
+            }
+
+            var url = '@Url.Action("CheckDeliveryDate")';
+            
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { DocDate: Date, EndDate: '@Model.MaxDate', StartDate: '@Model.MinDate' },
+                success: function (result) {
+                    if (result.Message == "T") {
+                        DeliverDate = true;
+                    } else {
+                        DeliverDate = false;
+                        $("#ErrorMessage1").show();
+                        $("#ErrorMessage1").text('Date Allow   @Model.MinDate - @Model.MaxDate This Range Only');
+                        return;
+
+                    }
+                }
+            });
+        });
+        $('#DeliveryNo').blur(function () {
+            var url = '@Url.Action("CheckDeliveryNO")';
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { DeliveryNO: $("#DeliveryNo").val(), DocumentNO: '@Model.Document' },
+                success: function (result) {
+                    if (result.Message == "T") {
+                        DeliverNO = true;
+                    } else {
+                        DeliverNO = false;
+                        
+                        $("#ErrorMessage1").show();
+                        $("#ErrorMessage1").text('DeliveryNO Exist Please CHange Delivery No.');
+                        return;
+
+                    }
+                }
+            });
+        });
+        //LoadVehicleNo();
+        $("#DeliverLrRecordKey").val('@Model.RecordKey');
+        $("#Lrno").blur(function () {
+            
+            if ($("#Lrno").val() != "") {
+                LrDetailsLoad();
+            }
+
+        });
+        $("#DeliverQty").constrain({ allow: { regex: "[0-9]" } });
+        $("#DeliverQty").blur(function () {
+            var TotalQty = $("#LRQty").val();
+            var DeliverQty = $("#DeliverQty").val();
+            var TotalWeight = $("#LRWeight").val();
+            var DeliverWeight = 0;
+            if (parseInt(TotalQty) >= parseInt(DeliverQty)) {
+                if (parseInt(TotalQty) == parseInt(DeliverQty)) {
+                    $("#DeliverQty").val(TotalQty)
+                    $("#DeliverWeight").val(TotalWeight)
+                } else {
+                    DeliverWeight = Math.round((parseFloat(DeliverQty) * parseFloat(TotalWeight)) / parseFloat(TotalQty));
+                    $("#DeliverWeight").val(DeliverWeight)
+                }
+            } else {
+                alert("You Cannot Deliver Greater Than Lr Quantity.......!");
+                $("#DeliverQty").val(TotalQty)
+                $("#DeliverWeight").val(TotalWeight)
+            }
+            $("#BillQty").val(DeliverQty)
+        });
+        $('input[type=radio][name=DeliveryStatus]').change(function () {
+            
+            var Remark = this.value;
+            var ID = this.id;
+            if (ID == "Short") {
+                $("#ShortQty").prop("disabled", false);
+            } else {
+                $("#ShortQty").prop("disabled", true);
+                $("#ShortQty").val("0");
+            }
+            $("#DeliveryRemark").val(Remark);
+        });
+    });
+    function LoadVehicleNo() {
+        var url = '@Url.Action("VehicleNo")'
+        $('#VehicleNo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehicleNo', text: '@Model.VehicleNo' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+<div id="ErrorMessage1" name="ErrorMessage1" class="alert alert-danger" style="display: none"></div>
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">Delivery No:</label>
+    <div class="col-sm-2 ">
+        @if (Model.tfatDeliverySetup.Delivery_Generate == true || Model.tfatDeliverySetup.Delivery_Both == true)
+        {
+            @Html.TextBoxFor(x => x.DeliveryNo, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliveryNo, @disabled = "disabled" })
+        }
+        else
+        {
+            @Html.TextBoxFor(x => x.DeliveryNo, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliveryNo })
+        }
+    </div>
+    <label class=" bold   col-sm-1  control-label">LR No:</label>
+    <div class="col-sm-2 " style="display: flex;">
+        @Html.TextBoxFor(x => x.Lrno, new { @class = "form-control", @style = "width:100%;", @Value = Model.Lrno })
+        <button class="btn btn-primary" style="font-size: 12px;padding:2px 9px;" data-toggle="modal" data-target="#LRComboList"><i class="glyphicon glyphicon-eye-open"></i></button>
+    </div>
+    <label class=" bold   col-sm-1  control-label">Time:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.Time, @disabled = "disabled" })
+    </div>
+    <label class=" bold   col-sm-1  control-label" style="margin-left: 0px;">Date:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.Date, new { @class = "form-control", @style = "width:100%;", @Value = Model.Date, @disabled = "disabled" })
+    </div>
+
+</div>
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">Consigner:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.ConsignerName, new { @class = "form-control", @style = "width:100%;", @Value = Model.ConsignerName, @readonly = "readonly" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">Consignee:</label>
+    <div class="col-sm-2 " style="">
+        @Html.TextBoxFor(x => x.ConsigneeName, new { @class = "form-control", @style = "width:100%;", @Value = Model.ConsigneeName, @readonly = "readonly" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">From:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.FromName, new { @class = "form-control", @style = "width:100%;", @Value = Model.FromName, @readonly = "readonly" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">To:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.ToName, new { @class = "form-control", @style = "width:100%;", @Value = Model.ToName, @readonly = "readonly" })
+    </div>
+</div>
+<div class="form-group">
+
+    <label class=" bold   col-sm-1  control-label">Lr Qty:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.LRQty, new { @class = "form-control", @style = "width:100%;", @Value = Model.LRQty, @readonly = "readonly" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">LR Weight:</label>
+    <div class="col-sm-2 " style="">
+        @Html.TextBoxFor(x => x.LRWeight, new { @class = "form-control", @style = "width:100%;", @Value = Model.LRWeight, @readonly = "readonly" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">Bal Qty:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.LRBalQty, new { @class = "form-control", @style = "width:100%;", @Value = Model.LRBalQty, @readonly = "readonly" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">Bal Weight:</label>
+    <div class="col-sm-2 " style="">
+        @Html.TextBoxFor(x => x.LRBalWeight, new { @class = "form-control", @style = "width:100%;", @Value = Model.LRBalWeight, @readonly = "readonly" })
+    </div>
+
+</div>
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">Deliver Date:</label>
+    <div class="col-sm-2 ">
+        @if (Model.tfatDeliverySetup.Delivery_Date)
+        {
+            @Html.TextBoxFor(x => x.DeliveryDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliveryDate })
+        }
+        else
+        {
+            @Html.TextBoxFor(x => x.DeliveryDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliveryDate, @disabled = "disabled" })
+        }
+    </div>
+    <label class=" bold   col-sm-1  control-label">Deliver Time:</label>
+    <div class="col-sm-2 ">
+        @if (Model.tfatDeliverySetup.Delivery_Date)
+        {
+            @Html.TextBoxFor(x => x.DeliveryTime, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.DeliveryTime })
+        }
+        else
+        {
+            @Html.TextBoxFor(x => x.DeliveryTime, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.DeliveryTime, @disabled = "disabled" })
+        }
+    </div>
+    <label class=" bold   col-sm-1  control-label">Deliver Qty:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.DeliverQty, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliverQty })
+    </div>
+    <label class=" bold   col-sm-1  control-label">Deliver Wt:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.DeliverWeight, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliverWeight, @readonly = "readonly" })
+    </div>
+</div>
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">Status:</label>
+    <div class="col-sm-5" style="display: flex;">
+        <input type="radio" class="form-control" name="DeliveryStatus" id="OK" value="OK" style="height:20px;width:35px;" checked /><label class=" bold control-label"> OK</label>
+        <input type="radio" class="form-control" name="DeliveryStatus" id="PCK" value="Package Damage" style="height:20px;width:35px;" /><label class=" bold control-label"> Package Damage</label>
+        <input type="radio" class="form-control" name="DeliveryStatus" id="MaterialD" value="Material Damage" style="height:20px;width:35px;" /><label class=" bold control-label"> Material Damage</label>
+        <input type="radio" class="form-control" name="DeliveryStatus" id="Short" value="Short" style="height:20px;width:35px;" /><label class=" bold control-label"> Short</label>
+    </div>
+    <label class=" bold   col-sm-1  control-label">Short Qty:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.ShortQty, new { @class = "form-control", @style = "width:100%;", @Value = Model.ShortQty, @disabled = "disabled" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">Bill Qty:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.BillQty, new { @class = "form-control", @style = "width:100%;", @Value = Model.BillQty })
+    </div>
+</div>
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">Vehicle No:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.VehicleNo, new { @class = "form-control", @style = "width:100%;", @Value = Model.VehicleNo })
+    </div>
+    <label class=" bold   col-sm-1  control-label">Contact:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.PersonName, new { @class = "form-control", @style = "width:100%;", @Value = Model.PersonName })
+    </div>
+    <label class=" bold   col-sm-1  control-label">Contact No:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.MobileNO, new { @class = "form-control", @maxlength = "10", @style = "width:100%;", @Value = Model.MobileNO })
+    </div>
+    <label class=" bold   col-sm-1  control-label">POD:</label>
+    <div class="col-sm-2" style="display: flex;">
+        @if (Model.POD == "No")
+        {
+            <input type="radio" class="form-control" name="POD" id="Yes" value="Yes" style="height:20px;width:35px;" disabled /><label class=" bold control-label"> Yes</label>
+            <input type="radio" class="form-control" name="POD" id="No" value="No" style="height:20px;width:35px;" disabled /><label class=" bold control-label"> No</label>
+        }
+        else
+        {
+            <input type="radio" class="form-control" name="POD" id="Yes" value="Yes" style="height:20px;width:35px;" /><label class=" bold control-label"> Yes</label>
+            <input type="radio" class="form-control" name="POD" id="No" value="No" style="height:20px;width:35px;" /><label class=" bold control-label"> No</label>
+        }
+    </div>
+</div>
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">Delivery-Remark:</label>
+    <div class="col-sm-11 ">
+        @Html.TextAreaFor(x => x.DeliveryRemark, new { @class = "form-control", @Value = Model.DeliveryRemark, @rows = "1", @maxlength = "150" })
+    </div>
+
+</div>
+<hr />
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">POD No:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.PODNo, new { @class = "form-control", @style = "width:100%;", @Value = Model.PODNo, @disabled = "disabled" })
+    </div>
+    <label class=" bold   col-sm-1  control-label">POD Date:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.PODDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.PODDate })
+    </div>
+    <label class=" bold   col-sm-1  control-label">POD Time:</label>
+    <div class="col-sm-2 ">
+        @Html.TextBoxFor(x => x.PODTime, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.PODTime })
+    </div>
+</div>
+<div class="form-group">
+    <label class=" bold   col-sm-1  control-label">POD-Remark:</label>
+    <div class="col-sm-11 ">
+        @Html.TextAreaFor(x => x.PODRemark, new { @class = "form-control", @Value = Model.PODRemark, @rows = "1", @maxlength = "150" })
+    </div>
+</div>

@@ -1,0 +1,221 @@
+﻿
+
+
+@model TFATERPWebApplication.Areas.Accounts.Models.PartyProdRateVM
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}
+@using Common;
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        LoadCategory();
+        $("#SaveData").click(function (event) {
+            event.preventDefault();
+            var NewItemList = [];
+            $('#catlinkgrid').find('tr[id="datacat"]').each(function () {
+                var $tds = $(this).find('td');
+                var myDets = {
+                    Code: $tds.eq(0).text(),
+                    VendorID: $tds.eq(2).text(),
+                    Rate: $tds.eq(3).text(),
+                    Disc: $tds.eq(4).text(),
+                    DiscAmt: $tds.eq(5).text(),
+                    MaxDisc: $tds.eq(6).text(),
+                    LeadTime: $tds.eq(7).text(),
+                    MinOrdQty: $tds.eq(8).text(),
+                    QCReqd: $tds.find("input[id='QCReqd']").is(':checked'),
+                    QtyTolePlus: $tds.eq(10).text(),
+                    SalesMargin: $tds.eq(11).text(),
+                }
+                NewItemList.push(myDets);
+            });
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+            ModelData["NewItemList"] = NewItemList;
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == 'Success') {
+                        window.location.href = "/Accounts/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Item%20Master&Controller2=ItemMaster";
+                    }
+                    else if (data.Status == 'Error') {
+                        alert(data.Message);
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Select Atleast One Record For Ledger.');
+                    }
+                    else {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+    });
+
+    function LoadCategory() {
+        var url = '@Url.Action("GetCategory")';
+        $('#category').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Name, id: item.Code }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<style>
+    .form-horizontal .control-label {
+        padding-top: 6px;
+        color: black;
+        text-align: left;
+    }
+
+    .headername {
+        font-size: medium;
+        font-family: Tahoma;
+        font-weight: 700;
+    }
+
+    /*.fixhead {
+        text-transform: uppercase;
+    }*/
+
+    .modal-dialog {
+        /*margin: 124px auto;*/
+        align-self: center;
+    }
+
+    .form-group {
+        margin-bottom: 5px;
+    }
+</style>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-md-4">
+            <b class="CodeSt">Product Party Relation for item: @Model.Document</b>
+        </div>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Item%20Master&Controller2=ItemMaster" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <div class="col-md-3 pull-right">
+            @Html.TextBoxFor(x => x.Category, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "category", @name = "category" })
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;padding-right:0px;font-family:Tahoma;padding-top:6px;font-size:9pt; width:unset;color:black;">
+            Party Category:
+        </div>
+    </div>
+</header>
+
+<div class="panel" style="height:500px">
+    <div class="panel-body" style="padding-left:3px;padding-right:3px;padding-top:12px;">
+        <div class="form-horizontal" id="frmcatlink" role="form" style="margin-top:32px;">
+            <div id="StatusDiv">
+                <table id="catlinkgrid" class="zui-table">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                            <th style="width:7%;">Party</th>
+                            <th style="width:21%;">Party Name</th>
+                            <th style="width:8%;">Vendor ID</th>
+                            <th style="width:8%;">Rate</th>
+                            <th style="width:7%;">Disc%</th>
+                            <th style="width:7%;">Disc.Amt</th>
+                            <th style="width:7%;">Max Disc%</th>
+                            <th style="width:7%;">Lead Time</th>
+                            <th style="width:7%;">Min.Ord.Qty</th>
+                            <th style="width:7%;">QC Reqd?</th>
+                            <th style="width:7%;">Qty Tole?</th>
+                            <th style="width:7%;">Sale Margin</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.NewItemList != null)
+                        {
+                            foreach (var item in @Model.NewItemList.ToList())
+                            {
+                                <tr id="datacat" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                    <td style="width:7%;">@item.Code</td>
+                                    <td style="width:21%;">@item.PartyName</td>
+                                    <td style="width:8%;" align="right" contenteditable="true">@item.VendorID</td>
+                                    <td style="width:8%;" align="right" contenteditable="true">@item.Rate</td>
+                                    <td style="width:7%;" align="right" contenteditable="true">@item.Disc</td>
+                                    <td style="width:7%;" align="right" contenteditable="true">@item.DiscAmt</td>
+                                    <td style="width:7%;" align="right" contenteditable="true">@item.MaxDisc</td>
+                                    <td style="width:7%;" align="right" contenteditable="true">@item.LeadTime</td>
+                                    <td style="width:7%;" align="right" contenteditable="true">@item.MinOrdQty</td>
+                                    @*<td style="width:7%;" align="right" contenteditable="true">@item.QCReqd</td>*@
+                                    <td style="text-align:center;width:7%;">@Html.CheckBoxFor(m => item.QCReqd, new { @value = item.QCReqd, @style = "width:16px;height:16px;", @id = "QCReqd", @name = "QCReqd" })</td>
+                                    <td style="width:7%;" align="right" contenteditable="true">@item.QtyTolePlus</td>
+                                    <td style="width:7%;" align="right" contenteditable="true">@item.SalesMargin</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4" style="padding-right:15px;">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SaveData">Save Data</button>
+                @*<button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="DeleteData">Delete</button>*@
+                <a href="~/Accounts/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Item%20Master&Controller2=ItemMaster" style="font-size: 13px;padding:3px 12px;margin-right:10px;" class="btn btn-danger" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+@Html.HiddenFor(x => x.Document, new { @id = "hdnDocument" })

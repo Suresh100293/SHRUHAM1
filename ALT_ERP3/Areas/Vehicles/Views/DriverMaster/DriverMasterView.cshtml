@@ -1,0 +1,545 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.DriverMasterVM
+@using Common;
+
+<script src="~/Content/js/iCheck/jquery.icheck.js"></script>
+<script src="~/Content/js/icheck-init.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        LoadZone();
+        LoadBranch();
+        LoadCreditors();
+        LoadVehicleNo();
+
+        $('#LicenceExpDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+            //startDate: "+0d",
+        });
+
+        $("#MobileNo1,#MobileNo2").constrain({ allow: { regex: "[0-9+]" } });
+        $('#Name').blur(function (event) {
+            if ($('#Name').val() == null || $('#Name').val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            DriverNameCheck();
+        });
+        $("#btnDeliveryAddDoc").click(function (event) {
+            event.preventDefault();
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Srl"] = $("#Document").val();
+            ModelData["Type"] = "Drive";
+            ModelData["DocType"] = "";
+            ModelData["RefType"] = "@Model.Header";
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+        $('#btnCreatePosting').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("GenerareCreditors")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            var DTO = { DriverName: $("#Name").val() };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        $('#Posting').select2('data', { id: data.Code, text: data.Name });
+                        $("#ErrorMessage").hide();
+                        $("#btnCreatePosting").prop("disabled", true);
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            var result = confirm("Are you sure you want to delete?");
+            if (result)
+            {
+                var url = '@Url.Action("DeleteStateMaster")';
+                @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = '@Model.Mode';
+                ModelData["Header"] = '@Model.Header';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        if (data.Status == 'Success')
+                        {
+                            $('.spinner').hide();
+                            window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                            $("#ErrorMessage").hide();
+                        }
+                        else
+                        {
+                            $('.spinner').hide();
+                            alert(data.Message);
+                        }
+                    },
+                });
+            }
+            else
+            {
+                $('.spinner').hide();
+                window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                $("#ErrorMessage").hide();
+            }
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            var TruckStatus = "";
+
+            if ($("#BranchCode").val() == null || $("#BranchCode").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select Branch..');
+                return;
+            }
+            if ($("#Name").val() == null || $("#Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ($("#Posting").val() == null || $("#Posting").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text( 'Posting Required..');
+                return;
+            }
+            DriverNameCheck();
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Name"] = $("#Name").val();
+            ModelData["Posting"] = $("#Posting").val();
+            ModelData["Nick_Name"] = $("#Nick_Name").val();
+            ModelData["MobileNo1"] = $("#MobileNo1").val();
+            ModelData["MobileNo2"] = $("#MobileNo2").val();
+            ModelData["Guaranter"] = $("#Guaranter").val();
+            ModelData["Reference"] = $("#Reference").val();
+            ModelData["LicenceNo"] = $("#LicenceNo").val();
+            ModelData["LicenceExpDate"] = $("#LicenceExpDate").val();
+            ModelData["ValidProof"] = $("#ValidProof").val();
+            ModelData["ProofNo"] = $("#ProofNo").val();
+            ModelData["VehicleNo"] = $("#VehicleNo").val();
+            ModelData["Active"] = $("#Active").is(":checked");
+            ModelData["ZoneCode"] = $("#ZoneCode").val();
+            ModelData["BranchCode"] = $("#BranchCode").val();
+            ModelData["DriverStatusChangeNarr"] = $("#DriverStatusChangeNarr").val();
+            ModelData["HoldTicklers"] = $("#HoldTicklers").val();
+            ModelData["Ticklers"] = $("#Ticklers").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success')
+                    {
+                        $('.spinner').hide();
+                        window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else
+                    {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+    function DriverNameCheck() {
+        var url = '@Url.Action("DriverNameCheck")';
+        var DTO = { DriverName: $("#Name").val(), Document: $("#Document").val()};
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success')
+                {
+                    $('.spinner').hide();
+                    $("#ErrorMessage").hide();
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text(data.Message);
+                    return;
+                }
+            },
+        });
+    }
+    function LoadZone() {
+        var url = '@Url.Action("GetZone")'
+        $('#ZoneCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ZoneCode', text: '@Model.ZoneName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function LoadBranch() {
+        var url = '@Url.Action("GetBranch")'
+        $('#BranchCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BranchCode', text: '@Model.BranchName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function LoadCreditors() {
+        var url = '@Url.Action("GetCreditors")'
+        $('#Posting').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Posting', text: '@Model.PostingName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function LoadVehicleNo() {
+        var url = '@Url.Action("GetVehicleNos")'
+        $('#VehicleNo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehicleNo', text: '@Model.VehicleNoN' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+
+</script>
+<style>
+    .red {
+        color: red;
+    }
+</style>
+<div class="form-horizontal" id="Rmaster" role="form" style="margin-top:0%; overflow-x:hidden; ">
+    <div class="form-group">
+        <label class="col-sm-2 control-label">System Code:</label>
+        <div class="col-sm-2">
+            @Html.TextBoxFor(x => x.Code, new { @class = "input-large-query form-control", @readonly = "readonly", @Value = Model.Code })
+        </div>
+        <div class="col-sm-1"></div>
+        <div class="col-sm-4">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Branch:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.BranchCode, new { @class = "input-large-query", @style = "width:60%;", @Value = Model.BranchCode })
+        </div>
+        <div class="col-sm-1"></div>
+        <label class="col-sm-2 control-label">Short Name (Alias):</label>
+        <div class="col-sm-2">
+            @Html.TextBoxFor(x => x.Nick_Name, new { @class = "form-control", @Value = Model.Nick_Name })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Driver Name:<span class="red">*</span></label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.Name, new { @class = "input-large-query form-control", @Value = Model.Name })
+        </div>
+        <div class="col-sm-1"></div>
+        <label class="col-sm-2 control-label">Vehicle No:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.VehicleNo, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.VehicleNo, @readonly = "readonly" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Mobile No:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.MobileNo1, new { @class = "form-control", @Value = Model.MobileNo1, @maxlength = "10", @style = "width: 170px;" })
+        </div>
+        <div class="col-sm-1"></div>
+        <label class="col-sm-2 control-label">Alternate Mobile No:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.MobileNo2, new { @class = "form-control", @Value = Model.MobileNo2, @maxlength = "10", @style = "width: 170px;" })
+        </div>
+        <div class="col-sm-1"></div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">LicenceNo:</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.LicenceNo, new { @class = "form-control", @Value = Model.LicenceNo, @style = "width:170px;" })
+        </div>
+        <label class="col-sm-2 control-label">Licence Exp Date:</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.LicenceExpDate, new { @class = "form-control", @Value = Model.LicenceExpDate, @style = "width:170px;" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Guaranter:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.Guaranter, new { @class = "form-control", @Value = Model.Guaranter, @maxlength = "50" })
+        </div>
+        <div class="col-sm-1"></div>
+        <label class="col-sm-2 control-label">Reference:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.Reference, new { @class = "form-control", @Value = Model.Reference, @maxlength = "50" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Active / InActive:</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.Active, new { @class = "checkbox", @style = "width:20px;", @Value = Model.Active })
+        </div>
+        <label class="col-sm-offset-1 col-sm-2 control-label">Posting Account:<span class="red">*</span></label>
+        <div class=" col-sm-3">
+            @Html.TextBoxFor(x => x.Posting, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Posting })
+        </div>
+        @if (Model.Mode == "Add")
+        {
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" style="padding: 3px 5px;" id="btnCreatePosting">Generate Post AC</button>
+            </div>
+        }
+    </div>
+    <div class="form-group hidden">
+        <label class="col-sm-2 control-label">Status Change Narr:</label>
+        <div class="col-sm-10">
+            @Html.TextAreaFor(x => x.DriverStatusChangeNarr, new { @class = "form-control", @Value = Model.DriverStatusChangeNarr, @maxlength = "250", @rows = "2" })
+        </div>
+        <div class="col-sm-4">
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Tickler:</label>
+        <div class="col-sm-4">
+            @Html.TextAreaFor(x => x.Ticklers, new { @class = "form-control", @Name = "Ticklers", @Id = "Ticklers", @style = "width: 98%; height: 105px;background-color: #fafafa;", @value = Model.Ticklers, @maxlength = 250 })
+        </div>
+        <label class="col-sm-2 control-label">Hold Tickler:</label>
+        <div class="col-sm-4">
+            @Html.TextAreaFor(x => x.HoldTicklers, new { @class = "form-control", @Name = "HoldTicklers", @Id = "HoldTicklers", @style = "width: 98%; height: 105px;background-color: #fafafa;", @value = Model.HoldTicklers, @maxlength = 250 })
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x => x.Document)
+
+
+
+
+

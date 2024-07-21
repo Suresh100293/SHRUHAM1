@@ -1,0 +1,449 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">Stock Batch Details</h4>
+    </div>
+    @if (Model.SubType == "RP" || Model.SubType == "CP" || Model.SubType == "IM" || Model.SubType == "NS" || Model.SubType == "IC" || Model.SubType == "SX")
+    {
+        <script>
+            $(document).ready(function () {
+                $('#txtMfgDate').datepicker({
+                    format: 'dd-mm-yyyy',
+                    autoclose: true,
+                });
+
+                $('#txtExpDate').datepicker({
+                    format: 'dd-mm-yyyy',
+                    autoclose: true,
+                });
+                $('.batchmfgdtclass').datepicker({
+                    format: 'dd-mm-yyyy',
+                    autoclose: true,
+                });
+
+                $('.batchexpdtclass').datepicker({
+                    format: 'dd-mm-yyyy',
+                    autoclose: true,
+                });
+                $('#btnadddBatchStk').click(function (event) {
+                    event.preventDefault();
+                    if (CheckBatchValidationOnFirstAdd() == false) {
+                        return;
+                    }
+                    var myBatchArray = []
+                    $('#ItmBtPR tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        var myDets = {
+                            tempId: tds.eq(0).text(),
+                            Batch: tds.eq(1).text(),
+                            Qty: tds.eq(2).text(),
+                            Qty2: tds.eq(3).text(),
+                            MRP: tds.eq(4).text(),
+                            Rate: tds.eq(5).text(),
+                            StrMfgDate: tds.find("input[id='typemfgdate']").val(),
+                            StrExpDate: tds.find("input[id='typeexpdate']").val(),
+                            Code: tds.eq(8).text(),
+                            MainType: tds.eq(9).text(),
+                            SubType: tds.eq(10).text(),
+                            Store: tds.eq(11).text(),
+                        }
+                        myBatchArray.push(myDets);
+                    })
+
+                    var ModelData = {};
+                    ModelData["BatchNo"] = $("#txtBatchNo").val();
+                    ModelData["Qty"] = $('#txtQty11').val();
+                    ModelData["Qty2"] = $('#txtBatchQty2').val();
+                    ModelData["Balance"] = $('#txtBalance').val();
+                    ModelData["MRP"] = $('#txtMRP').val();
+                    ModelData["Rate"] = $('#txtRate11').val();
+                    ModelData["StrMfgDate"] = $('#txtMfgDate').val();
+                    ModelData["StrExpDate"] = $('#txtExpDate').val();
+                    ModelData["SubType"] = $("#hdnSType").val();
+                    ModelData["MainType"] = $("#hdnMType").val();
+                    ModelData["Store"] = $("#Store").val();
+                    ModelData["Code"] = $("#txtitemcode").val();
+                    ModelData["ChangeLog"] = $("#hdnchangelog").val();
+                    ModelData["ItemBatchListPS"] = myBatchArray;
+                    ModelData["ProductQty"] = $("#hdnAddProductQty").val();
+                    ModelData["ProductQty2"] = $("#hdnAddProductQty2").val();
+                    ModelData["ProductRateOn2"] = $("#hdnAddProductRateOn2").val();
+                    var DTO = { Model: ModelData };
+                    var url = '@Url.Action("AddItemBatchListPurch")';
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json;charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            $('.spinner').hide();
+                            $('#itembatch').modal('show');
+                            if (data.Status == "Success") {
+                                $('#ItemBatch').html(data.Html);
+                            }
+                            if (data.Status == "Duplicate") {
+                                alert('Duplicate Batch Number ' + data.Message + "")
+                            }
+
+                        },
+                        error: function () {
+                            alert("Error occured while processing your request.");
+                        }
+                    });
+                });
+
+                $('#SaveBatchDPurch').click(function (event) {
+                    event.preventDefault();
+                    CheckBatchValidation()
+                });
+
+                $('button[action|="DeleteBatch"]').click(function (event) {
+                    event.preventDefault();
+                    var myBatchArray = []
+                    $('#ItmBtPR tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        var myDets = {
+                            tempId: tds.eq(0).text(),
+                            Batch: tds.eq(1).text(),
+                            Qty: tds.eq(2).text(),
+                            Qty2: tds.eq(3).text(),
+                            MRP: tds.eq(4).text(),
+                            Rate: tds.eq(5).text(),
+                            StrMfgDate: tds.find("input[id='typemfgdate']").val(),
+                            StrExpDate: tds.find("input[id='typeexpdate']").val(),
+                            Code: tds.eq(8).text(),
+                            MainType: tds.eq(9).text(),
+                            SubType: tds.eq(10).text(),
+                            Store: tds.eq(11).text(),
+                        }
+                        myBatchArray.push(myDets);
+                    })
+
+                    var ModelData = {};
+                    ModelData["tempId"] = $(this).val();
+                    ModelData["ItemBatchListPS"] = myBatchArray;
+                    ModelData["SubType"] = $("#hdnSType").val();
+                    ModelData["ChangeLog"] = $("#hdnchangelog").val();
+                    ModelData["ProductQty"] = $("#hdnAddProductQty").val();
+                    ModelData["ProductQty2"] = $("#hdnAddProductQty2").val();
+                    ModelData["ProductRateOn2"] = $("#hdnAddProductRateOn2").val();
+                    var DTO = { Model: ModelData };
+                    var url = '@Url.Action("DeleteItemBatchInAddMode")';
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json;charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            $('.spinner').hide();
+                            $('#itembatch').modal('show');
+                            $('#ItemBatch').html(data.Html);
+                        },
+                        error: function () {
+                            alert("Error occured while processing your request.");
+                        }
+                    });
+                });
+            });
+
+            function CheckBatchValidation() {
+                var adjsum1 = 0;
+                var adjsum2 = 0;
+                var rateonbool = $('#hdnAddProductRateOn2').val();
+                var batchqty2 = parseFloat($('#hdnAddProductQty2').val());
+                var batchqty1 = parseFloat($('#hdnAddProductQty').val());
+                if (rateonbool == "False") {
+                    $('#ItmBtPR tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        var Qty = tds.eq(2).text();
+                        adjsum1 += (parseFloat(Qty));
+                    })
+                    if (batchqty1 != adjsum1) {
+                        alert('Product Qty1 is not equal to Batch Qty1')
+
+                        $('#hdnBatchSaved').val('0');
+
+                    }
+                    else {
+                        $('#hdnBatchSaved').val('1');
+                    }
+
+
+                }
+                else {
+                    $('#ItmBtPR tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        var Qty2 = tds.eq(3).text();
+                        adjsum2 += (parseFloat(Qty2));
+                    })
+                    if (batchqty2 < adjsum2) {
+                        alert('Product Qty2 is not equal to Batch Qty2')
+
+                        $('#hdnBatchSaved').val('0');
+                    }
+                    else {
+                        $('#hdnBatchSaved').val('1');
+                    }
+
+                }
+                if ($('#hdnBatchSaved').val() == "1") {
+
+                    $('#itembatch').modal('hide');
+                }
+            }
+
+            function CheckBatchValidationOnFirstAdd() {
+                var adjsum1 = 0;
+                var adjsum2 = 0;
+                var rateonbool = $('#hdnAddProductRateOn2').val();
+                var batchqty2 = $('#hdnAddProductQty2').val();
+                var batchqty1 = $('#hdnAddProductQty').val();
+                if (rateonbool == "False") {
+                    adjsum1 = parseFloat($('#txtQty11').val());
+                    if (batchqty1 < adjsum1) {
+                        alert('Product Qty1 is less than Batch Qty1')
+
+                        return false;
+
+                    }
+                    else {
+                        return true;
+                    }
+
+                }
+                else {
+                    adjsum2 = parseFloat($('#txtBatchQty2').val());
+
+                    if (batchqty2 < adjsum2) {
+                        alert('Product Qty2 is less than Batch Qty2')
+
+                        return false;
+                    }
+                    else {
+                        return true;
+                    }
+
+                }
+
+            }
+
+        </script>
+        <div class="modal-body">
+            Quantity: @Html.DisplayFor(x => x.ProductQty, new { @class = "form-control", @style = "text-align:right;font-weight:bold;" })  Quantity2: @Html.DisplayFor(x => x.ProductQty2)
+
+
+
+            <div id="divItmBtPR" class="grid" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+                <table id="ItmBtPR" class="zui-tableww">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                            <th>Sr.No</th>
+                            <th>Batch Number</th>
+                            <th>Quantity</th>
+                            <th>Quantity2</th>
+                            <th>MRP</th>
+                            <th>Rate</th>
+                            <th>Mfg.Date</th>
+                            <th>Exp.Date</th>
+                            <th hidden="hidden"></th>
+                            <th hidden="hidden"></th>
+                            <th hidden="hidden"></th>
+                            <th hidden="hidden"></th>
+                            <th></th>
+                        </tr>
+                        <tr>
+                            <td></td>
+                            <td>@Html.TextBoxFor(x => x.BatchNo, new { @type = "text", @id = "txtBatchNo", @style = "width:99%;margin-top:2px;" })</td>
+                            <td>@Html.TextBoxFor(x => x.Qty, new { @type = "text", @id = "txtQty11", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                            <td>@Html.TextBoxFor(x => x.Qty2, new { @type = "text", @id = "txtBatchQty2", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                            <td>@Html.TextBoxFor(x => x.MRP, new { @type = "text", @id = "txtMRP", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                            <td>@Html.TextBoxFor(x => x.Rate, new { @type = "text", @id = "txtRate11", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                            <td>@Html.TextBoxFor(x => x.StrMfgDate, new { @type = "text", @id = "txtMfgDate", @style = "width:99%;margin-top:2px;height:25px;", @Value = DateTime.Now.ToString("dd-MM-yyyy") })</td>
+                            <td>@Html.TextBoxFor(x => x.StrExpDate, new { @type = "text", @id = "txtExpDate", @style = "width:99%;margin-top:2px;height:25px;", @Value = DateTime.Now.ToString("dd-MM-yyyy") })</td>
+                            <td hidden="hidden"></td>
+                            <td hidden="hidden"></td>
+                            <td hidden="hidden"></td>
+                            <td hidden="hidden"></td>
+                            <td><a id="btnadddBatchStk" href="#" class="btn btn-primary btn-sm" title="Add"><i class="fa fa-plus"></i></a></td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.ItemBatchListPS != null)
+                        {
+                            for (int i = 0; i < Model.ItemBatchListPS.Count; i++)
+                            {
+                                <tr>
+                                    <td style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].tempId)</td>
+                                    <td contenteditable="true">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Batch)</td>
+                                    <td contenteditable="true" style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Qty)</td>
+                                    <td contenteditable="true" style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Qty2)</td>
+                                    <td>@Html.DisplayFor(m => Model.ItemBatchListPS[i].MRP)</td>
+                                    <td>@Html.DisplayFor(m => Model.ItemBatchListPS[i].Rate)</td>
+                                    <td contenteditable="true" style="text-align:right"><input id="typemfgdate" class="batchmfgdtclass" type="text" value="@Model.ItemBatchListPS[i].StrMfgDate" /></td>
+                                    <td contenteditable="true" style="text-align:right"><input id="typeexpdate" class="batchexpdtclass" type="text" value="@Model.ItemBatchListPS[i].StrExpDate" /></td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Code)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].MainType)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].SubType)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Store)</td>
+                                    <td><button type="button" action="DeleteBatch" class="btn btn-danger btn-sm" value="@Html.DisplayFor(m => Model.ItemBatchListPS[i].tempId)" title="Delete"><i class="fa fa-trash-o"></i></button></td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc">
+            <button type="button" class="btn btn-success" id="SaveBatchDPurch">Save</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+        </div>
+    }
+    @if (Model.SubType == "RS" || Model.SubType == "CS" || Model.SubType == "XS" || Model.SubType == "NP" || Model.SubType == "OC" || Model.SubType == "PX")
+    {
+        <script>
+            $(document).ready(function () {
+                $('#SaveBatchDSales').click(function (event) {
+                    event.preventDefault();
+                    CheckBatchValidation()
+                });
+            });
+
+            function CheckBatchValidation() {
+                var adjsum1 = 0;
+                var adjsum2 = 0;
+                var rateonbool = $('#hdnAddProductRateOn2').val();
+                var batchqty2 = parseFloat($('#hdnAddProductQty2').val());
+                var batchqty1 = parseFloat($('#hdnAddProductQty').val());
+                if (rateonbool == "False" || rateonbool == "false") {
+                    $('#itembatchSL tr:not(:first)').each(function () {
+                        if ($(this).find('input[type="checkbox"]').is(':checked')) {
+                            var tds = $(this).find('td');
+                            var Qty = parseFloat(tds.eq(3).text());
+                            var BalQty = parseFloat(tds.eq(5).text());
+                            if (Qty <= 0) {
+                                alert('Selected Batch Quantity is zero')
+                                $('#hdnBatchSaved').val('0');
+                            }
+                            if (Qty > BalQty) {
+                                alert('Selected Batch Quantity is greater than Balance Qty')
+                                $('#hdnBatchSaved').val('0');
+                            }
+                            adjsum1 += (parseFloat(Qty));
+                        }
+                    })
+                    if (batchqty1 != adjsum1) {
+                        alert('Product Qty1 is not equal to Batch Qty1')
+
+                        $('#hdnBatchSaved').val('0');
+
+                    }
+                    if (batchqty1 == adjsum1) {
+                        $('#hdnBatchSaved').val('1');
+                    }
+
+
+                }
+                else {
+                    $('#itembatchSL tr:not(:first)').each(function () {
+                        if ($(this).find('input[type="checkbox"]').is(':checked')) {
+                            var tds = $(this).find('td');
+                            var Qty2 = parseFloat(tds.eq(4).text());
+                            var BalQty = parseFloat(tds.eq(5).text());
+                            if (Qty2 <= 0) {
+                                alert('Selected Batch Quantity2 is zero')
+                                $('#hdnBatchSaved').val('0');
+                            }
+                            if (Qty2 > BalQty) {
+                                alert('Selected Batch Quantity2 is greater than Balance Qty')
+                                $('#hdnBatchSaved').val('0');
+                            }
+                            adjsum2 += (parseFloat(Qty2));
+                        }
+                    })
+                    if (batchqty2 != adjsum2) {
+                        alert('Product Qty2 is not equal to Batch Qty2')
+
+                        $('#hdnBatchSaved').val('0');
+                    }
+                    if (batchqty2 == adjsum2) {
+                        $('#hdnBatchSaved').val('1');
+                    }
+
+                }
+                if ($('#hdnBatchSaved').val() == "1") {
+
+                    $('#itembatch').modal('hide');
+                }
+            }
+        </script>
+        <div class="modal-body">
+            Quantity: @Html.DisplayFor(x => x.ProductQty, new { @class = "form-control", @style = "text-align:right;font-weight:bold;" })  Quantity2: @Html.DisplayFor(x => x.ProductQty2)
+            <div class="divitembatchSL" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+                <table id="itembatchSL" class="zui-tableww" style="width:100%;">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                            <th></th>
+                            <th>Sr.No</th>
+                            <th>Batch Number</th>
+                            <th>Qty</th>
+                            <th>Qty2</th>
+                            <th>Balance</th>
+                            <th>MRP</th>
+                            <th>Rate</th>
+                            <th>Mfg.Date</th>
+                            <th>Exp.Date</th>
+                            <th hidden="hidden"></th>
+                            <th hidden="hidden"></th>
+                            <th hidden="hidden"></th>
+                            <th hidden="hidden"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.ItemBatchListPS != null)
+                        {
+                            for (int i = 0; i < Model.ItemBatchListPS.Count; i++)
+                            {
+                                <tr>
+                                    <td style="text-align:right">@Html.CheckBoxFor(m => Model.ItemBatchListPS[i].ExistData)</td>
+                                    <td contenteditable="true">@Html.DisplayFor(m => Model.ItemBatchListPS[i].tempId)</td>
+                                    <td contenteditable="true">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Batch)</td>
+                                    <td contenteditable="true" style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].UseQty)</td>
+                                    <td contenteditable="true" style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Qty2)</td>
+                                    <td style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Balance)</td>
+                                    <td>@Html.DisplayFor(m => Model.ItemBatchListPS[i].MRP)</td>
+                                    <td>@Html.DisplayFor(m => Model.ItemBatchListPS[i].Rate)</td>
+                                    <td style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].StrMfgDate)</td>
+                                    <td style="text-align:right">@Html.DisplayFor(m => Model.ItemBatchListPS[i].StrExpDate)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Code)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].MainType)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].SubType)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.ItemBatchListPS[i].Store)</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc">
+            <button type="button" class="btn btn-success" id="SaveBatchDSales">Save</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+        </div>
+    }
+    @Html.HiddenFor(x => x.hdnBatchSaved, new { @id = "hdnBatchSaved" })
+    @Html.HiddenFor(x => x.ProductQty, new { @id = "hdnAddProductQty" })
+    @Html.HiddenFor(x => x.ProductQty2, new { @id = "hdnAddProductQty2" })
+    @Html.HiddenFor(x => x.ProductRateOn2, new { @id = "hdnAddProductRateOn2" })
+</div>

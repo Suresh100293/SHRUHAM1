@@ -1,0 +1,493 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.NewVehiclesRatesVM
+@using Common;
+@{
+    ViewBag.Title = "NewIndex";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<style>
+    /*set Pervious command Nex Button*/
+    #AllRates_filter {
+        margin-top: -60px;
+    }
+
+    .dataTables_filter input {
+        display: inline-block;
+        width: 100%;
+        vertical-align: middle;
+    }
+
+    .dataTables_paginate.paging_bootstrap.pagination {
+        margin-top: -37px;
+    }
+
+    input {
+        text-align: center;
+    }
+
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+
+    thead th {
+        text-align: center;
+        padding: 8px;
+    }
+
+    .tab1 {
+        border-collapse: collapse;
+        width: 80%;
+        margin-top: 5px;
+    }
+
+    th, td {
+        text-align: left;
+        padding: 8px;
+    }
+
+    tr:nth-child(even) {
+        background-color: #f2f2f2
+    }
+
+    th {
+        background-color: rgb(215, 215, 214);
+        /*background-color: #00CCCC;*/
+        /*color: white;*/
+        color: darkslategrey;
+    }
+
+    .tab1 th {
+        background-color: rgb(215, 215, 214);
+        /*background-color: aquamarine;*/
+        color: darkslategrey;
+    }
+
+
+    .example {
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        width: max-content;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .example th {
+            background-color: #F7F7F7;
+            font-weight: bold;
+        }
+
+        .example th, .example td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .example, .example table td {
+            border: 0px solid #ccc;
+        }
+</style>
+<style>
+    .editableTable {
+        border: solid 1px;
+        border-color: dimgray;
+        border-collapse: separate;
+        border-spacing: inherit;
+        width: auto !important;
+    }
+
+        .editableTable th {
+            background-color: lightgray;
+            border-right: solid 1px dimgray;
+            border-bottom: solid 1px dimgray;
+            color: black;
+            text-align: center;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            font-size: 9pt;
+            font-weight: normal;
+        }
+
+        .editableTable td {
+            border: solid 1px dimgray;
+            border-top: solid 1px dimgray;
+            color: black;
+            padding: 5px !important;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            font-size: 9pt;
+        }
+</style>
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+        $(document).ready(function () {
+            LoadCopyBranch();
+            //$("#Reporting").constrain({ allow: { regex: "[a-zA-Z ]" } });
+            $("#Reporting").constrain({ allow: { regex: "[0-9:.]" } });
+            $(".item_Rate,.item_AdvRate").constrain({ allow: { regex: "[0-9:.]" } });
+
+
+
+
+             $('#btnCopyKM').click(function (event) {
+                event.preventDefault();
+                $("#ErrorMessage").hide();
+                var divId = $("#CopyBranch").val();
+                if (divId == null || divId == "") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Select Area..');
+                    return;
+                }
+                var ModelData = {};
+                ModelData["CopyBranch"] = $("#CopyBranch").val();
+                ModelData["VehicleNo_Category"] = '@Model.VehicleNo_Category';
+                ModelData["typeofRate"] = '@Model.typeofRate';
+                ModelData["VehiclesList"] = AllRates;
+                ModelData["From"] = '@Model.From';
+
+                var selectedeToAreaCode = "";
+            $('#AllRates tbody tr').each(function () {
+                debugger;
+                if ($(this).find('input[type=checkbox]').prop("checked") == true) {
+                    debugger;
+                    var $this = $(this).find('input[type=checkbox]');
+                        var ToCode = $this.attr("id");
+                        selectedeToAreaCode += ToCode + ",";
+                    }
+                });
+            selectedeToAreaCode = selectedeToAreaCode.substring(0, selectedeToAreaCode.length - 1);
+            ModelData["Document"] = selectedeToAreaCode;
+
+                 if (selectedeToAreaCode=="") {
+                     $("#ErrorMessage").show();
+                     $("#ErrorMessage").text('Please Select To Destination ..');
+                     return;
+                 }
+
+                var url = '@Url.Action("CopyKM")';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#KilometerPartialDiv");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+
+                    },
+                });
+            });
+
+
+
+            //$("#AllRates").dataTable({
+            //    "iDisplayLength": 5,
+            //    "bPaginate": false,
+            //    "bInfo": true,
+            //    "bFilter": true,
+            //    "bLengthChange": false
+            //});
+
+
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            var error = false;
+            var ErroMsg = "";
+            var AllRates = new Array();
+            //$('#AllRates TBODY tr').each(function () {
+            //    var AllRate = {};
+            //    var row = $(this);
+            //    //if (row.find('td:eq(2) input[type=Text]').val() != "0") {
+
+            //    if (parseFloat(row.find('td:eq(4)').text()) < parseFloat(row.find('td:eq(5)').text())) {
+            //            error = true;
+            //            ErroMsg = 'U Can not Get More Advance Compare To Rate';
+            //        }
+                    
+
+            //    AllRate.Code = (row.find('td:eq(1)').text());
+            //        AllRate.To=(row.find('td:eq(2) input[type=Text]').val());
+            //        AllRate.KM=(row.find('td:eq(2) input[type=Text]').val());
+            //        AllRate.Rate=(row.find('td:eq(3) input[type=Text]').val());
+            //        AllRate.AdvRate = (row.find('td:eq(4) input[type=Text]').val());
+            //        AllRate.Reporting = (row.find('td:eq(5) input[type=Text]').val());
+
+            //        //AllRate.ReportingHH = (row.find('td:eq(5)').find('input[type=number]').eq(0).val());
+            //        //AllRate.ReportingMM = (row.find('td:eq(5)').find('input[type=number]').eq(1).val());
+
+
+            //        //AllRate.ReportingHH = (row.find('td:eq(6) input[type=number]:first').val());
+
+            //        //AllRate.ReportingMM = (row.find('td:eq(6) input[type=number]:second').val());
+            //        AllRates.push(AllRate);
+            //    //}
+            //});
+            $('#AllRates TBODY tr').each(function () {
+                var row = $(this);
+                if (row.find('input[type=checkbox]').prop("checked") == true) {
+                    var tds = $(this).find('td');
+                    if (parseFloat(tds.eq(4).text()) < parseFloat(tds.eq(5).text())) {
+                        error = true;
+                        ErroMsg = 'U Can not Get More Advance Compare To Rate';
+                    }
+                    
+                    var myDets = {
+                        Code : tds.eq(1).text(),
+                        To: tds.eq(2).attr("id"),
+                        Rate : tds.eq(4).text(),
+                        AdvRate: tds.eq(5).text(),
+                        Reporting: tds.eq(6).text(),
+                    }
+
+                    AllRates.push(myDets);
+                }
+            });
+
+            if (error) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text(ErroMsg);
+                return;
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            ModelData["From"] = '@Model.From';
+            ModelData["VehicleNo_Category"] = '@Model.VehicleNo_Category';
+            ModelData["typeofRate"] = '@Model.typeofRate';
+            ModelData["VehiclesList"] = AllRates;
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Vehicles/VehiclesRates/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+    function LoadCopyBranch() {
+        var url = '@Url.Action("To")'
+        $('#CopyBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CopyBranch', text: '@Model.CopyBranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Vehicles/VehiclesRates/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            @*<b class="CodeSt">@Model.Mode Mode</b>*@
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:0%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+
+            <div class="col-sm-12">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="">Copy From:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.CopyBranch, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.CopyBranch })
+                    </div>
+                    <div class="col-sm-1">
+                        <button type="button" class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnCopyKM"><i class="glyphicon glyphicon-refresh" style="font-size: 1em;"></i></button>
+                    </div>
+                </div>
+                @*<div class="form-group">
+                        <label class="col-sm-1 control-label" style="">KM Calculate:</label>
+                        <div class="col-sm-3">
+                            <div class="col-sm-5" style="margin-top:0px;padding-left:0px;">
+                                <input type="text" class="KMOperation form-control" style="width:100%;" />
+                            </div>
+                        </div>
+                        <div class="col-sm-1">
+                            <button type="button" class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnKMOperation"><i class="glyphicon glyphicon-refresh" style="font-size: 1em;"></i></button>
+                        </div>
+                    </div>*@
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="">KM Per HR:</label>
+                    <div class="col-sm-3">
+                        <div class="col-sm-5" style="margin-top:0px;padding-left:0px;">
+                            <input type="text" class="form-control" id="KMPERHR" style="width:100%;" />
+                        </div>
+                    </div>
+                    <div class="col-sm-1">
+                        <button type="button" class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnKMPerHR"><i class="glyphicon glyphicon-refresh" style="font-size: 1em;"></i></button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-6" id="KilometerPartialDiv">
+                        @Html.Partial("_PartialView", Model)
+                    </div>
+                </div>
+            </div>
+
+
+
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Vehicles/VehiclesRates/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@*<input type="hidden" id="controllername" />*@
+@Html.HiddenFor(x => x.Document)
+@*<table class="tab1 table-bordered">
+        <thead>
+            <tr style="text-align:center;font-weight:bold;">
+                <th>Vehicle No &nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;&nbsp;@Model.VehicleNo_Category.ToString().ToUpper()</th>
+                <th>From&nbsp;&nbsp;&nbsp;:&nbsp;&nbsp;&nbsp;@Model.FromName.ToString().ToUpper()</th>
+
+            </tr>
+        </thead>
+    </table>*@
+
+@*<table id="AllRates" class=" table table-bordered table-striped">
+        <thead>
+            <tr style="text-align:center;font-weight:bold;">
+                <th hidden>Code</th>
+                <th>To</th>
+                <th>KM</th>
+                <th>Rate</th>
+                <th>AdvRate</th>
+                <th>Reporting</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model.VehiclesList)
+            {
+                <tr>
+                    <td hidden>@Html.TextBoxFor(x => item.Code, new { @class = "input-large-query form-control", @style = "width:100%;", @Value = item.Code })</td>
+                    @if (!(item.To.Contains("A")))
+                    {
+                        if (item.To.Contains("B"))
+                        {
+                            item.ToName += " - B";
+                            <td>@Html.TextBoxFor(x => item.ToName, new { @class = "input-large-query form-control ", @style = "width:100%;", @readonly = "readonly", @Value = item.ToName })</td>
+                        }
+                        else
+                        {
+                            item.ToName += " - SB";
+                            <td>@Html.TextBoxFor(x => item.ToName, new { @class = "input-large-query form-control ", @style = "width:100%;", @readonly = "readonly", @Value = item.ToName })</td>
+                        }
+
+                    }
+                    else
+                    {
+                        item.ToName += " - A";
+                        <td>@Html.TextBoxFor(x => item.ToName, new { @class = "input-large-query form-control", @style = "width:100%;", @readonly = "readonly", @Value = item.ToName })</td>
+                    }
+                    <td>@Html.TextBoxFor(x => item.KM, new { @class = "input-large-query form-control", @style = "width:100%;", @Value = item.KM })</td>
+                    <td>@Html.TextBoxFor(x => item.Rate, new { @class = "input-large-query form-control", @style = "width:100%;", @Value = item.Rate })</td>
+                    <td>@Html.TextBoxFor(x => item.AdvRate, new { @class = "input-large-query form-control", @style = "width:100%;", @Value = item.AdvRate })</td>
+                    <td>
+                        @Html.TextBoxFor(x => item.Reporting, new { @class = "input-large-query form-control", @style = "width:100%;", @Value = item.Reporting })
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>*@

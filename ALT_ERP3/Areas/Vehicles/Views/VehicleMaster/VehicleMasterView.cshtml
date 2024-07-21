@@ -1,0 +1,1424 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.VehicleMasterVM
+@using Common;
+@{
+    /**/
+
+    ViewBag.Title = "Vehicle Master";
+    Layout = null;
+}
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+<style>
+    .multiselect-search {
+        height: 31px !important;
+    }
+
+    .jstree a {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    .jstree-default a.jstree-search {
+        color: #ff0779 !important;
+        font-weight: bold !important;
+    }
+</style>
+<script type="text/javascript">
+    var Querymarkers = [];
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+
+        $('#attachdoc,#mapdoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        })
+        $("#attachdoc,#mapdoc").modal("hide");
+
+        LoadCurrCategory();
+        LoadBroker();
+        LoadDriver();
+        LoadVehicleGroupStatus();
+        VehiPostAc();
+        LoadDebitAccount();
+        LoadDriverCreditAccount();
+
+        if ('@Model.Mode'!="Add") {
+            FillTreeView();
+        } else {
+            CheckUncheckTree('Check');
+            $('#chkSelectAll').prop("checked", true);
+        }
+
+        if ('@Model.DriverAdvancePayable'=="True") {
+            $("#DriverAdvancePayable").prop("checked", true);
+        } else {
+            $("#DriverAdvancePayable").prop("checked", false);
+        }
+        if ('@Model.FMVOUREL'=="True") {
+            $("#FMVOUREL").prop("checked", true);
+        } else {
+            $("#FMVOUREL").prop("checked", false);
+        }
+
+        if ('@Model.FMVOUREL'=="True" || '@Model.DriverAdvancePayable'=="True") {
+            $("#MaintainDriverAc").prop("checked", true);
+        } else {
+            $("#MaintainDriverAc").prop("checked", false);
+        }
+
+        $("#btnVehicleTracking").click(function (event) {
+            event.preventDefault();
+            if ($("#TrackButtonReq").val() == "false" || $("#TrackButtonReq").val() == "False") {
+                alert($("#TrackErrorMsg").val());
+                return;
+            }
+            var url = '@Url.Action("TrackID")';
+            var DTO = { VehicleCode: $("#Document").val() };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var markers = [];
+                    if (data.Status == "Error") {
+                        alert("Vehicle Not Found...!");
+                    } else {
+                        var map1 = new google.maps.Map(document.getElementById('QueryMapDiv'), {
+                            center: { lat: 21.145800, lng: 79.088158 },
+                            zoom: 4
+                        });
+                        for (var i = 0; i < Querymarkers.length; i++) {
+                            Querymarkers[i].setMap(null);
+                        }
+                        Querymarkers = [];
+                        var markerQ = new google.maps.Marker({
+                            position: { lat: parseFloat(data.Latitude), lng: parseFloat(data.Longitude) },
+                            map: map1,
+                        });
+
+                        var contentStringQ = '<div id="content">' +
+                            '<div id="siteNotice">' +
+                            '</div>' +
+                            '<h1 id="firstHeading" class="firstHeading">' + data.Vehicle + '</h1>' +
+                            '<div id="bodyContent">';
+                        var infowindowQ = new google.maps.InfoWindow({
+                            content: contentStringQ
+                        });
+                        var markerValueQ = markerQ;
+                        google.maps.event.addListener(markerQ, 'mouseover', (function (markerValueQ, i) {
+                            return function () {
+                                infowindowQ.open(map1, markerQ);
+                            }
+                        })(markerQ));
+                        google.maps.event.addListener(markerQ, 'mouseout', (function (markerValueQ, i) {
+                            return function () {
+                                infowindowQ.close();
+                            }
+                        })(markerQ));
+
+                        Querymarkers.push(markerQ);
+                        $('#mapdoc').modal('show');
+                    }
+                },
+            });
+        });
+        $("#SpecialRemarkReq").change(function () {
+            if (this.checked) {
+                $("#Remark").removeAttr("disabled");
+
+            } else {
+                $("#Remark").attr("disabled", "disabled");
+            }
+        });
+        $("#BalckListReq").change(function () {
+            if (this.checked) {
+                $("#BalckListRemark").removeAttr("disabled");
+
+            } else {
+                $("#BalckListRemark").attr("disabled", "disabled");
+            }
+        });
+        $('#chkSelectAll').change(function () {
+            if ($('#chkSelectAll').is(":checked")) {
+                CheckUncheckTree('Check');
+            }
+            else {
+                CheckUncheckTree('UnCheck');
+            }
+        });
+        $('#search').keyup(function () {
+            $('#treeviewcontrol').jstree('search', $(this).val());
+        });
+        if ('@Model.Pick_Vehicle_Rate'== "True" || '@Model.PickDriverTripRate'== "True") {
+            $("#Vehicle_Rate").removeAttr("disabled");
+            $("#Category_Rate").removeAttr("disabled");
+            if ('@Model.Pick_Vehicle_Rate'== "True") {
+                $("#ChangeVehicleFreight_Advance").removeAttr("disabled");
+            }
+            else {
+                $("#ChangeVehicleFreight_Advance").prop('checked', false);
+                $("#ChangeVehicleFreight_Advance").attr("disabled", "disabled");
+            }
+            if ('@Model.PickDriverTripRate'== "True") {
+                $("#ChangeDriverFreight_Advance").removeAttr("disabled");
+            }
+            else
+            {
+                $("#ChangeDriverFreight_Advance").prop('checked', false);
+                $("#ChangeDriverFreight_Advance").attr("disabled", "disabled");
+            }
+        }
+        else
+        {
+            $("#ChangeVehicleFreight_Advance").prop('checked', false);
+            $("#ChangeVehicleFreight_Advance").attr("disabled", "disabled");
+            $("#ChangeDriverFreight_Advance").prop('checked', false);
+            $("#ChangeDriverFreight_Advance").attr("disabled", "disabled");
+
+            $("#Vehicle_Rate").prop('checked', false);
+            $("#Vehicle_Rate").attr("disabled", "disabled");
+            $("#Category_Rate").prop('checked', false);
+            $("#Category_Rate").attr("disabled", "disabled");
+            $("#GetParentAlso").prop('checked', false);
+            $("#GetParentAlso").attr("disabled", "disabled");
+        }
+        if ('@Model.MaintainCreditorRecord'!="True") {
+            $("#MaintainCreditorRecord").attr("disabled", true);
+        }
+        if ('@Model.GetParentAlso' == "True") {
+            $("#GetParentAlso").prop('checked', true);
+        }
+        $("#Pick_Vehicle_Rate").change(function () {
+            if (this.checked == true || $("#PickDriverTripRate").is(":checked") == true) {
+                $("#Vehicle_Rate").prop('checked', true);
+                $("#Category_Rate").prop('checked', true);
+                $("#GetParentAlso").prop('checked', true);
+                if (this.checked == true) {
+                    $("#ChangeVehicleFreight_Advance").removeAttr("disabled");
+                } else {
+                    $("#ChangeVehicleFreight_Advance").prop('checked', false);
+                    $("#ChangeVehicleFreight_Advance").attr("disabled", "disabled");
+                }
+               
+                $("#Vehicle_Rate").removeAttr("disabled");
+                $("#Category_Rate").removeAttr("disabled");
+                $("#GetParentAlso").removeAttr("disabled");
+            } else {
+                $("#ChangeVehicleFreight_Advance").prop('checked', false);
+                $("#ChangeVehicleFreight_Advance").attr("disabled", "disabled");
+
+                $("#Vehicle_Rate").prop('checked', false);
+                $("#Vehicle_Rate").attr("disabled", "disabled");
+                $("#Category_Rate").prop('checked', false);
+                $("#Category_Rate").attr("disabled", "disabled");
+                $("#GetParentAlso").prop('checked', false);
+                $("#GetParentAlso").attr("disabled", "disabled");
+            }
+        });
+
+        $("#PickDriverTripRate").change(function () {
+            if (this.checked == true || $("#Pick_Vehicle_Rate").is(":checked") == true) {
+                $("#Vehicle_Rate").prop('checked', true);
+                $("#Category_Rate").prop('checked', true);
+                $("#GetParentAlso").prop('checked', true);
+
+                if (this.checked == true) {
+                    $("#ChangeDriverFreight_Advance").removeAttr("disabled");
+                } else {
+                    $("#ChangeDriverFreight_Advance").prop('checked', false);
+                    $("#ChangeDriverFreight_Advance").attr("disabled", "disabled");
+                }
+
+                $("#Vehicle_Rate").removeAttr("disabled");
+                $("#Category_Rate").removeAttr("disabled");
+                $("#GetParentAlso").removeAttr("disabled");
+            } else {
+                $("#ChangeDriverFreight_Advance").prop('checked', false);
+                $("#ChangeDriverFreight_Advance").attr("disabled", "disabled");
+                $("#Vehicle_Rate").prop('checked', false);
+                $("#Vehicle_Rate").attr("disabled", "disabled");
+                $("#Category_Rate").prop('checked', false);
+                $("#Category_Rate").attr("disabled", "disabled");
+                $("#GetParentAlso").prop('checked', false);
+                $("#GetParentAlso").attr("disabled", "disabled");
+            }
+        });
+
+        $("#PostingReq").change(function ()
+        {
+            if (this.checked)
+            {
+                if ($("#MaintainDriverAc").prop('checked') == true)
+                {
+                    $("#MaintainCreditorRecord").prop('checked', false);
+                    $("#MaintainCreditorRecord").attr("disabled", true);
+                }
+                else
+                {
+                    $("#MaintainCreditorRecord").attr("disabled", false);
+                }
+            }
+            else
+            {
+                $("#MaintainCreditorRecord").prop('checked', false);
+                $("#MaintainCreditorRecord").attr("disabled", true);
+            }
+        });
+        $("#MaintainDriverAc").change(function () {
+            if (this.checked) {
+                $("#MaintainCreditorRecord").prop('checked', false);
+                $("#MaintainCreditorRecord").attr("disabled", true);
+                //$("#DriCrAc").attr("disabled", false);
+                $("#dRIdEBIaC").attr("disabled", false);
+                $("#FMVOUREL").attr("disabled", false);
+                $("#DriverAdvancePayable").attr("disabled", false);
+                $("#DriverAdvancePayable").attr("checked", true);
+                //$("#FMVOUREL").prop('checked', false);
+            } else {
+                $("#MaintainCreditorRecord").attr("disabled", false);
+                $("#dRIdEBIaC").attr("disabled", true);
+                //$("#DriCrAc").attr("disabled", true);
+                $("#FMVOUREL").prop('checked', false);
+                $("#FMVOUREL").attr("disabled", true);
+                $("#DriverAdvancePayable").prop('checked', false);
+                $("#DriverAdvancePayable").attr("disabled", true);
+            }
+        });
+        if ('@Model.CreditAccount'=="B") {
+            $("#FMBroker").attr("checked", true);
+        }
+        if ('@Model.CreditAccount'=="V") {
+            $("#FMVehicle").attr("checked", true);
+        }
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        $('#Vehicle_No').blur(function () {
+            CheckName();
+        });
+        $('#Purchase_Date').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#Date').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#Last_Emi_Date').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#btnCreatePosting').click(function (event) {
+            event.preventDefault();
+
+            CheckName();
+            var url = '@Url.Action("GenerareCreditors")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            var DTO = { TruckNo: $("#Vehicle_No").val() };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        $('#VehiPostAc').select2('data', { id: data.Code, text: data.Name });
+                        $("#ErrorMessage").hide();
+                        $("#btnCreatePosting").prop("disabled", true);
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+        $("#PayLoad").constrain({ allow: { regex: "[0-9]" } });
+        $("#KM").constrain({ allow: { regex: "[0-9]" } });
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            var result = confirm("Are you sure you want to delete?");
+            if (result)
+            {
+                var url = '@Url.Action("DeleteStateMaster")';
+                @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = '@Model.Mode';
+                ModelData["Header"] = '@Model.Header';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                            window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                            $("#ErrorMessage").hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            alert(data.Message);
+                        }
+                    },
+                });
+            }
+            else
+            {
+                $('.spinner').hide();
+                window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                $("#ErrorMessage").hide();
+            }
+        });
+        $('#expandall').click(function () {
+            ExpandOrCollapse();
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            if ($("#VehicleGroup").val() == null || $("#VehicleGroup").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Truck Status is Required..');
+                return;
+            }
+            if ($("#Vehicle_Category").val() == null || $("#Vehicle_Category").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Vehicle_Category is Required..');
+                return;
+            }
+            if ($("#VehicleGroup").val() == null || $("#VehicleGroup").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('VehicleGroup is Required..');
+                return;
+            }
+            if ($("#Broker_Name").val() == null || $("#Broker_Name").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Broker is Required..');
+                return;
+            }
+            if ($("#PayLoad").val() == null || $("#PayLoad").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('PayLoad is Required..');
+                return;
+            }
+            if ($("#KM").val() == null || $("#KM").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('KM is Required..');
+                return;
+            }
+            if ($("#vehicleReportingSt").val() == null || $("#vehicleReportingSt").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Vehicle Current Status is Required..');
+                return;
+            }
+            if ($("#VehiPostAc").val() == null || $("#VehiPostAc").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Posting is Required..');
+                return;
+            }
+
+            if ($("#Pick_Vehicle_Rate").is(":checked") == true || $("#PickDriverTripRate").is(":checked") == true) {
+                if ($("#Vehicle_Rate").is(":checked") == false && $("#Category_Rate").is(":checked") == false ) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Select Rate Type..');
+                    return;
+                }
+            }
+            if ($("#SpecialRemarkReq").is(":checked") == true) {
+                if ($("#Remark").val() == null || $("#Remark").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Activity Remark is Required..');
+                    return;
+                }
+            }
+            if ($("#BalckListReq").is(":checked") == true) {
+                if ($("#BalckListRemark").val() == null || $("#BalckListRemark").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Hold Remark is Required..');
+                    return;
+                }
+            }
+            if ($("#PostingReq").is(":checked")) {
+                if ($("#DebitAcCode").val() == null || $("#DebitAcCode").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Debit AC is Required..');
+                    return;
+                }
+                if ($("#FMBroker").is(":checked") == false && $("#FMVehicle").is(":checked") == false ) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Credit AC is Required..');
+                    return;
+                }
+            }
+            if ($("#MaintainDriverAc").is(":checked")) {
+                if ($("#DriverAdvancePayable").is(":checked")) {
+                    if ($("#DriCrAc").val() == null || $("#DriCrAc").val() == '') {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Driver Credit  AC is Required..');
+                        return;
+                    }
+                }
+                if ($("#DriverAdvancePayable").is(":checked") == false && $("#FMVOUREL").is(":checked") == false ) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Select Posting Of Driver..');
+                    alert("Select Posting Of Driver..");
+                    return;
+                }
+            }
+            var BranchList = "";
+            $('#treeviewcontrol').each(function () {
+                $(this).find('li').each(function () {
+                    var current = $(this);
+                    if (current.hasClass("jstree-checked")) {
+                        BranchList += current.context.id + ",";
+                    }
+                });
+            });
+            BranchList = BranchList.substr(0, BranchList.length - 1);
+            if (BranchList == '' || BranchList == null) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select Branch.....!');
+                return;
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Vehicle_No"] = $("#Vehicle_No").val();
+            ModelData["VehicleGroup"] = $("#VehicleGroup").val();
+            ModelData["Vehicle_Category"] = $("#Vehicle_Category").val();
+            ModelData["VehiPostAc"] = $("#VehiPostAc").val();
+            ModelData["Broker_Name"] = $("#Broker_Name").val();
+            ModelData["Driver_Name"] = $("#Driver_Name").val();
+            ModelData["KM"] = $("#KM").val();
+            ModelData["PayLoad"] = $("#PayLoad").val();
+            ModelData["Acitve"] = $("#Acitve").is(":checked");
+            ModelData["vehicleReportingSt"] = $("#vehicleReportingSt").val();
+            ModelData["ScheduleDate_Time"] = $("#ScheduleDate_Time").is(":checked");
+            ModelData["ScheduleKM"] = $("#ScheduleKM").is(":checked");
+            ModelData["Pick_Vehicle_Rate"] = $("#Pick_Vehicle_Rate").is(":checked");
+            ModelData["PickDriverTripRate"] = $("#PickDriverTripRate").is(":checked");
+            ModelData["ChangeVehicleFreight_Advance"] = $("#ChangeVehicleFreight_Advance").is(":checked");
+            ModelData["ChangeDriverFreight_Advance"] = $("#ChangeDriverFreight_Advance").is(":checked");
+            ModelData["DriverAdvancePayable"] = $("#DriverAdvancePayable").is(":checked");
+            ModelData["FMVOUREL"] = $("#FMVOUREL").is(":checked");
+            if ($("#Pick_Vehicle_Rate").is(":checked") == false && $("#PickDriverTripRate").is(":checked") == false) {
+                ModelData["Category"] = null;
+            } else {
+                var category = "";
+                if ($("#Vehicle_Rate").is(":checked"))
+                {
+                    category += 'V,';
+                }
+                if ($("#Category_Rate").is(":checked"))
+                {
+                    category += 'C,';
+                }
+                ModelData["Category"] = category.substring(0, category.length - 1);
+            }
+            ModelData["MaintainDriverAc"] = $("#MaintainDriverAc").is(":checked");
+            ModelData["ShortName"] = $("#ShortName").val();
+            ModelData["SpecialRemarkReq"] = $("#SpecialRemarkReq").is(":checked");
+            ModelData["BalckListReq"] = $("#BalckListReq").is(":checked");
+            ModelData["BalckListRemark"] = $("#BalckListRemark").val();
+            ModelData["Remark"] = $("#Remark").val();
+            ModelData["Branch"] = BranchList;
+
+            //Optional Data
+            ModelData["Owner_Name"] = $("#Owner_Name").val();
+            ModelData["Permit_No"] = $("#Permit_No").val();
+            ModelData["Chassis_No"] = $("#Chassis_No").val();
+            ModelData["Last_Emi_Date"] = $("#Last_Emi_Date").val();
+            ModelData["Purchase_Date"] = $("#Purchase_Date").val();
+            ModelData["BillOrInvoice_No"] = $("#BillOrInvoice_No").val();
+            ModelData["Chassis_Cost"] = $("#Chassis_Cost").val();
+            ModelData["Financer_Name"] = $("#Financer_Name").val();
+            ModelData["Agreement_Amount"] = $("#Agreement_Amount").val();
+            ModelData["Intrest_Rate"] = $("#Intrest_Rate").val();
+            ModelData["Insurance_Co"] = $("#Insurance_Co").val();
+            ModelData["Insured_Amount"] = $("#Insured_Amount").val();
+            ModelData["Engine_No"] = $("#Engine_No").val();
+            ModelData["Dealer_Name"] = $("#Dealer_Name").val();
+            ModelData["Invoice_Amount"] = $("#Invoice_Amount").val();
+            ModelData["Body_Cost"] = $("#Body_Cost").val();
+            ModelData["Agreement_nature"] = $("#Agreement_nature").val();
+            ModelData["Financed_Amount"] = $("#Financed_Amount").val();
+            ModelData["Date"] = $("#Date").val();
+            ModelData["Intrest_Amount"] = $("#Intrest_Amount").val();
+            ModelData["Policy_No"] = $("#Policy_No").val();
+            ModelData["Premium_Amount"] = $("#Premium_Amount").val();
+
+            ModelData["PostingReq"] = $("#PostingReq").is(":checked");
+            ModelData["MaintainCreditorRecord"] = $("#MaintainCreditorRecord").is(":checked");
+            ModelData["GetParentAlso"] = $("#GetParentAlso").is(":checked");
+            ModelData["DebitAcCode"] = $("#DebitAcCode").val();
+            ModelData["DriCrAc"] = $("#DriCrAc").val();
+            ModelData["VehicleStatusChangeNarr"] = $("#VehicleStatusChangeNarr").val();
+
+            if (($("#FMBroker").is(":checked") == true)) {
+                ModelData["CreditAccount"] = "B";
+            } else {
+                if (($("#FMVehicle").is(":checked") == true)) {
+                    ModelData["CreditAccount"] = "V";
+                }
+            }
+            ModelData["NoofTyres"] = $("#NoofTyres").val();
+            ModelData["NoOfSpepni"] = $("#NoOfSpepni").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        if ('@Model.ShortCutKey'=="True") {
+                            window.close();
+                        } else {
+                            window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        }
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+        $("#btnDeliveryAddDoc").click(function (event) {
+            event.preventDefault();
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Srl"] = $("#Document").val();
+            ModelData["Type"] = "Vehic";
+            ModelData["DocType"] = "";
+            ModelData["RefType"] = "@Model.Header";
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+    });
+    function Gridacledger() {
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=VehicleHistory';
+        var sUrlpath = '@Url.Action("GetMasterGridData")?ViewDataId=VehicleHistory&Code=' + $("#Document").val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+    function LoadDebitAccount() {
+        var url = '@Url.Action("DebitAccount")'
+        $('#DebitAcCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DebitAcCode', text: '@Model.DebitAcName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    }
+    function LoadDriverCreditAccount() {
+        var url = '@Url.Action("DriCreditAccount")'
+        $('#DriCrAc').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DriCrAc', text: '@Model.DriCrAcN' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    }
+    function LoadBroker() {
+        var url = '@Url.Action("GetBroker")'
+        $('#Broker_Name').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Broker_Name', text: '@Model.Broker' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function ExpandOrCollapse() {
+        if ($("#treeviewcontrol>ul>li").hasClass("jstree-open")) {
+            $("#treeviewcontrol").jstree("close_all", "#0");
+        }
+        else {
+            $("#treeviewcontrol").jstree("open_all", "#0");
+        }
+    }
+    function FillTreeView() {
+        var Document = $("#Document").val();
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/VehicleMaster/TreeView?Mode=@Model.Mode&Document=" + Document,
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+        });
+    }
+    function CheckUncheckTree(check) {
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/VehicleMaster/CheckUncheckTree?Check=" + check,
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+        });
+    }
+    function LoadVehicleGroupStatus() {
+        var url = '@Url.Action("GetVehicleGroupStatus")'
+        $('#VehicleGroup').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax:
+            {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehicleGroup', text: '@Model.VehicleGroup_Name' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                if ('@Model.Mode' != "Add") {
+                    ChangeVehicleGroup();
+                }
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function ChangeVehicleGroup() {
+        if ($("#VehicleGroup").val() != $("#PreviousVehicleGroup").val()) {
+            var result = confirm("It Will Be Change In Posting Account Are You Sure ?");
+            if (result)
+            {
+            } else {
+                $('#VehicleGroup').select2('data', { id: $("#PreviousVehicleGroup").val(), text: $("#PreviousVehicleGroup_Name").val() });
+            }
+        }
+    }
+    function LoadDriver() {
+        var url = '@Url.Action("GetDriver")'
+        $('#Driver_Name').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Driver_Name', text: '@Model.Driver' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function LoadCurrCategory() {
+        var url = '@Url.Action("AutoCompleteVehicleCategory")'
+        $('#Vehicle_Category').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Vehicle_Category', text: '@Model.Vehicle_Category_Name' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function VehiPostAc() {
+        var url = '@Url.Action("VehiclePostAc")'
+        $('#VehiPostAc').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehiPostAc', text: '@Model.VehiPostAcName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function CheckName() {
+        NameFlag = "False";
+        var currValue = $('#Vehicle_No').val()
+        var url = '@Url.Action("CheckExist")';
+        if (currValue != null || currValue != "") {
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { TableName: "VehicleMaster", Colfield: "[TruckNo]", Value: $('#Vehicle_No').val(), SkipColumnName: "RecordKey", PKValue: '@Model.Document' },
+                success: function (result) {
+                    if (result.Message == "F") {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Vehicle_No is Exist Please Change The Vehicle_No..');
+                        $('#Submit').prop('disabled', true);
+                        return;
+                    } else {
+                        $("#ErrorMessage").hide();
+                        $('#Submit').prop('disabled', false);
+                    }
+                }
+            });
+        }
+    }
+    function SetEmptyAttachment(TabCode) {
+        debugger;
+        var AttachDoc = $("#Div" + TabCode);
+        AttachDoc.html('');
+    }
+    function GetAttachment(TabCode)
+    {
+        var url = '/Logistics/Attachment/UploadFileWithoutModal';
+        var ModelData = {};
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Srl"] = $("#Document").val();
+        ModelData["Type"] = "Vehic";
+        ModelData["DocType"] = TabCode;
+        ModelData["RefType"] = "@Model.Header";
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                debugger;
+                var AttachDoc = $("#Div" + TabCode);
+                AttachDoc.html('');
+                AttachDoc.html(data.Html);
+            },
+        });
+    }
+</script>
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:1%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="tab">
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="DefaultPage" style="width:180px;">Vehicle Information</button>
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable3')" style="width:180px;">Vehicle History</button>
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable4')" style="width:180px;">Document Attachment</button>
+            </div>
+            <div id="divLedgerTable" style="min-height:450px;max-height:450px;margin-bottom:10px;" class="tabcontent">
+                <div id="DataEntry" class="col-sm-9" style="margin-bottom:20px;min-height:440px;max-height:440px;overflow-y:auto;overflow-x:hidden;">
+                    @Html.Partial("_VehicleMasterPartialView", Model)
+                    @* iX9: -- Code for Header Ends -- *@
+                </div>
+                <div class="col-sm-3" style="min-height:440px;max-height:440px;overflow-y:auto;overflow-x:hidden;font-family:Tahoma;font-size:12px;border-left:double;">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">
+                            <div class="input-group" style="display:flex;">
+                                <label class="control-label" style="font-size: 14px;font-weight: bold;padding-right:10px;">Select All</label>
+                                <div style="padding-right:40px;"><input type="checkbox" class="checkbox" id="chkSelectAll" style="width:22px;" /></div>
+                                <input type="text" class="form-control" style="width:150px;" placeholder="Search Node ..." id="search" />
+                            </div>
+                        </div>
+                        <div class="panel-body" style="">
+                            <div class="row">
+                                <div id="treeviewcontrol" @*style=" min-height:400px;overflow-y:auto;max-height:400px;position: relative;"*@></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="divLedgerTable3" style="min-height:450px;max-height:450px;margin-bottom:0px;" class="tabcontent">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager" style="height:32px;width:100%;"></div>
+                </div>
+            </div>
+            <div id="divLedgerTable4" style="min-height:450px;max-height:450px;margin-bottom:0px;" class="tabcontent">
+                <div class="tab">
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'VehiclePhoto')" id="DefaultPage1">Vehicle Photo</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'RCBook')">RC Book</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'Fitness')">Fitness</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'Insurance')">Insurance</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'PUC')">PUC</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'AIP_1_Year')">AIP (1 Year)</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'StateTax_5_Year')" style="width: 130px;">State Tax (5 Year)</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'TPState')">TP State</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'GreenTax')">Green Tax</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'Other')">Other</button>
+                </div>
+                <div id="VehiclePhoto" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivVehiclePhoto" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="RCBook" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivRCBook" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="Fitness" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivFitness" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="Insurance" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivInsurance" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="PUC" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivPUC" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="AIP_1_Year" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivAIP_1_Year" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="StateTax_5_Year" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivStateTax_5_Year" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="TPState" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivTPState" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="GreenTax" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivGreenTax" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="Other" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivOther" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+            </div>
+            <script>
+                function openCity(evt, cityName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(cityName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                    if (cityName == "divLedgerTable3") {
+                        $('#list').jqGrid('clearGridData');
+                        $("#list").jqGrid("GridUnload");
+                        $('#list').trigger('reloadGrid');
+                        Gridacledger();
+                    }
+                    if (cityName == "divLedgerTable4") {
+                        document.getElementById("DefaultPage1").click();
+                    }
+                }
+                document.getElementById("DefaultPage").click();
+                function openCityNew(evt, cityName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontentNew");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        debugger;
+                        tabcontent[i].style.display = "none";
+                        SetEmptyAttachment(tabcontent[i].id);
+                    }
+                    tablinks = document.getElementsByClassName("tablinksNew");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(cityName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                    GetAttachment(cityName);
+                }
+
+            </script>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            @if (Model.Mode != "Add")
+            {
+                <button type="button" id="btnVehicleTracking" value="" class="btn btn-primary" tooltip="Tracking" title="Tracking" style="padding: 4px 12px!important;">
+                    Track Vehicle
+                </button>
+            }
+
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right" style="padding-left:5px;">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="expandall">Expand All / Collapse All</button>
+            </div>
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnDeliveryAddDoc">Attachment</button>
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.VehicleGroup, new { @id = "PreviousVehicleGroup" })
+@Html.HiddenFor(x => x.VehicleGroup_Name, new { @id = "PreviousVehicleGroup_Name" })
+@Html.HiddenFor(x => x.TrackButtonReq)
+@Html.HiddenFor(x => x.TrackErrorMsg)
+
+
+@*Suchan Attachment*@
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="attachdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="AttachDoc">
+            </div>
+        </div>
+    </div>
+</div>
+@*Shruham Map*@
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="mapdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+
+            <div class="modal-body">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title"><b>Location</b></h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="QueryMapDiv" style="height:300px;width:100%;background-color:rebeccapurple;">
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                        <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

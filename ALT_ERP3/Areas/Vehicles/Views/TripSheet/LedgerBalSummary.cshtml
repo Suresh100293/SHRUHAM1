@@ -1,0 +1,178 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common
+
+<script>
+    $(document).ready(function () {
+        var TotalBal = 0;
+        $("#getBalLedgertabledata tbody").on('change', '.CRChk', function () {
+            TotalAdv = 0;
+            $("#getBalLedgertabledata > tbody  > tr").each(function () {
+                var Row = $(this).closest('tr');
+                if (Row.find('input[type=checkbox]').prop("checked") == true) {
+                    var tds = $(this).find('td');
+                    TotalBal += parseFloat(tds.eq(4).text());
+                }
+            });
+            $('#txtBalAmt').text(TotalBal);
+        });
+        $("#chkselectAllcr").change(function () {
+            if (this.checked) {
+                $(".CRChk").prop('checked', true);
+                //CalculateNetAmount();
+            } else {
+                $(".CRChk").prop('checked', false);
+                //CalculateNetAmount();
+            }
+            TotalBal = 0;
+            $("#getBalLedgertabledata > tbody  > tr").each(function () {
+                var Row = $(this).closest('tr');
+                if (Row.find('input[type=checkbox]').prop("checked") == true) {
+                    var tds = $(this).find('td');
+                    TotalBal += parseFloat(tds.eq(4).text());
+                }
+            });
+            $('#txtBalAmt').text(TotalBal);
+        });
+        $('#pickbalrecord').click(function (event) {
+            var ModelData = {};
+            var Advledgers = [];
+            $("#getBalLedgertabledata > tbody  > tr").each(function ()
+            {
+                if ($(this).find('input[class=CRChk]').prop("checked") == true)
+                {
+                    debugger;
+                    var tds = $(this).find('td');
+                    var myDets =
+                    {
+                        Srl: tds.eq(1).text(),
+                        DocDate: tds.eq(2).text(),
+                        Party: tds.eq(3).text(),
+                        AltCode: tds.eq(5).text(),
+                        Code: tds.eq(6).text(),
+                        Narr: tds.eq(7).text(),
+                        TableKey: tds.eq(8).text(),
+                        Branch: tds.eq(9).text(),
+                        Debit: tds.eq(10).text(),
+                        Credit: tds.eq(11).text(),
+                    }
+                    Advledgers.push(myDets);
+                }
+             });
+
+            if (Advledgers.length == 0)
+            {
+                 alert('Select Altealst One Document...!');
+                 return;
+            }
+            ModelData["Advledgers"] = Advledgers;
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveBalanceList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function ()
+                {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    debugger;
+                    $('.spinner').hide();
+                    var BillListDiv = $("#DivBalLedger");
+                    BillListDiv.html('');
+                    BillListDiv.html(data.Html);
+                    $('#AdvanceList').modal('hide');
+                    CalculateNetAmount();
+
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+    });
+</script>
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            <h4 class="modal-title">Pick Balance Document</h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" style="max-height:450px; min-height:450px;overflow: scroll;">
+                <table id="getBalLedgertabledata" class="zui-table" style="border-color:gray;width:100%;">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                            <th colspan="1" style="width: 1%;vertical-align:inherit;"><center><input type="checkbox" id="chkselectAllcr" /></center></th>
+                            <th style="width: 7%;">Voucher</th>
+                            <th style="width: 7%;">DocDate</th>
+                            <th style="width: 10%;">Branch</th>
+                            <th style="width: 7%;">Amount</th>
+                            <th style="width: 20%;">Paid From Ac</th>
+                            <th style="width: 15%;">Other Ac</th>
+                            <th style="width: 50%;">Narr</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            if (Model.Balledgers != null)
+                            {
+                                foreach (var item in @Model.Balledgers.ToList())
+                                {
+                                    var Amount = item.Debit + item.Credit;
+                                    <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;" id="@item.Branch@item.TableKey">
+
+                                        <td>
+                                            @if (item.TDSFlag)
+                                            {
+                                                <center><input type="checkbox" class="CRChk" checked value="@item.Branch@item.TableKey" /></center>
+                                            }
+                                            else
+                                            {
+                                                <center><input type="checkbox" class="CRChk" value="@item.Branch@item.TableKey" /></center>
+                                            }
+                                        </td>
+                                        <td style="">@item.Srl</td>
+                                        <td style="">@item.DocDate.ToShortDateString()</td>
+                                        <td style="">@item.Party</td>
+                                        <td style="">@Amount.Value.ToString("F2") </td>
+                                        <td style="">@item.AltCode</td>
+                                        <td style="">@item.Code</td>
+                                        <td style="">@item.Narr</td>
+                                        <td class="hidden" style="">@item.TableKey</td>
+                                        <td class="hidden" style="">@item.Branch</td>
+                                        <td class="hidden" style="">@item.Debit</td>
+                                        <td class="hidden" style="">@item.Credit</td>
+                                    </tr>
+                                }
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        @{
+                            var Amount1 = Model.Balledgers == null ? 0 : Model.Balledgers.Sum(x => x.Debit.Value + x.Credit.Value);
+                            <tr>
+                                <td colspan="3">Total :-</td>
+                                <td>@Amount1.ToString("F2")</td>
+                                <td colspan="2" style="color:crimson;">Adjust Amt :- <label id="txtBalAmt">0</label></td>
+                                <td colspan="4"></td>
+                            </tr>
+                        }
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;">
+            <button type="button" class="btn btn-success" id="pickbalrecord">Accept Data</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal">Discard</button>
+        </div>
+    </div>
+</div>

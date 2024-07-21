@@ -1,0 +1,203 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.UserDashboardVM
+@{
+    /**/
+
+    ViewBag.Title = "Transaction Message Rules";
+}
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<style>
+    .multiselect.disabled {
+        background-color: aqua;
+        color: black;
+        font-weight: bold;
+    }
+
+    
+</style>
+<script>
+    $(document).ready(function () {
+        $(".EditableGrid").constrain({ allow: { regex: "[0-9]" } });
+
+        //$("#AllSendSMS").prop("disabled", true);
+        $('#DisplayOrder').focusout(function () {
+            debugger;
+            $("#Submit").prop("disabled", false);
+            var Count = 0;
+            var NewSrno = $("#DisplayOrder").val();
+            var OldSrno = $("#hdnDisplayOrder").val();
+            $('#tabledatapick2 tbody tr').each(function () {
+                var tds = $(this).find('td');
+                if (tds.find("input[id='DisplayOrder']").val().toString().trim() == NewSrno.toString().trim()) {
+                    Count += 1;
+                }
+            });
+            if (Count > 1) {
+                alert("Please Check Display Order No...!\n Duplicate Not Allow...!");
+                $("#Submit").prop("disabled", true);
+            }
+        });
+
+
+        $('.BranchL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Branch',
+        });
+        $("#AddNewSideBar").click(function (event) {
+            event.preventDefault();
+            if ($('#User').val() == '' || $('#User').val() == null) {
+                alert('Please Select User First')
+                return;
+            }
+            var ModelData = {};
+
+            ModelData["GridMode"] = "Add";
+            ModelData["User"] = $('#User').val()
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetSideBar")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+					if (data.Status == "Error")
+                    {
+                        alert(data.Message)
+                        return;
+                    }
+                    else
+                    {
+                        $('#MessageRulesdiv').html(data.Html);
+                    }
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        
+        $('button[action|="EditLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["Srno"] = $(this).val();
+            ModelData["GridMode"] = "Edit";
+            ModelData["User"] = $('#User').val()
+            ModelData["Header"] = $('#Header').val()
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetSideBar")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#MessageRulesdiv').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('button[action|="DeleteLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["Srno"] = $(this).val();
+            ModelData["User"] = $('#User').val()
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteSidebar")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#MessageRulesdiv').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        
+    });
+</script>
+<style>
+    .fixTableHead {
+        overflow-y: auto;
+        height: 411px;
+    }
+
+        .fixTableHead thead {
+            position: sticky;
+            top: 0;
+        }
+</style>
+<div class="fixTableHead" style="width:100%!important;">
+    <table id="tabledatapick2" class="zui-table " style="font-size:12pt;width:100%!important;">
+        <thead>
+            <tr role="row">
+                <th style="vertical-align:inherit;border-right: 1px solid black;" class="hidden">Dashboard Code</th>
+                <th style="width: 6%;vertical-align:inherit;border-right: 1px solid black;">Sr No</th>
+                <th style="width: 10%;vertical-align:inherit;border-right: 1px solid black;">Display No</th>
+                <th style="width: 37%;vertical-align:inherit;border-right: 1px solid black;">Dashboard Name</th>
+                <th style="width: 6%;vertical-align:inherit;">Active</th>
+                <th style="width: 6%;vertical-align:inherit;">Zoom</th>
+                <th style="width: 25%;vertical-align:inherit;border-right: 1px solid black;">Branch</th>
+                <th colspan="2" style="width: 10%;vertical-align:inherit;border-right: 1px solid black;"><button class="btn btn-info" style="padding:0px 25px;" id="AddNewSideBar" data-toggle="tooltip" data-placement="top" title="Add New SideBar."><i class="glyphicon glyphicon-plus"></i></button></th>
+            </tr>
+        </thead>
+        <tbody style="">
+            @if (Model.mRightList != null)
+            {
+                for (int i = 0; i < Model.mRightList.Count; i++)
+                {
+                    <tr style="font-family:Tahoma;font-size:12pt;border: solid 1px lightgray;">
+                        <td class="hidden" style="text-align:center;border-right: 1px solid black;">@Html.TextBoxFor(m => Model.mRightList[i].ID, new { @value = Model.mRightList[i].ID, @style = "border:none;text-align:left;", @readonly = "readonly", @id = "ID", @name = "ID" })</td>
+
+                        <td style="width: 6%;text-align:center;border-right: 1px solid black;">@Html.TextBoxFor(m => Model.mRightList[i].Srno, new { @value = Model.mRightList[i].Srno, @style = "border:none;text-align:left;width: 60%;", @disabled = "disabled", @id = "Srno", @name = "Srno" })</td>
+                        <td style="width: 10%;text-align:center;border-right: 1px solid black;">@Html.TextBoxFor(m => Model.mRightList[i].DisplayOrder, new { @value = Model.mRightList[i].DisplayOrder, @style = "border:none;text-align:left;width: 60%;",@class="EditableGrid", @id = "DisplayOrder", @name = "DisplayOrder" })</td>
+                        <td style="width: 37%;border-right: 1px solid black;">@Html.TextBoxFor(m => Model.mRightList[i].Name, new { @value = Model.mRightList[i].Name, @style = "border:none;text-align:left;width: 100%;", @readonly = "readonly", @id = "Name", @name = "Name" })</td>
+
+                        <td style="width: 6%;text-align:center;">@Html.CheckBoxFor(m => Model.mRightList[i].Status, new { @value = Model.mRightList[i].Status, @style = "width:16px;height:16px;", @id = "Status", @name = "Status",  @class = "EditableGrid" })</td>
+                        <td style="width: 6%;text-align:center;">@Html.CheckBoxFor(m => Model.mRightList[i].ZoomURL, new { @value = Model.mRightList[i].ZoomURL, @style = "width:16px;height:16px;", @id = "ZoomURL", @name = "ZoomURL",  @class = "EditableGrid" })</td>
+                        <td style="width: 25%;text-align:center;border-right: 1px solid black;">@Html.ListBoxFor(x => Model.mRightList[i].BranchL, Model.BranchsOnly.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = Model.mRightList[i].BranchL == null ? false : Model.mRightList[i].BranchL.Contains(y.Value) }), new { Multiple = "multiple", size = "4", @class = "BranchL", @id = "BranchL", @disabled = "disabled" })</td>
+                        <td style="width: 5%;text-align:center;border-right: 1px solid black;"><button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@Model.mRightList[i].Srno" title="Edit"><i class="fa fa-edit"></i></button></td>
+                        <td style="width: 5%;text-align:center;border-right: 1px solid black;"><button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@Model.mRightList[i].Srno" title="Delete"><i class="fa fa-trash-o"></i></button></td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+

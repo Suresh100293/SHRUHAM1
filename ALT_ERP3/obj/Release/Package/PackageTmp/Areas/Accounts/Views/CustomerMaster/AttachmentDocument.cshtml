@@ -1,0 +1,311 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.CustomerMasterVM
+
+@if (Model.Mode == "Add")
+{
+    <script type="text/javascript">
+    $(document).ready(function () {
+        $("#btnAddDocument").click(function (event) {
+            event.preventDefault();
+            var size = 0;
+            var formData = new FormData();
+            var totalFiles = document.getElementById("FileUpload").files.length;
+            for (var i = 0; i < totalFiles; i++) {
+                var file = document.getElementById("FileUpload").files[i];
+                size += file.size;
+                if (file.size < 1048576) {
+                    formData.append("FileUpload", file);
+                }
+                else {
+                    alert('File Size Must Not Exceed 1 MB')
+                    return;
+                }
+            }
+            if (size > 1048576) {
+                alert('File Size Must Not Exceed 1 MB')
+                return;
+            }
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("AttachDocument")',
+                data: formData,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    $('#AttachDoc').html(data.Html);
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+
+        $('button[action|="Delete"]').click(function (event) {
+            event.preventDefault();
+            var myImageArray = [];
+            var url = '@Url.Action("DeleteUploadFile")';
+            $('#AttachTable tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    ImageStr: tds.eq(2).text(),
+                    FileName: tds.eq(0).text(),
+                    tempId: tds.eq(3).text()
+                }
+                myImageArray.push(myDets);
+            })
+            var ModelData = {};
+
+            ModelData["Document"] = $("#hdnEditDodument").val();
+            ModelData["tempId"] = $(this).val();
+            ModelData["DocumentList"] = myImageArray;
+            ModelData["Mode"] = $("#hdnMode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteUploadFile")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+
+                success: function (data) {
+                    $('#AttachDoc').html(data.Html);
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        });
+    });
+
+    </script>
+
+    <div class="modal-dialog" style="width:unset;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Attach Document</h4>
+            </div>
+            <div class="modal-body" style="padding:unset;">
+                <div class="panel-body">
+                    <div class="position-center">
+                        <form role="form">
+                            <div class="form-group">
+                                <label>File input</label>
+                                <input type="file" id="FileUpload" multiple="multiple" />
+                            </div>
+                            <input type="submit" value="Upload" class="btn btn-warning" id="btnAddDocument" />
+
+                        </form>
+
+
+                        <div class="grid" id="docDetailTable">
+                            <table id="AttachTable" class="zui-tableww">
+
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Delete</th>
+
+                                    </tr>
+
+                                </thead>
+                                <tbody>
+
+                                    @if (Model.DocumentList != null)
+                                    {
+                                        foreach (var item in @Model.DocumentList.ToList())
+                                        {
+
+                                            <tr role="row" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                                <td>@item.FileName</td>
+                                                <td><button type="button" action="Delete" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button></td>
+                                                <td hidden="hidden">  @item.ImageStr </td>
+                                                <td hidden="hidden">   @item.tempId </td>
+
+                                            </tr>
+                                        }
+                                    }
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer" style="background-color:#cccccc">
+
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+
+            $("#btnAddDocument").click(function (event) {
+                event.preventDefault();
+                var size = 0;
+                var formData = new FormData();
+                var totalFiles = document.getElementById("FileUpload").files.length;
+                for (var i = 0; i < totalFiles; i++) {
+                    var file = document.getElementById("FileUpload").files[i];
+                    size += file.size;
+                    if (file.size < 1048576) {
+                        formData.append("FileUpload", file);
+                    }
+                    else {
+                        alert('File Size Must Not Exceed 1 MB')
+                        return;
+                    }
+                }
+                if (size > 1048576) {
+                    alert('File Size Must Not Exceed 1 MB')
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: '/Master/EditImage?Document=' + $('#hdnEditDodument').val(),
+                    data: formData,
+                    dataType: 'json',
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        $('#AttachDoc').html(data.Html);
+                    },
+                    error: function (error) {
+                        alert(JSON.stringify(error));
+                    }
+                });
+            });
+
+            $('button[action|="Delete"]').click(function (event) {
+                event.preventDefault();
+                var myImageArray = [];
+                $('#AttachTable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    var myDets = {
+                        ImageStr: tds.eq(3).text(),
+                        FileName: tds.eq(0).text(),
+                        tempId: tds.eq(4).text()
+                    }
+                    myImageArray.push(myDets);
+                })
+                var ModelData = {};
+
+                ModelData["Document"] = $("#hdnEditDodument").val();
+                ModelData["tempId"] = $(this).val();
+                ModelData["DocumentList"] = myImageArray;
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("DeleteUploadFile")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+
+                    success: function (data) {
+                        $('#AttachDoc').html(data.Html);
+                        $('.spinner').hide();
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("An error occurred while processing the request.");
+                    }
+                });
+            });
+        });
+    </script>
+
+
+    <div class="modal-dialog" style="width:unset;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title">Attach Document</h4>
+            </div>
+            <div class="modal-body" style="padding:unset;">
+                <div class="panel-body">
+                    <div class="position-center">
+                        <div role="form">
+                            <table class="zui-tableww" id="AttachTable">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Delete</th>
+                                        <th>Download</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                    @if (Model.DocumentList != null)
+                                    {
+                                        foreach (var fName in Model.DocumentList)
+                                        {
+
+                                            <tr>
+
+                                                <td>@fName.FileName</td>
+                                                <td>
+                                                    <button type="button" action="Delete" class="btn btn-danger btn-sm" value="@fName.tempId" title="Delete"><i class="fa fa-trash-o"></i></button>
+                                                </td>
+
+                                                <td>
+                                                    @Html.ActionLink("Download", "Download", new { Area = "Accounts", Controller = "CustomerMaster", tempId = fName.tempId }, new { @Class = "sc_button sc_button_round sc_button_small", @tooltip = "Add", @action = "Download" })
+                                                </td>
+                                                <td hidden="hidden">
+                                                    @fName.ImageStr
+                                                </td>
+                                                <td hidden="hidden">
+                                                    @fName.tempId
+                                                </td>
+
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                            <br />
+                            <br />
+                            <div class="form-group">
+                                <label>File input</label>
+                                <input type="file" id="FileUpload" multiple />
+                            </div>
+                            <input type="submit" value="Upload" class="btn btn-warning" id="btnAddDocument" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color:#cccccc">
+
+
+                <input type="submit" value="Close" class="btn btn-danger" data-dismiss="modal" />
+            </div>
+        </div>
+    </div>
+
+}
+
+@Html.HiddenFor(x => x.AllFileStr, new { @Id = "hdnAllFileStr" })
+
+@Html.HiddenFor(x => x.FileNameStr, new { @Id = "hdnFileNameStr" })
+
+
+
+
+
+

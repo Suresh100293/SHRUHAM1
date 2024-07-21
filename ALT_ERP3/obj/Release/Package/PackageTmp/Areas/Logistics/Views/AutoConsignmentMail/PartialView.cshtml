@@ -1,0 +1,522 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.AutoConsignmentMailVM
+@using Common;
+@{
+    ViewBag.Title = "Auto Consignment Mail Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        LoadTypes();
+        LoadReports('@Model.Type');
+        
+        var CommonValue = "";
+        if ('@Model.EveryDay' == "True" || '@Model.EveryDay' == "true")
+        {
+            $(".EveryDayDiv").removeClass("hidden");
+            $(".DayDiv,.DateDiv").addClass("hidden");
+            $("#EveryDayReq").prop("checked", true);
+            $("#DayReq,#DateReq").prop("checked", false);
+        }
+        else if ('@Model.Day' == "True" || '@Model.Day' == "true")
+        {
+            $(".DayDiv").removeClass("hidden");
+            $(".EveryDayDiv,.DateDiv").addClass("hidden");
+            $("#DayReq").prop("checked", true);
+            $("#EveryDayReq,#DateReq").prop("checked", false);
+            var DayNameiD='@Model.DayName';
+            $("#"+DayNameiD).prop("checked", true);
+        }
+        else if ('@Model.DateR' == "True" || '@Model.DateR' == "true")
+        {
+            $(".DateDiv").removeClass("hidden");
+            $(".EveryDayDiv,.DayDiv").addClass("hidden");
+            $("#DateReq").prop("checked", true);
+            $("#EveryDayReq,#DayReq").prop("checked", false);
+        }
+
+        $('#Account').val('');
+        if ('@Model.Account' != "") {
+            $.each('@Model.Account'.split(','), function (idx, val) {
+                $("#AccountL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#Account').val(CommonValue);
+        }
+        $("#Type").change(function () {
+            LoadReports($("#Type").val());
+        });
+        $("#DailyBasis").change(function () {
+            if (this.checked) {
+                $("#YestDailyBasis").prop("checked", false);
+                $("#DailyBasis").prop("checked", true);
+            }
+            else {
+                $("#DailyBasis").prop("checked", false);
+            }
+        });
+        $("#YestDailyBasis").change(function () {
+            if (this.checked) {
+                $("#YestDailyBasis").prop("checked", true);
+                $("#DailyBasis").prop("checked", false);
+            }
+            else {
+                $("#YestDailyBasis").prop("checked", false);
+            }
+        });
+
+        $("#AccountL").change(function () {
+            debugger;
+            $('#Account').val('');
+            var selected = "";
+            $("#AccountL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Account').val(selected);
+            if ('@Model.Mode' == "Add") {
+                GetEmailOfCustomer(selected);
+            }
+            return false;
+        });
+        $('.AccountL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '200',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Customer To Send',
+        });
+        $('#Date,#UptoDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+        $('input[type=radio][name=HitBy]').change(function () {
+            if (this.value == 'EveryDay') {
+                $(".EveryDayDiv").removeClass("hidden");
+                $(".DayDiv,.DateDiv").addClass("hidden");
+                $("#EveryDayReq").prop("checked", true);
+                $("#DayReq,#DateReq").prop("checked", false);
+            }
+            else if (this.value == 'Day') {
+                $(".DayDiv").removeClass("hidden");
+                $(".EveryDayDiv,.DateDiv").addClass("hidden");
+                $("#DayReq").prop("checked", true);
+                $("#EveryDayReq,#DateReq").prop("checked", false);
+            } else if (this.value == 'Date') {
+                $(".DateDiv").removeClass("hidden");
+                $(".EveryDayDiv,.DayDiv").addClass("hidden");
+                $("#DateReq").prop("checked", true);
+                $("#EveryDayReq,#DayReq").prop("checked", false);
+            }
+        });
+
+        $('#EveryDayReq').change(function () {
+            if ($('#EveryDayReq').is(":checked")) {
+                $(".CustomerMaster").removeClass("hidden");
+                $(".Master").addClass("hidden");
+            }
+            else {
+                $(".CustomerMaster").addClass("hidden");
+                $(".Master").removeClass("hidden");
+            }
+        });
+
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            var url = '@Url.Action("DeleteStateMaster")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+            ModelData["Document"] = $("#Document").val();
+
+            ModelData["Header"] = '@Model.Header';
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+
+        $('#Submit').click(function (event)
+        {
+            event.preventDefault();
+            var ModelData = {};
+            if ($("#Type").val() == null || $("#Type").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Type is Required...');
+                return;
+            }
+            if ($("#ReportName").val() == null || $("#ReportName").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Report Name is Required...');
+                return;
+            }
+            //if ($("#Account").val() == null || $("#Account").val() == '')
+            //{
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Please Select Customer ...');
+            //    return;
+            //}
+            if ($("#EmailTo").val() == null || $("#EmailTo").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Email ID is Required...');
+                return;
+            }
+
+            if ($("#EveryDayReq").prop("checked")) {
+                if ($("#EveryDayTime").val() == null || $("#EveryDayTime").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Set The Time...');
+                    return;
+                }
+                else
+                {
+                    ModelData["Time"] = $("#EveryDayTime").val();
+                }
+            }
+            else if ($("#DayReq").prop("checked"))
+            {
+                if ($("input[name='DayName']:checked").length==0) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Select The Day...');
+                    return;
+                }
+                if ($("#DayTime").val() == null || $("#DayTime").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Set The Time...');
+                    return;
+                }
+                else
+                {
+                    ModelData["Time"] = $("#DayTime").val();
+                }
+            }
+            else if ($("#DateReq").prop("checked"))
+            {
+                if ($("#Date").val() == null || $("#Date").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Set The Date...');
+                    return;
+                }
+                if ($("#DateTime").val() == null || $("#DateTime").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Set The Time...');
+                    return;
+                }
+                else
+                {
+                    ModelData["Time"] = $("#DateTime").val();
+                }
+            }
+            if ($("#UptoDate").val() == null || $("#UptoDate").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Set The LastSendDate...');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Type"] = $("#Type").val();
+            ModelData["ReportName"] = $("#ReportName").val();
+            ModelData["DailyBasis"] = $("#DailyBasis").prop("checked");
+            ModelData["YestDailyBasis"] = $("#YestDailyBasis").prop("checked");
+
+            ModelData["Active"] = $("#Active").prop("checked");
+            ModelData["Account"] = $("#Account").val();
+            ModelData["EmailTo"] = $("#EmailTo").val();
+            ModelData["EmailCC"] = $("#EmailCC").val();
+            ModelData["EmailBCC"] = $("#EmailBCC").val();
+            ModelData["EveryDay"] = $("#EveryDayReq").prop("checked");
+            ModelData["Day"] = $("#DayReq").prop("checked");
+            ModelData["DayName"] = $("input[type=radio][name=DayName]:checked").val();
+            ModelData["DateR"] = $("#DateReq").prop("checked");
+            ModelData["Date"] = $("#Date").val();
+            ModelData["UptoDate"] = $("#UptoDate").val();
+
+            ModelData["Header"] = '@Model.Header';
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+
+    function GetEmailOfCustomer(codes)
+    {
+        var url = '@Url.Action("GetEmailID")';
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: url,
+            data: { Codes: codes },
+            success: function (result) {
+                $("#EmailTo").val(result.EMail);
+            }
+        });
+    }
+    function LoadReports(TypeValue) {
+        event.preventDefault();
+        var url = '@Url.Action("PopulateSaveReports")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Type: TypeValue },
+            success: function (result) {
+                $("#ReportName").empty();
+                $.each(result, function (i, item) {
+                    $("#ReportName").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#ReportName').val('@Model.ReportName').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function LoadTypes() {
+        event.preventDefault();
+        var url = '@Url.Action("PopulateTypes")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Type").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Type').val('@Model.Type').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+    </div>
+</header>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="form-group" style="margin-top:-20px;">
+                <div id="DataEntry" class="col-sm-11">
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">Code:</label>
+                        <div class="col-sm-1">
+                            @Html.TextBoxFor(x => x.Code, new { @class = "form-control", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @Value = Model.Code })
+                        </div>
+                        <label class="col-sm-1 control-label">Customer:</label>
+                        <div class="col-sm-2">
+                            @Html.ListBoxFor(x => x.AccountL, Model.Customers, new { @class = "AccountL", @id = "AccountL" })
+                        </div>
+                        <div class="col-sm-2">
+                            <label class="col-sm-3 control-label">Type:<span style="color:red;">*</span></label>
+                            <div class="col-sm-9">
+                                @if (Model.Mode == "Add")
+                                {
+                                    @Html.DropDownListFor(m => m.Type, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "Type", @Id = "Type" })
+                                }
+                                else
+                                {
+                                    @Html.DropDownListFor(m => m.Type, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "Type", @Id = "Type", @disabled = "disabled" })
+                                }
+                            </div>
+                        </div>
+                        <label class="col-sm-1 control-label">Report Name:<span style="color:red;">*</span></label>
+                        <div class="col-sm-2">
+                            @Html.DropDownListFor(m => m.ReportName, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "ReportName", @Id = "ReportName" })
+                        </div>
+                        
+
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-offset-7 col-sm-2  control-label" style="width:auto;">Today Data Only :</label>
+                        <div class="col-sm-1" style="width:auto;">
+                            @Html.CheckBoxFor(x => x.DailyBasis, new { @class = "checkbox", @style = "width:20px;", @Value = Model.DailyBasis })
+                        </div>
+                        <label class=" col-sm-1  control-label" style="width:auto;">Yesterday Data Only :</label>
+                        <div class="col-sm-1">
+                            @Html.CheckBoxFor(x => x.YestDailyBasis, new { @class = "checkbox", @style = "width:20px;", @Value = Model.YestDailyBasis })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class=" col-sm-1  control-label">Email ID :<span style="color:red;">*</span></label>
+                        <div class="col-sm-10">
+                            @Html.TextAreaFor(x => x.EmailTo, new { @class = "form-control", @style = "width:100%;", @Value = Model.EmailTo, @maxlength = "250", @rows = "2" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class=" col-sm-1  control-label">Email (CC) :</label>
+                        <div class="col-sm-10">
+                            @Html.TextAreaFor(x => x.EmailCC, new { @class = "form-control", @style = "width:100%;", @Value = Model.EmailCC, @maxlength = "250", @rows = "2" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class=" col-sm-1  control-label">Email (BCC) :</label>
+                        <div class="col-sm-10">
+                            @Html.TextAreaFor(x => x.EmailBCC, new { @class = "form-control", @style = "width:100%;", @Value = Model.EmailBCC, @maxlength = "250", @rows = "2" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class=" col-sm-1  control-label">Active :</label>
+                        <div class="col-sm-2">
+                            @Html.CheckBoxFor(x => x.Active, new { @class = "checkbox", @style = "width:20px;", @Value = Model.Active })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class=" col-sm-1  control-label">Particular :</label>
+                        <div class="col-sm-3" style="display:flex;">
+                            <input type="radio" class="form-control " name="HitBy" id="EveryDayReq" value="EveryDay" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Every Day</label>
+                            <input type="radio" class="form-control " name="HitBy" id="DayReq" value="Day" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Day</label>
+                            <input type="radio" class="form-control " name="HitBy" id="DateReq" value="Date" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Date</label>
+                        </div>
+                    </div>
+                    <div class="form-group EveryDayDiv">
+                        <label class=" col-sm-1  control-label"></label>
+                        <div class="col-sm-2 ">
+                            @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @id = "EveryDayTime", @type = "time", @style = "width:100%;", @Value = Model.Time })
+                        </div>
+
+                    </div>
+                    <div class="form-group DayDiv">
+                        <label class=" col-sm-1  control-label"></label>
+                        <div class="col-sm-5 " style="display:flex;width:auto;">
+                            <input type="radio" class="form-control " name="DayName" id="Monday" value="Monday" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Mon</label>
+                            <input type="radio" class="form-control " name="DayName" id="Tuesday" value="Tuesday" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Tue</label>
+                            <input type="radio" class="form-control " name="DayName" id="Wednesday" value="Wednesday" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Wed</label>
+                            <input type="radio" class="form-control " name="DayName" id="Thursday" value="Thursday" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Thur</label>
+                            <input type="radio" class="form-control " name="DayName" id="Friday" value="Friday" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Fri</label>
+                            <input type="radio" class="form-control " name="DayName" id="Saturday" value="Saturday" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Sat</label>
+                            <input type="radio" class="form-control " name="DayName" id="Sunday" value="Sunday" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Sun</label>
+                        </div>
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @id = "DayTime", @type = "time", @style = "width:100%;", @Value = Model.Time })
+                        </div>
+                    </div>
+                    <div class="form-group DateDiv">
+                        <label class=" col-sm-1  control-label"></label>
+                        <div class="col-sm-2 ">
+                            @Html.TextBoxFor(x => x.Date, new { @class = "form-control", @style = "width:100%;", @Value = Model.Date })
+                        </div>
+                        <div class="col-sm-2 ">
+                            @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @id = "DateTime", @type = "time", @style = "width:100%;", @Value = Model.Time })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class=" col-sm-1  control-label">Send Upto Date</label>
+                        <div class="col-sm-2 ">
+                            @Html.TextBoxFor(x => x.UptoDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.UptoDate })
+                        </div>
+                        <label class=" col-sm-9  control-label" style="color:red;">( Upto This Date System Send Mail Auto.)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right" style="padding-left:5px;">
+            </div>
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+
+        </div>
+    </div>
+</footer>
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.Account)

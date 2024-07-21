@@ -1,0 +1,234 @@
+﻿@using Common
+
+@model GridOption
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<style>
+    .form-control {
+        border: 1px solid darkgray;
+    }
+</style>
+<style>
+    .table > thead > tr > th {
+        padding: unset;
+        text-align: center;
+    }
+
+    .table-bordered > thead > tr > th, .table-bordered > tbody > tr > th, .table-bordered > tfoot > tr > th, .table-bordered > thead > tr > td, .table-bordered > tbody > tr > td, .table-bordered > tfoot > tr > td {
+        border: 1px solid darkgrey;
+    }
+
+    .table-bordered {
+        border: 1px solid darkgrey;
+    }
+
+    .table > tbody > tr > td, .table > tbody > tr > th, .table > tfoot > tr > td, .table > tfoot > tr > th, .table > thead > tr > td, .table > thead > tr > th {
+        padding: unset;
+        font-family: Tahoma;
+        font-size: 9pt;
+        height: 26px;
+    }
+
+    .focus {
+        background-color: #ff00ff;
+        color: #fff;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .pageNumber {
+        padding: 2px;
+    }
+
+    tr:nth-child(even) {
+        background-color: unset;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        $("#DocDate").focus();
+        var branch = '@Session["BranchCode"].ToString()';
+        $('#hdnbranch').val(branch);
+        loadAccount();
+        loadBranch()
+        $('#btnrefresh').click(function () {
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var url = '@Url.Action("GetReceivableDetails")?Date=' + Date + '&AccountName=' + $('#Account').val() + '&Branch=' + $('#Branch').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#lblopening').val(data.Opening);
+                    $('#lblclosing').val(data.Closing);
+                    $('#RecInt').html(data.Html);
+
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        });
+
+
+        $('#btnexcel').click(function () {
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + Date + '&AccountName=' + $('#Account').val())
+        });
+
+        $('#btnPrint').click(function () {
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDF")?Date=' + Date + '&AccountName=' + $('#Account').val())
+        });
+
+    });
+    function loadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var elementText = $(element).attr('data-init-text');
+                xcallback({ "term": elementText });
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function loadBranch() {
+        var url = '@Url.Action("GetBranchList")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Branch").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Branch').val($('#hdnbranch').val()).attr("selected", "selected");
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+</script>
+<div class="row">
+    <div class="col-md-12">
+        <section class="panel" style="margin-bottom:7px;">
+            <header class="panel-heading" style="background:beige;padding:0px;">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-2" style="margin-top:5px;"><b>Receivable Interface</b></div>
+                        <div class="col-md-4 pull-right">
+                            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="height:29px;">
+                                <span class="input-group-addon">To</span>
+                                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="height:29px;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                        Party
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" id="Account" class="input-large query" style="width: 100%;" />
+
+                    </div>
+                    <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                        Branch
+                    </div>
+                    <div class="col-md-2">
+                        @Html.DropDownListFor(m => m.Branch, DropdownHelper.EmptyList(), new { @class = "form-control", @style = "height:28px;" })
+                    </div>
+                    <div class="col-md-4" style="width:40.333333%;">
+                        Opening:<input id="lblopening" style="height:21px;width:100px;text-align:right;" /> Dr
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Closing :<input id="lblclosing" style="height:21px;width:100px;text-align:right;" /> Dr
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+<div id="RecInt">
+    @Html.Partial("ReceivableDetails")
+</div>
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:lightgray;padding:unset;">
+    <div class="row">
+        <div class="col-sm-8">
+            <button class="btn btn-info btn-sm" id="btnrefresh"><i class="fa fa-refresh"></i> Refresh</button>
+            <button class="btn btn-success btn-sm" id="btnexcel"><i class="fa fa-file-excel-o"></i>Excel</button>
+            <button class="btn btn-success btn-sm" id="btnPrint"><i class="fa fa-file-excel-o"></i>Print</button>
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" id="SaveData">Adjust</button>
+                <a href="~/Transaction/TransactionMaintenanceGrid?Type=@Model.Type&ViewDataId=ViewData-Ledger" class="btn btn-danger" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+<input type="hidden" id="hdnbranch" />
+

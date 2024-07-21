@@ -1,0 +1,1057 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.LedgerVM
+@using Common
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+@*<style>
+        .form-control {
+            height: 28px;
+            border: 1px solid #BBBABA;
+            color: black;
+        }
+
+        .form-horizontal .control-label {
+            padding-top: 6px;
+            color: black;
+            text-align: left;
+        }
+
+        .headername {
+            font-size: medium;
+            font-family: Tahoma;
+            font-weight: 700;
+        }
+
+        .CodeSt {
+            font-size: 18px;
+        }
+
+        .fixhead {
+            text-transform: uppercase;
+        }
+
+        /*.modal-dialog {
+                align-self:center;
+            }*/
+
+        .form-group {
+            margin-bottom: 5px;
+        }
+
+        .SaveData {
+            background-color: #95b75d;
+            border-color: #95b75d;
+            color: #FFFFFF;
+            display: inline-block;
+            padding: 6px 12px;
+            margin-bottom: 0;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.42857143;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            -ms-touch-action: manipulation;
+            touch-action: manipulation;
+            cursor: pointer;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            background-image: none;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+    </style>*@
+<script>
+    $(document).ready(function () {
+        $("#DocuDate").focus();
+        $('#DocuDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#StrBankDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        loadBranch()
+        LoadCurrencyMain()
+        LoadBankChgAcc()
+        $('#CurrCode').change(function () {
+            var url = '@Url.Action("GetCurrencyRate")?Code=' + $('#CurrCode').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data == parseFloat(0)) {
+                        $('#CurrRate').val(1)
+                    }
+                    else {
+                        var currRateI = parseFloat(data);
+                        $('#CurrRate').val(currRateI.toFixed(2));
+                    }
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#addRefDoc').change(function () {
+            var url = '@Url.Action("GetReferenceDetails")?ParentKey=' + $('#addRefDoc').val() + '&Code=' + $('#addCode').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addStrChqDate').val(data.StrChqDate);
+                    $('#addCheque').val(data.Cheque);
+                    $('#addAmt').val(data.Amt);
+                    $('#BankCashCode').val(data.BankCashCode);
+                    $('#BankCashName').val(data.BankCashName);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#DeleteData').click(function () {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var url = '@Url.Action("DeleteData")';
+            var ModelData = {};
+            ModelData["ParentKey"] = $("#hdnParentKey").val();
+            ModelData["Header"] = '@Model.Header'
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    alert(data.Message);
+                    if (data.Status == 'Success') {
+                        window.location.href = "/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2"
+                    }
+                    else if (data.Status == 'Error') {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $('#SaveData').click(function () {
+            event.preventDefault();
+            if ($("#DocuDate").val() == '') {
+                alert('Please Select DocDate.');
+                return;
+            }
+            if ($('#addCode').val() == '') {
+                alert('Please Select Party.');
+                return;
+            }
+            if ($("#CurrCode").val() == '') {
+                alert('Please Select Currency.');
+                return;
+            }
+            if ($('#addCheque').val() == '') {
+                alert('Please Enter Cheque.');
+                return;
+            }
+            if ($('#addStrChqDate').val() == '') {
+                alert('Please Enter Cheque Date.');
+                return;
+            }
+            if ($('#addRefDoc').val() == '') {
+                alert('Please Select Reference Document.');
+                return;
+            }
+            if ($('#BankChgAcc').val() == '') {
+                alert('Please Select Bank Charges Account.');
+                return;
+            }
+            if ($('#BankCharges').val() == '') {
+                alert('Please Enter Bank Charges.');
+                return;
+            }
+            if ($('#BankCashCode').val() == '') {
+                alert('Please Select Bank Account.');
+                return;
+            }
+            $("#ErrorMessage").hide();
+            var AddonSerial = [];
+            $('#addongrid').find('tr[id="datacharge"]').each(function () {
+                var $tds = $(this).find('td');
+                var myDets = {
+                    Fld: $tds.eq(0).text(),
+                    ApplCode: ($tds.eq(4).text() == "C" || $tds.eq(4).text() == "M") ? $tds.find(".addontxtfvalue").val() : $tds.find("input[class='addontxtfvalue']").val(),
+                    FldType: $tds.eq(4).text()
+                }
+
+                AddonSerial.push(myDets);
+            });
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+
+            ModelData["DocuDate"] = $("#DocuDate").val();
+            ModelData["Branch"] = $("#Branch").val();
+            ModelData["BankCashCode"] = $("#BankCashCode").val();
+            ModelData["MainType"] = $("#hdnMainType").val();
+            ModelData["SubType"] = $("#hdnSubType").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["Prefix"] = $("#hdnPrefix").val();
+            ModelData["Srl"] = $("#EdithdnSrl").val();
+            ModelData["ParentKey"] = $("#hdnParentKey").val();
+            ModelData["CurrRate"] = $("#CurrRate").val();
+            ModelData["CurrCode"] = $('#CurrCode').val();
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            ModelData["AddOnList"] = AddonSerial;
+            ModelData["Header"] = '@Model.Header';
+            ModelData["Cheque"] = $("#addCheque").val();
+            ModelData["StrChqDate"] = $("#addStrChqDate").val();
+            ModelData["LocationCode"] = $("#addLocationCode").val();
+            ModelData["RefDoc"] = $("#addRefDoc").val();
+            ModelData["Code"] = $("#addCode").val();
+            ModelData["Amt"] = $("#addAmt").val();
+            ModelData["Narr"] = $("#addNarr").val();
+            ModelData["BankChgAcc"] = $("#BankChgAcc").val();
+            ModelData["PartyCharges"] = $("#PartyCharges").val();
+            ModelData["BankCharges"] = $("#BankCharges").val();
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        alert("Document Saved as " + data.NewSrl + "");
+                        window.location.href = "/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2"
+                    }
+                    else if (data.Status == 'failure') {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Select Atleast One Record For Ledger.');
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $("#btnAddOns").click(function (event) {
+            event.preventDefault();
+            $('#addonmodel').modal('show');
+        });
+
+        $("#btnAddNote").click(function (e) {
+            event.preventDefault();
+            var url = '@Url.Action("AddNote")?SalesManCode=' + '@Model.Code';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addnotemodel').modal('show');
+                    $('#controllername').val(data.Controller);
+                },
+            });
+        });
+
+        $("#btnAddDoc").click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("UploadFile")';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#attachdoc').modal('show');
+                    $('#controllername').val(data.Controller);
+                },
+            });
+        });
+    })
+
+    function loadBranch() {
+        var url = '@Url.Action("GetBranchList")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Branch").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Branch').val('@Model.Branch').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function LoadCurrencyMain() {
+        var url = '@Url.Action("GetCurrency")'
+        $('#CurrCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 5,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CurrCode', text: '@Model.CurrName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadBankChgAcc() {
+        var url = '@Url.Action("GetAccountList")?BaseGr=' + $("#hdnMainType").val();
+        $('#BankChgAcc').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BankChgAcc', text: '@Model.BankChgAccName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    }
+</script>
+
+<script>
+    $(document).ready(function () {
+        $('#addStrChqDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $("#addAmt").constrain({ allow: { regex: "[0-9.]" } });
+        loadaccount1()
+        loadaddInnerBranch()
+        loadDBank1()
+        loadWareHouse1()
+        loadAutoRefDoc()
+        $("#findAccdetail").click(function (event) {
+            event.preventDefault(event);
+            $('#searchtype').val('');
+            $('#searchtext').val('');
+            var url = '@Url.Action("FindAccountdetails")';
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#dialog1').modal('show');
+                    loadlist()
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnRefDoc").click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("GetReferencePickUp")?Code=' + $('#addCode').val();
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addgetrefmodel').modal('show');
+                    $('#AddGetRefModel').html(data.Html);
+                },
+            });
+        });
+
+    });
+
+    function loadaccount1() {
+        $('#ErrorMessage1').hide();
+        var url = '@Url.Action("GetAccountList")?BaseGr=' + $("#hdnMainType").val();
+        $('#addCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Code', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function loadAutoRefDoc() {
+        var url = '@Url.Action("GetRefDoc")'
+        $('#addRefDoc').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term + "^" + $('#addCode').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name, id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.RefDoc', text: '@Model.RefDoc' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function loadRefaccount1() {
+        var url = '@Url.Action("GetAccountList")?BaseGr=' + $("#hdnMainType").val();
+        $('#addRefParty').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.RefParty', text: '@Model.RefPartyName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function GetRefrenceRecords() {
+        var ModelData = {};
+        ModelData["Code"] = $('#addCode').val();
+        ModelData["Branch"] = $('#addBranch').val();
+        ModelData["SubType"] = $('#hdnSubType').val();
+        ModelData["AmtType"] = $("input[name=AmtType]:checked").val();
+        ModelData["LocationCode"] = $('#addLocationCode').val();
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("GetReferenceAdjustments")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforesend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#divLedgerTable2').html(data.Html);
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("error occured while processing your request.");
+            }
+        });
+    }
+
+    function GetTDSBoolean() {
+        var ModelData = {};
+        ModelData["Party"] = $('#addCode').val();
+
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("GetTDSBoolean")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforesend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#addTDSFlag').prop('checked', data.CutTDS);;
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("error occured while processing your request.");
+            }
+        });
+    }
+
+    function loadaddInnerBranch() {
+        var url = '@Url.Action("GetBranchList")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#addBranch").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#addBranch').val('@Model.Branch').attr("selected", "selected");
+
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadDBank1() {
+        var url = '@Url.Action("GetDraweeBankList")'
+        $('#addDraweeCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DraweeCode', text: '@Model.DraweeCode' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function loadWareHouse1() {
+        var url = '@Url.Action("GetWarehouseList")'
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#addLocationCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#addLocationCode').val('@Model.LocationCode').attr("selected", "selected");
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadPaymentMode1() {
+        var url = '@Url.Action("GetPaymentMode")'
+        $('#addPaymentMode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Text,
+                                id: item.Value
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.PaymentMode', text: '@Model.PaymentModeName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt" id="headercaption">@Model.Header (@Model.Type)</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt" id="headercaption">@Model.ChangeLog Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <div class="form-horizontal" id="frmaddnewbank" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none; padding:3px;"></div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Doc. Serial:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.Srl, new { @class = "form-control", @id = "Srl", @Name = "Srl", @style = "height:28px;font-size:13pt;font-weight:bolder;", @Value = Model.Srl, @Disabled = "disabled" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Doc. Date:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.DocuDate, new { @type = "text", @class = "form-control", @id = "DocuDate", @Name = "DocuDate", @style = "height:28px;font:size:13pt;font-weight:bolder;", @Value = Model.DocDate.ToString("dd-MM-yyyy") })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Plant/BU:</label>
+                <div class="col-sm-4">
+                    @Html.DropDownListFor(m => m.Branch, DropdownHelper.EmptyList(), new { @class = "form-control", @id = "Branch", @Name = "Branch", @style = "width:99%;" })
+                </div>
+                <div class="col-sm-1 control-label">WH/Location:</div>
+                <div class="col-sm-4">
+                    @Html.DropDownListFor(x => x.LocationCode, DropdownHelper.EmptyList(), new { @class = "form-control", @id = "addLocationCode", @Name = "addLocationCode", @style = "width:99%;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Currency:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.CurrCode, new { @type = "input-large-query", @id = "CurrCode", @Name = "CurrCode", @style = "width:99%;", @Disabled = "disabled" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Curr. Rate:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(m => m.CurrRate, new { @class = "form-control", @id = "CurrRate", @Name = "CurrRate", @style = "width:99%;", @Value = Model.CurrRate, @Disabled = "disabled" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Party:</div>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.Code, new { @class = "input-large-query", @id = "addCode", @Name = "addCode", @style = "width:99%;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Receipt Doc.:</div>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.RefDoc, new { @class = "input-large-query", @id = "addRefDoc", @Name = "addRefDoc", @style = "width:99%;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Cheque No.:</div>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.Cheque, new { @class = "form-control", @id = "addCheque", @Name = "addCheque", @style = "width:99%;", @Disabled = "disabled" })
+                </div>
+                <div class="col-sm-2"></div>
+                <div class="col-sm-1 control-label">Cheque Date:</div>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.StrChqDate, new { @Type = "text", @class = "form-control", @id = "addStrChqDate", @Name = "addStrChqDate", @Disabled = "disabled" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Bank Code:</div>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.BankCashCode, new { @class = "form-control", @id = "BankCashCode", @Name = "BankCashCode", @style = "width:99%;", @Disabled = "disabled" })
+                </div>
+                <div class="col-sm-2"></div>
+                <div class="col-sm-1 control-label">Bank Name:</div>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.BankCashName, new { @class = "form-control", @id = "BankCashName", @Name = "BankCashName", @style = "width:99%;", @Disabled = "disabled" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Chq. Amount:</div>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.Amt, new { @class = "form-control", @id = "addAmt", @Name = "addAmt", @style = "text-align:right;", @Value = Model.Amt.ToString("0.00"), @Disabled = "disabled" })
+                </div>
+                <div class="col-sm-2"></div>
+                <div class="col-sm-1 control-label">Remark:</div>
+                <div class="col-sm-5">
+                    @Html.TextAreaFor(x => x.Narr, new { @id = "addNarr", @name = "addNarr", @style = "width:100%", @Value = Model.Narr, @rows = 5, @Disabled = "disabled" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-3 control-label" style="font-weight:bolder;font-size:12pt;">Charges and Posting</div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Bank Charge:</div>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.BankCharges, new { @class = "form-control", @id = "BankCharges", @Name = "BankCharges", @style = "width:99%;", @Value = Model.BankCharges.ToString("0.00") })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Date:</div>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.StrBankDate, new { @class = "form-control", @id = "StrBankDate", @Name = "StrBankDate", @style = "width:99%;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Posting A/C:</div>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.BankChgAcc, new { @class = "input-large-query", @id = "BankChgAcc", @Name = "BankChgAcc", @style = "width:99%;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Charges to Party:</div>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.PartyCharges, new { @class = "form-control", @id = "PartyCharges", @Name = "PartyCharges", @style = "width:99%;", @Value = Model.PartyCharges.ToString("0.00") })
+                </div>
+            </div>
+            <div id="divchqdepositLog">
+                @*@Html.Partial("LogsAndFollowers")*@
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <button class="btn btn-warning" id="btnAddOns" style="font-size: 13px;padding:3px 12px;" name="Command"><i class="fa fa-clipboard"></i>&nbsp;&nbsp;AddOns</button>
+            @*<button class="btn btn-info" id="btnAddNote" style="font-size: 13px;padding:3px 12px;" name="Command">Add Note</button>
+                <button class="btn btn-warning" id="btnAddDoc" style="font-size: 13px;padding:3px 12px;" name="Command"><i class="fa fa-paperclip"></i>&nbsp;&nbsp;Attach Doc</button>*@
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:Tahoma;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.ChangeLog != "Delete")
+                {
+                    <button class="btn btn-success" id="SaveData" style="font-size: 13px;padding:3px 12px;" formtarget="_blank">Save</button>
+                }
+                @if (Model.ChangeLog == "Delete")
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="DeleteData">Delete</button>
+                }
+                <a href="~/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="margin-right:10px;font-size:13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div class="example-modal">
+    <div id="addonmodel" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="AddOnModel">
+                @Html.Partial("AddOnGrid")
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<div class="example-modal">
+        <div id="addnotemodel" class="modal modal-primary" style="z-index:2500;">
+            <div class="modal-dialog" style="width:650px;">
+                <div id="notemodel">
+                    @Html.Partial("AddNote")
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="example-modal">
+        <div id="attachdoc" class="modal modal-primary" style="z-index:2500;">
+            <div class="modal-dialog" style="width:650px;">
+                <div id="AttachDoc">
+                    @Html.Partial("AttachmentDocument")
+                </div>
+            </div>
+        </div>
+    </div>*@
+@Html.HiddenFor(x => x.MainType, new { @id = "hdnMainType" })
+@Html.HiddenFor(x => x.SubType, new { @id = "hdnSubType" })
+@Html.HiddenFor(x => x.Type, new { @id = "hdnType" })
+@Html.HiddenFor(x => x.Document, new { @id = "hdnDocument" })
+@Html.HiddenFor(x => x.ParentKey, new { @id = "hdnParentKey" })
+@Html.HiddenFor(x => x.OptionCode, new { @Id = "hdnOptionCode" })
+@Html.HiddenFor(x => x.Prefix, new { @id = "hdnPrefix" })
+@Html.HiddenFor(x => x.Srl, new { @id = "EdithdnSrl" })
+@Html.HiddenFor(x => x.ConstantMode, new { @id = "hdnConstantMode" })
+@Html.HiddenFor(x => x.ChangeLog, new { @id = "hdnChangeLog" })
+<input type="hidden" id="controllername" />
+@Html.HiddenFor(x => x.hdnAddonSaved, new { @Id = "hdnAddonSaved" })

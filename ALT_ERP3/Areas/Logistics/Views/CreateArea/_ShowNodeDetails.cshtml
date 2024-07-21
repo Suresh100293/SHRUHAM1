@@ -1,0 +1,1507 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.BranchVM
+@using Common;
+@{
+    ViewBag.Title = "TfatBranch";
+    Layout = null;
+}
+<style>
+
+    /*.multiselect-container {
+        color: red !important;
+        background-color: #b6ff00 !important;
+    }
+    .multiselect-container .disabled .active :hover {
+        color: White !important;
+        background-color: #b6ff00 !important;
+    }*/
+    
+    select {
+        text-align-last: center;
+        text-align: center;
+        font-weight: bold;
+    }
+
+    .Flex {
+        display: flex;
+    }
+</style>
+<style>
+    .editableTable {
+        border: solid 1px;
+        border-color: dimgray;
+        border-collapse: separate;
+        border-spacing: inherit;
+        width: auto !important;
+    }
+
+        .editableTable th {
+            background-color: lightgray;
+            border-right: solid 1px dimgray;
+            border-bottom: solid 1px dimgray;
+            color: black;
+            text-align: center;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            font-size: 9pt;
+            font-weight: normal;
+        }
+
+        .editableTable td {
+            border: solid 1px dimgray;
+            border-top: solid 1px dimgray;
+            color: black;
+            padding: 5px !important;
+            font-family: Verdana, Geneva, Tahoma, sans-serif;
+            font-size: 9pt;
+        }
+
+</style>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+
+
+    function colon(x) {
+        debugger;
+        if (x.length == 2) {
+            x+= ":";
+        }
+        return x;
+    }
+    $(document).ready(function () {
+
+
+        $("#VehicleActivity").constrain({ allow: { regex: "[0-9:]" } });
+        $(".DistanceKM").constrain({ allow: { regex: "[0-9]" } });
+        $("#SMTPPort").constrain({ allow: { regex: "[0-9]" } });
+
+
+        if ('@Model.LocalMail' == "True" || '@Model.LocalMail' == "true") {
+            $("#LocalMail").prop("checked", true);
+        } else {
+            $("#BlobalMail").prop("checked", true);
+        }
+
+
+        $("#VehicleActivity").keyup(function () {
+            debugger;
+            var OriginalContent = $(this).val();
+            var Value = colon(OriginalContent);
+            $(this).val(Value);
+        });
+        $("#VehicleActivity").blur(function (e) {
+            var OriginalContent = $(this).val();
+            if ($(this).val() == "" || $(this).val() == "0") {
+                $(this).val("00:00");
+            } else {
+                var Value = $(this).val();
+                if (Value.length > 2) {
+                    var length = Value.length;
+                    if (length == 3) {
+                        Value += "00";
+                    }
+                    else if (length == 4) {
+                        Value += "0";
+                    }
+                    else {
+                        Value = Value.substring(0, 5);
+                    }
+                }
+                var ssnRE = new RegExp('([01]?[0-9]|2[0-3]):[0-5][0-9]');
+                if (!ssnRE.test(Value)) {
+                    alert('Invalid Plese Enter Proper Format Eg.HH:MM');
+                    $(this).val("00:00");
+                } else {
+                    $(this).val(Value);
+                }
+
+            }
+        });
+
+
+
+        
+
+        $("#All").click(function () {
+            $(".SingleChk").prop('checked', $(this).prop('checked'));
+        });
+
+        if ('@Model.Category' == "Area") {
+            $('#addchild').prop("disabled", true);
+        } else {
+            $('#addchild').prop("disabled", false);
+        }
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        
+        $("#TfatBranch_Grp").prop("disabled", true);
+
+        if ('@Model.Mode' == "Add") {
+            $("#Type").prop("disabled", true);
+            
+        }
+        if ('@Model.Mode' == "Edit") {
+            $("#Category").prop("disabled", true);
+        } if ('@Model.Inactive' == "True") {
+            $("#Category").prop("disabled", false);
+            $("#TfatBranch_Grp").prop("disabled", false);
+        }
+        $('#TfatBranch_gp_RCMDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        
+        $("#AllTime").change(function ()
+        {
+            if (this.checked)
+            {
+                $("#WorkingHoursFrom").attr("disabled", "disabled");
+                $("#WorkingHoursTo").attr("disabled", "disabled");
+            } else
+            {
+                $("#WorkingHoursFrom").removeAttr("disabled"); 
+                $("#WorkingHoursTo").removeAttr("disabled"); 
+            }
+        });
+        $("#Category").change(function () {
+            debugger;
+            if ('@Model.Mode'!="Add") {
+                $("#TfatBranch_Grp").select2("val", "");
+            }
+            if ($("#Category").val() == "Zone") {
+                $("#Type").prop("disabled", true);
+                $("#Type option[value='G']").prop("selected", true);
+                $("#VehicleActivity").prop("disabled", true);
+                $("#AllTime").prop("disabled", true);
+                $("#WorkingHoursFrom").prop("disabled", true);
+                $("#WorkingHoursTo").prop("disabled", true);
+
+            } else {
+                $("#Type").prop("disabled", false);
+                $("#Type option[value='G']").prop("selected", false);
+                $("#VehicleActivity").prop("disabled", false);
+                $("#AllTime").prop("disabled", false);
+                $("#WorkingHoursFrom").prop("disabled", false);
+                $("#WorkingHoursTo").prop("disabled", false);
+            }
+
+            $("#TempPCode").empty();
+            //event.preventDefault();
+            var url = '@Url.Action("TempGetBranchList")?CompCode=' + $('#Category').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $.each(result, function (i, item) {
+                        $("#TempPCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+                    
+                    $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+            @*var url = '@Url.Action("TempGetBranchList")';
+            var DTO = { CompCode: $('#Category').val()};
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $.each(data, function (i, item) {
+                        $("#TempPCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+
+                },
+            });*@
+        });
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadGrp()
+        LoadCompCode()
+        LoadLocationCode()
+        LoadCountry()
+        LoadState()
+        LoadCity()
+        LoadCurrName()
+        LoadAccount()
+
+        @* iX9: make all the fields hidden with visible property=false *@
+        //$("#TfatBranch_gp_EnableParty").hide();
+
+        @* iX9: Multi-Select Controls *@
+        var values = $('#hdnUsers').val();
+        $("#hdnUsersArray").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $(".Userslistbox option[value='" + e + "']").prop("selected", true);
+                $(".Userslistbox option[value='" + e + "']").prop("disabled", true);
+                //$(".Userslistbox option[value='" + e + "']").addClass("DisabledListBox");
+            });
+            $.each(values.split(","), function (i, e) {
+            });
+
+        }
+        //$(".Userslistbox").change(function () {
+        //    $('#hdnUsersArray').val('');
+        //    var selected = [];
+        //    $(".Userslistbox :selected").each(function () {
+        //        selected.push($(this).val());
+        //    });
+        //    $('#hdnUsersArray').val(selected)
+        //    return false;
+        //});
+        $('.Userslistbox').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select User',
+        })
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatBranch_Business').val('@Model.TfatBranch_Business').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatBranch_gp_VATGST').val('@Model.TfatBranch_gp_VATGST').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatBranch_gp_AutoAccStyle').val('@Model.TfatBranch_gp_AutoAccStyle').attr("selected", "selected");
+        @* iX9: Date Picker Code *@
+        $('#TfatBranch_gp_RCMDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#ChangePlantBUDetails').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TfatBranch_Code: { required: true, },
+                TfatBranch_Name: { required: true, },
+                TfatBranch_Grp: { required: true, },
+                TfatBranch_CompCode: { required: true, },
+                TfatBranch_Country: { required: true, },
+                TfatBranch_State: { required: true, },
+                TfatBranch_City: { required: true, },
+                TfatBranch_gp_RoundVAT: { required: true, },
+                TfatBranch_gp_AutoAccStyle: { required: true, },
+                TfatBranch_gp_AutoAccLength: { required: true, },
+            },
+            messages: {
+                TfatBranch_Code: { required: 'Code is Required', },
+                TfatBranch_Name: { required: 'Name is Required', },
+                TfatBranch_Grp: { required: 'Grp is Required', },
+                TfatBranch_CompCode: { required: 'CompCode is Required', },
+                TfatBranch_Country: { required: 'Country is Required', },
+                TfatBranch_State: { required: 'State is Required', },
+                TfatBranch_City: { required: 'City is Required', },
+                TfatBranch_gp_RoundVAT: { required: 'gp_RoundVAT is Required', },
+                TfatBranch_gp_AutoAccStyle: { required: 'gp_AutoAccStyle is Required', },
+                TfatBranch_gp_AutoAccLength: { required: 'gp_AutoAccLength is Required', },
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        //$("#TfatBranch_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatBranch_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatBranch_Grp").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatBranch_CompCode").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatBranch_LocationCode").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#TfatBranch_Country").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatBranch_State").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatBranch_City").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatBranch_CurrName").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#TfatBranch_TimeDiff").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#TfatBranch_CurrDec").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#TfatBranch_gp_CashLimitAmt").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#TfatBranch_gp_GSTStyle").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#VehicleActivity").constrain({ allow: { regex: "[0-9]:" } });
+        //$(".DistanceKM").constrain({ allow: { regex: "[0-9]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+    });
+
+    
+
+
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadGrp() {
+        var url = '@Url.Action("AutoCompleteGrp")'
+        $('#TfatBranch_Grp').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Area: $("#Category").val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_Grp', text: '@Model.GrpName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    //function validateHhMm(inputField) {
+    //
+    //        var isValid = /^([0-1]?[0-9]|2[0-4]):([0-5][0-9])(:[0-5][0-9])?$/.test(inputField.value);
+
+    //    if (isValid) {
+    //        $("#VehicleActivityF").val("T")
+    //        } else {
+    //        $("#VehicleActivityF").val("F")
+    //        }
+    //    }
+
+    function LoadCompCode() {
+        var url = '@Url.Action("AutoCompleteCompCode")'
+        $('#TfatBranch_CompCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_CompCode', text: '@Model.CompCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadLocationCode() {
+        var url = '@Url.Action("AutoCompleteLocationCode")'
+        $('#TfatBranch_LocationCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_LocationCode', text: '@Model.LocationCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCountry() {
+        var url = '@Url.Action("AutoCompleteCountry")'
+        $('#TfatBranch_Country').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_Country', text: '@Model.CountryName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadState() {
+        var url = '@Url.Action("AutoCompleteState")'
+        $('#TfatBranch_State').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_State', text: '@Model.StateName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCity() {
+        var url = '@Url.Action("AutoCompleteCity")'
+        $('#TfatBranch_City').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_City', text: '@Model.CityName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCurrName() {
+        var url = '@Url.Action("AutoCompleteCurrName")'
+        $('#TfatBranch_CurrName').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_CurrName', text: '@Model.CurrNameName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadAccount() {
+        var url = '@Url.Action("AutoCompleteAccount")'
+        $('#TfatBranch_Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatBranch_Account', text: '@Model.AccountName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+<section class="panel" style="margin-bottom:15px;">
+    <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+    <div class="col-sm-9" style="margin-top: -6px;">
+        <div class="tab">
+            <button class="tablinks" onclick="OpenTab(event, 'divGeneral')" id="FirstTab">General</button>
+            <button class="tablinks" onclick="OpenTab(event, 'divMailing Info')">Address Info</button>
+            <button class="tablinks" onclick="OpenTab(event, 'divStatutory')">Statutory</button>
+            <button class="tablinks" onclick="OpenTab(event, 'divPreferences')">Preferences</button>
+            <button class="tablinks" onclick="OpenTab(event, 'divSMS Setup')">SMS Setup</button>
+            <button class="tablinks" onclick="OpenTab(event, 'divMail')">Mail Setup</button>
+            @*<button class="tablinks" onclick="OpenTab(event, 'divKM KM')">KM Master</button>*@
+        </div>
+        @* iX9: Tab Body Panels *@
+        <div id="divGeneral" style="overflow:scroll;height:450px;" class="tabcontent">
+            <div style="width:850px;">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Name:</label>
+                    <div class="col-sm-3">
+
+                        @if (Model.TfatBranch_Code == "G00000" || Model.TfatBranch_Code == "HO0000")
+                        {
+                            @Html.TextBoxFor(x => x.TfatBranch_Name, new { @maxlength = "50", @readonly = "readonly", @class = "form-control", @Name = "TfatBranch_Name", @style = "text-transform: capitalize;", @Value = Model.TfatBranch_Name, @Id = "TfatBranch_Name" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.TfatBranch_Name, new { @maxlength = "50", @class = "form-control", @Name = "TfatBranch_Name", @style = "text-transform: capitalize;", @Value = Model.TfatBranch_Name, @Id = "TfatBranch_Name" })
+                        }
+                    </div>
+                    <label class="col-sm-2 control-label">Plant/BU Code:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Code, new { @maxlength = "6", @readonly = "readonly", @class = "form-control", @Name = "TfatBranch_Code", @Value = Model.TfatBranch_Code, @Id = "TfatBranch_Code" })
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Grp:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Grp, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_Grp", @Value = Model.TfatBranch_Grp, @Name = "TfatBranch_Grp" })
+                    </div>
+                    <label class="col-sm-2 control-label">Comp Code:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_CompCode, new { @readonly = "readonly", @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_CompCode", @Value = Model.TfatBranch_CompCode, @Name = "TfatBranch_CompCode" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Location:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_LocationCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_LocationCode", @Value = Model.TfatBranch_LocationCode, @Name = "TfatBranch_LocationCode" })
+                    </div>
+                    <label class="col-sm-2 control-label">Users Allowed:</label>
+                    <div class="col-sm-3">
+                        @Html.ListBoxFor(x => x.UsersItemX, Model.UsersMultiX, new { @class = "Userslistbox", @id = "TfatBranch_Users" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Login allowed?:</label>
+                    <div class="col-sm-3">
+                        @Html.CheckBoxFor(x => x.TfatBranch_LogIn, new { @value = Model.TfatBranch_LogIn, @id = "TfatBranch_LogIn", @name = "TfatBranch_LogIn", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Curr. Name:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_CurrName, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_CurrName", @Value = Model.TfatBranch_CurrName, @Name = "TfatBranch_CurrName" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">TimeZone Difference:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_TimeDiff, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatBranch_TimeDiff", @Value = Model.TfatBranch_TimeDiff, @Id = "TfatBranch_TimeDiff" })
+                    </div>
+
+                    <label class="col-sm-2 control-label">Curr.Dec:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_CurrDec, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatBranch_CurrDec", @Value = Model.TfatBranch_CurrDec, @Id = "TfatBranch_CurrDec" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Interbranch Account:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Account, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_Account", @Value = Model.TfatBranch_Account, @Name = "TfatBranch_Account" })
+                    </div>
+                    <label class="col-sm-2 control-label">Tax Applicable:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatBranch_gp_VATGST, Model.gp_VATGSTList, new { @class = "form-control", @Id = "TfatBranch_gp_VATGST", @Name = "TfatBranch_gp_VATGST", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Category:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Category == "0")
+                        {
+                            @Html.DropDownListFor(m => m.Category, Model.CategoryList, new { @class = "form-control", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                        }
+                        else
+                        {
+                            @Html.DropDownListFor(m => m.Category, Model.CategoryList, new { @class = "form-control", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                        }
+                    </div>
+                    <label class="col-sm-2 control-label">Type:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Type == "0")
+                        {
+                            @Html.DropDownListFor(m => m.Type, Model.TypeList, new { @class = "form-control", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                        }
+                        else
+                        {
+                            @Html.DropDownListFor(m => m.Type, Model.TypeList, new { @class = "form-control", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                        }
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Vehicle Activity Upto (HH:MM):</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.VehicleActivity, new { @class = "form-control", @style = "width:105px;", @Value = Model.VehicleActivity, @maxlength = "5" })
+                    </div>
+                    <label class="col-sm-2 control-label">Wrkin Hours:</label>
+                    <label class="col-sm-1 control-label" style="width:auto;">24 Hours:</label>
+                    <div class="col-sm-1" style="padding: 0px;margin: 0px;width: 20px;">
+                        @Html.CheckBoxFor(x => x.AllTime, new { @class = "form-control", @style = "margin-top:0px;", @Value = Model.AllTime })
+                    </div>
+                    <div class="col-sm-3" style="display: flex;">
+                        @Html.TextBoxFor(x => x.WorkingHoursFrom, new { @class = "form-control", @type = "time", @style = "width:130px;margin-left:-5px;", @Value = Model.WorkingHoursFrom })
+                        &nbsp;
+                        @Html.TextBoxFor(x => x.WorkingHoursTo, new { @class = "form-control", @type = "time", @style = "width:130px;", @Value = Model.WorkingHoursTo })
+                    </div>
+
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Active:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.Status, new { @value = Model.Status, @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Sun:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_Sun, new { @value = Model.TfatBranch_Sun, @id = "TfatBranch_Sun", @name = "TfatBranch_Sun", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Monday:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_Mon, new { @value = Model.TfatBranch_Mon, @id = "TfatBranch_Mon", @name = "TfatBranch_Mon", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Tuesday:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_Tue, new { @value = Model.TfatBranch_Tue, @id = "TfatBranch_Tue", @name = "TfatBranch_Tue", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Wednesday:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_Wed, new { @value = Model.TfatBranch_Wed, @id = "TfatBranch_Wed", @name = "TfatBranch_Wed", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Thursday:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_Thu, new { @value = Model.TfatBranch_Thu, @id = "TfatBranch_Thu", @name = "TfatBranch_Thu", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Friday:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_Fri, new { @value = Model.TfatBranch_Fri, @id = "TfatBranch_Fri", @name = "TfatBranch_Fri", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Saturday:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_Sat, new { @value = Model.TfatBranch_Sat, @id = "TfatBranch_Sat", @name = "TfatBranch_Sat", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="divMailing Info" style="overflow:scroll;height:450px;" class="tabcontent">
+            <div style="width:950px;">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Address:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Addrl1, new { @maxlength = "35", @class = "form-control", @Name = "TfatBranch_Addrl1", @Value = Model.TfatBranch_Addrl1, @Id = "TfatBranch_Addrl1" })
+                    </div>
+                    <label class="col-sm-2 control-label">Address line-3:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Addrl3, new { @maxlength = "35", @class = "form-control", @Name = "TfatBranch_Addrl3", @Value = Model.TfatBranch_Addrl3, @Id = "TfatBranch_Addrl3" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Address line-2:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Addrl2, new { @maxlength = "35", @class = "form-control", @Name = "TfatBranch_Addrl2", @Value = Model.TfatBranch_Addrl2, @Id = "TfatBranch_Addrl2" })
+                    </div>
+                    <label class="col-sm-2 control-label">Address line-4:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Addrl4, new { @maxlength = "35", @class = "form-control", @Name = "TfatBranch_Addrl4", @Value = Model.TfatBranch_Addrl4, @Id = "TfatBranch_Addrl4" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Country:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Country, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_Country", @Value = Model.TfatBranch_Country, @Name = "TfatBranch_Country" })
+                    </div>
+                    <label class="col-sm-2 control-label">State:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_State, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_State", @Value = Model.TfatBranch_State, @Name = "TfatBranch_State" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">City:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_City, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatBranch_City", @Value = Model.TfatBranch_City, @Name = "TfatBranch_City" })
+                    </div>
+                    <label class="col-sm-2 control-label">Pin Code:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_aPin, new { @maxlength = "10", @class = "form-control", @Name = "TfatBranch_aPin", @Value = Model.TfatBranch_aPin, @Id = "TfatBranch_aPin" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Fax:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_aFax, new { @maxlength = "25", @class = "form-control", @Name = "TfatBranch_aFax", @Value = Model.TfatBranch_aFax, @Id = "TfatBranch_aFax" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Telephone-1:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Tel1, new { @maxlength = "10", @class = "form-control", @Name = "TfatBranch_Tel1", @Value = Model.TfatBranch_Tel1, @Id = "TfatBranch_Tel1" })
+                    </div>
+                    <label class="col-sm-2 control-label">Telephone-2:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Tel2, new { @maxlength = "10", @class = "form-control", @Name = "TfatBranch_Tel2", @Value = Model.TfatBranch_Tel2, @Id = "TfatBranch_Tel2" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Telephone-3:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Tel3, new { @maxlength = "10", @class = "form-control", @Name = "TfatBranch_Tel3", @Value = Model.TfatBranch_Tel3, @Id = "TfatBranch_Tel3" })
+                    </div>
+                    <label class="col-sm-2 control-label">Telephone-4:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Tel4, new { @maxlength = "10", @class = "form-control", @Name = "TfatBranch_Tel4", @Value = Model.TfatBranch_Tel4, @Id = "TfatBranch_Tel4" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label"></label>
+                    <div class="col-sm-3">
+                    </div>
+                    <label class="col-sm-2 control-label">www:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_www, new { @maxlength = "50", @class = "form-control", @Name = "TfatBranch_www", @Value = Model.TfatBranch_www, @Id = "TfatBranch_www" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Print Header:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.TfatBranch_PrintInfo, new { @maxlength = "100", @class = "form-control", @Name = "TfatBranch_PrintInfo", @Value = Model.TfatBranch_PrintInfo, @rows = 5, @Id = "TfatBranch_PrintInfo" })
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="divStatutory" style="overflow:scroll;height:450px;" class="tabcontent">
+            <div style="width:950px;">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Business:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatBranch_Business, Model.BusinessList, new { @class = "form-control", @Id = "TfatBranch_Business", @Name = "TfatBranch_Business", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Auth / License No.:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_aAuthno, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_aAuthno", @Value = Model.TfatBranch_aAuthno, @Id = "TfatBranch_aAuthno" })
+                    </div>
+                    <label class="col-sm-2 control-label">Licence2 Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_Licence2, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_Licence2", @Value = Model.TfatBranch_Licence2, @Id = "TfatBranch_Licence2" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Local Tax Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_aLstno, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_aLstno", @Value = Model.TfatBranch_aLstno, @Id = "TfatBranch_aLstno" })
+                    </div>
+                    <label class="col-sm-2 control-label">CST Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_aCstNo, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_aCstNo", @Value = Model.TfatBranch_aCstNo, @Id = "TfatBranch_aCstNo" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">GST Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_GSTNo, new { @maxlength = "15", @class = "form-control", @Name = "TfatBranch_GSTNo", @Value = Model.TfatBranch_GSTNo, @Id = "TfatBranch_GSTNo" })
+                    </div>
+                    <label class="col-sm-2 control-label">Income Tax No.(PAN):</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_PanNo, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_PanNo", @Value = Model.TfatBranch_PanNo, @Id = "TfatBranch_PanNo" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">CIN Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_CINNo, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_CINNo", @Value = Model.TfatBranch_CINNo, @Id = "TfatBranch_CINNo" })
+                    </div>
+                    <label class="col-sm-2 control-label">VAT Registration:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_VATReg, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_VATReg", @Value = Model.TfatBranch_VATReg, @Id = "TfatBranch_VATReg" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">TIN Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_TINNumber, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_TINNumber", @Value = Model.TfatBranch_TINNumber, @Id = "TfatBranch_TINNumber" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">TDS Registration:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_TDSReg, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_TDSReg", @Value = Model.TfatBranch_TDSReg, @Id = "TfatBranch_TDSReg" })
+                    </div>
+                    <label class="col-sm-2 control-label">TDS Office:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_TDSOffice, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_TDSOffice", @Value = Model.TfatBranch_TDSOffice, @Id = "TfatBranch_TDSOffice" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">TDS Authorise:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_TDSAuthorise, new { @maxlength = "10", @class = "form-control", @Name = "TfatBranch_TDSAuthorise", @Value = Model.TfatBranch_TDSAuthorise, @Id = "TfatBranch_TDSAuthorise" })
+                    </div>
+                    <label class="col-sm-2 control-label">TDS Circular:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_TDSCir, new { @maxlength = "30", @class = "form-control", @Name = "TfatBranch_TDSCir", @Value = Model.TfatBranch_TDSCir, @Id = "TfatBranch_TDSCir" })
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="divPreferences" style="overflow:scroll;height:450px;" class="tabcontent">
+            <div style="">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Disc.Amt (Purchase):</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_DiscAP, new { @value = Model.TfatBranch_gp_DiscAP, @id = "TfatBranch_gp_DiscAP", @name = "TfatBranch_gp_DiscAP", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Allow to Change?:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_AllowDiscAP, new { @value = Model.TfatBranch_gp_AllowDiscAP, @id = "TfatBranch_gp_AllowDiscAP", @name = "TfatBranch_gp_AllowDiscAP", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Disc. Amt (Sales):</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_DiscAS, new { @value = Model.TfatBranch_gp_DiscAS, @id = "TfatBranch_gp_DiscAS", @name = "TfatBranch_gp_DiscAS", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Allow to Change?:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_AllowDiscAS, new { @value = Model.TfatBranch_gp_AllowDiscAS, @id = "TfatBranch_gp_AllowDiscAS", @name = "TfatBranch_gp_AllowDiscAS", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Disc% (Purchase):</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_DiscPP, new { @value = Model.TfatBranch_gp_DiscPP, @id = "TfatBranch_gp_DiscPP", @name = "TfatBranch_gp_DiscPP", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Allow to Change?:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_AllowDiscPP, new { @value = Model.TfatBranch_gp_AllowDiscPP, @id = "TfatBranch_gp_AllowDiscPP", @name = "TfatBranch_gp_AllowDiscPP", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Disc% (Sales):</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_DiscPS, new { @value = Model.TfatBranch_gp_DiscPS, @id = "TfatBranch_gp_DiscPS", @name = "TfatBranch_gp_DiscPS", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Allow Disc% (Sales):</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_AllowDiscPS, new { @value = Model.TfatBranch_gp_AllowDiscPS, @id = "TfatBranch_gp_AllowDiscPS", @name = "TfatBranch_gp_AllowDiscPS", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Change Purch Rate:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_AllowRateP, new { @value = Model.TfatBranch_gp_AllowRateP, @id = "TfatBranch_gp_AllowRateP", @name = "TfatBranch_gp_AllowRateP", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Allow to Change?:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_AllowRateS, new { @value = Model.TfatBranch_gp_AllowRateS, @id = "TfatBranch_gp_AllowRateS", @name = "TfatBranch_gp_AllowRateS", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">BIN Concept:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_BIN, new { @value = Model.TfatBranch_gp_BIN, @id = "TfatBranch_gp_BIN", @name = "TfatBranch_gp_BIN", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Include Order In Closing Stock:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.gp_CLStockAddOrder, new { @value = Model.gp_CLStockAddOrder, @id = "gp_CLStockAddOrder", @name = "gp_CLStockAddOrder", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Check Cash Limit:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_CashLimit, new { @value = Model.TfatBranch_gp_CashLimit, @id = "TfatBranch_gp_CashLimit", @name = "TfatBranch_gp_CashLimit", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Cash Limit Amt:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_CashLimitAmt, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatBranch_gp_CashLimitAmt", @Value = Model.TfatBranch_gp_CashLimitAmt, @Id = "TfatBranch_gp_CashLimitAmt" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Cash Limit Warn:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_CashLimitWarn, new { @value = Model.TfatBranch_gp_CashLimitWarn, @id = "TfatBranch_gp_CashLimitWarn", @name = "TfatBranch_gp_CashLimitWarn", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label style="" class="col-sm-2 control-label">gp_EnableParty:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_EnableParty, new { @value = Model.TfatBranch_gp_EnableParty, @id = "TfatBranch_gp_EnableParty", @name = "TfatBranch_gp_EnableParty", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">GIN Qty.:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_GINQty, new { @value = Model.TfatBranch_gp_GINQty, @id = "TfatBranch_gp_GINQty", @name = "TfatBranch_gp_GINQty", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">GST Type:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_GSTStyle, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatBranch_gp_GSTStyle", @Value = Model.TfatBranch_gp_GSTStyle, @Id = "TfatBranch_gp_GSTStyle" })
+                    </div>
+
+                    <label class="col-sm-2 control-label">Default GSTSupply:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_GSTSupply, new { @value = Model.TfatBranch_gp_GSTSupply, @id = "TfatBranch_gp_GSTSupply", @name = "TfatBranch_gp_GSTSupply", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Holiday-1:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_Holiday1, new { @style = "width: 100px;", @maxlength = "9", @class = "form-control", @Name = "TfatBranch_gp_Holiday1", @Value = Model.TfatBranch_gp_Holiday1, @Id = "TfatBranch_gp_Holiday1" })
+                    </div>
+                    <label class="col-sm-2 control-label">Holiday-2:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_Holiday2, new { @style = "width: 100px;", @maxlength = "9", @class = "form-control", @Name = "TfatBranch_gp_Holiday2", @Value = Model.TfatBranch_gp_Holiday2, @Id = "TfatBranch_gp_Holiday2" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Multi Qty Units:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_MultiUnit, new { @value = Model.TfatBranch_gp_MultiUnit, @id = "TfatBranch_gp_MultiUnit", @name = "TfatBranch_gp_MultiUnit", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Neg Stock Watch:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_NegStock, new { @value = Model.TfatBranch_gp_NegStock, @id = "TfatBranch_gp_NegStock", @name = "TfatBranch_gp_NegStock", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Neg. Stock AsOn Today:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_NegStockAsOn, new { @value = Model.TfatBranch_gp_NegStockAsOn, @id = "TfatBranch_gp_NegStockAsOn", @name = "TfatBranch_gp_NegStockAsOn", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Neg Stock Warn:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_NegWarn, new { @value = Model.TfatBranch_gp_NegWarn, @id = "TfatBranch_gp_NegWarn", @name = "TfatBranch_gp_NegWarn", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Item wise Posting:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_PostP, new { @value = Model.TfatBranch_gp_PostP, @id = "TfatBranch_gp_PostP", @name = "TfatBranch_gp_PostP", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Purch Post TDS:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_PurchPostTDS, new { @value = Model.TfatBranch_gp_PurchPostTDS, @id = "TfatBranch_gp_PurchPostTDS", @name = "TfatBranch_gp_PurchPostTDS", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">PSP:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_PSP, new { @value = Model.TfatBranch_gp_PSP, @id = "TfatBranch_gp_PSP", @name = "TfatBranch_gp_PSP", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">RCM Date:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_RCMDateVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "TfatBranch_gp_RCMDate", @id = "TfatBranch_gp_RCMDate", @Value = Model.TfatBranch_gp_RCMDate.ToString("dd/MM/yyyy") })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">SEZ Charge Party:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_SEZChargeParty, new { @value = Model.TfatBranch_gp_SEZChargeParty, @id = "TfatBranch_gp_SEZChargeParty", @name = "TfatBranch_gp_SEZChargeParty", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Tax Dec. Purch:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_VatDecP, new { @maxlength = "3", @class = "form-control", @style = "text-align:right;width:100px;", @Name = "TfatBranch_gp_VatDecP", @Value = Model.TfatBranch_gp_VatDecP, @Id = "TfatBranch_gp_VatDecP" })
+                    </div>
+                    <label class="col-sm-2 control-label">Round Tax:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_RoundVAT, new { @maxlength = "3", @class = "form-control", @style = "text-align:right;width:100px;", @Name = "TfatBranch_gp_RoundVAT", @Value = Model.TfatBranch_gp_RoundVAT, @Id = "TfatBranch_gp_RoundVAT" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Tax Dec. Sales:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_VatDecS, new { @maxlength = "3", @class = "form-control", @style = "text-align:right;width:100px;", @Name = "TfatBranch_gp_VatDecS", @Value = Model.TfatBranch_gp_VatDecS, @Id = "TfatBranch_gp_VatDecS" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Purch. Against Sale Reqd:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_SPAdjForce, new { @value = Model.TfatBranch_gp_SPAdjForce, @id = "TfatBranch_gp_SPAdjForce", @name = "TfatBranch_gp_SPAdjForce", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Stock Serial:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_Serial, new { @value = Model.TfatBranch_gp_Serial, @id = "TfatBranch_gp_Serial", @name = "TfatBranch_gp_Serial", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Batch Details:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_Batch, new { @value = Model.TfatBranch_gp_Batch, @id = "TfatBranch_gp_Batch", @name = "TfatBranch_gp_Batch", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">Auto Code</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Account Masters:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_AutoAccCode, new { @value = Model.TfatBranch_gp_AutoAccCode, @id = "TfatBranch_gp_AutoAccCode", @name = "TfatBranch_gp_AutoAccCode", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Style:</label>
+                    <div class="col-sm-2">
+                        @Html.DropDownListFor(m => m.TfatBranch_gp_AutoAccStyle, Model.gp_AutoAccStyleList, new { @class = "form-control", @Id = "TfatBranch_gp_AutoAccStyle", @Name = "TfatBranch_gp_AutoAccStyle", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+
+                    <label class="col-sm-2 control-label">Code Length:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.TfatBranch_gp_AutoAccLength, new { @maxlength = "3", @class = "form-control", @style = "text-align:right;width:100px;", @Name = "TfatBranch_gp_AutoAccLength", @Value = Model.TfatBranch_gp_AutoAccLength, @Id = "TfatBranch_gp_AutoAccLength" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Allow Duplicate Sales Order Number</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_gp_SONoDupl, new { @value = Model.TfatBranch_gp_SONoDupl, @id = "TfatBranch_gp_SONoDupl", @name = "TfatBranch_gp_SONoDupl", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Duplicate Item Description</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_DuplicateItemName, new { @value = Model.TfatBranch_DuplicateItemName, @id = "TfatBranch_DuplicateItemName", @name = "TfatBranch_DuplicateItemName", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Product Code Auto Numbering?</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.gp_ItemAutoCode, new { @value = Model.gp_ItemAutoCode, @id = "gp_ItemAutoCode", @name = "gp_ItemAutoCode", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Auto Serial Length</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.gp_Length, new { @class = "form-control", @style = "text-align:right;", @Name = "gp_Length", @Value = Model.gp_Length, @Id = "gp_Length" })
+                    </div>
+
+
+                </div>
+                <div class="form-group">
+
+                    <label class="col-sm-2 control-label">Product Code Auto Numbering Addon Based</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.gp_AddonBased, new { @value = Model.gp_AddonBased, @id = "gp_AddonBased", @name = "gp_AddonBased", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-2 control-label">Immediate Group Prefix?/Parent GroupTree Prefix?</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.gp_ItemCodeStyle, new { @value = Model.gp_ItemCodeStyle, @id = "gp_ItemCodeStyle", @name = "gp_ItemCodeStyle", @style = "height:16px;width:16px;" })
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Include Returns For Pending Order</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.gp_OrdIncludeRet, new { @value = Model.gp_OrdIncludeRet, @id = "gp_OrdIncludeRet", @name = "gp_OrdIncludeRet", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="divSMS Setup" style="overflow:scroll;height:450px;" class="tabcontent">
+            <div style="">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">SMSURL:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.TfatBranch_SMSURL, new { @maxlength = "100", @class = "form-control", @Name = "TfatBranch_SMSURL", @Value = Model.TfatBranch_SMSURL, @rows = 5, @Id = "TfatBranch_SMSURL" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">User ID:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_SMSUserId, new { @maxlength = "35", @class = "form-control", @Name = "TfatBranch_SMSUserId", @Value = Model.TfatBranch_SMSUserId, @Id = "TfatBranch_SMSUserId" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Password:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_SMSPass, new { @maxlength = "15", @class = "form-control", @Name = "TfatBranch_SMSPass", @Value = Model.TfatBranch_SMSPass, @Id = "TfatBranch_SMSPass" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Caption:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatBranch_SMSCaption, new { @maxlength = "35", @class = "form-control", @Name = "TfatBranch_SMSCaption", @Value = Model.TfatBranch_SMSCaption, @Id = "TfatBranch_SMSCaption" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Add Dial Prefix:</label>
+                    <div class="col-sm-2">
+                        @Html.CheckBoxFor(x => x.TfatBranch_SMSPrefix, new { @value = Model.TfatBranch_SMSPrefix, @id = "TfatBranch_SMSPrefix", @name = "TfatBranch_SMSPrefix", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="divMail" style="overflow:scroll;height:450px;" class="tabcontent">
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Active:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.BranchMail, new { @class = "form-control", @style = "height: 25px;width: 20px; ", @Name = "BranchMail", @Value = Model.BranchMail, @Id = "BranchMail" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Use Setup:</label>
+                <div class="col-sm-4" style="display: flex;">
+                    <input type="radio" class="form-control" name="Collection" id="LocalMail" value="Local" style="height:20px;width:35px;"/><label class=" bold control-label"> User Setup</label>
+                    <input type="radio" class="form-control" name="Collection" id="BlobalMail" value="Blobal" style="height:20px;width:35px;" /><label class=" bold control-label"> Company Setup</label>
+                </div>
+            </div>
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">Email:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatBranch_Email, new { @maxlength = "50", @class = "form-control", @Name = "TfatBranch_Email", @Value = Model.TfatBranch_Email, @Id = "TfatBranch_Email" })
+                </div>
+            </div>
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">BCC Email:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.BCCTo, new { @maxlength = "50", @class = "form-control", @Name = "BCCTo", @Value = Model.BCCTo, @Id = "BCCTo" })
+                </div>
+            </div>
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">CC Email:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.CCTo, new { @maxlength = "50", @class = "form-control", @Name = "CCTo", @Value = Model.CCTo, @Id = "CCTo" })
+                </div>
+            </div>
+
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">SMTP Server:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.SMTPServer, new { @maxlength = "50", @class = "form-control", @Name = "SMTPServer", @Value = Model.SMTPServer, @Id = "SMTPServer" })
+                </div>
+            </div>
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">SMTP User:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.SMTPUser, new { @maxlength = "50", @class = "form-control", @Name = "SMTPUser", @Value = Model.SMTPUser, @Id = "SMTPUser" })
+                </div>
+            </div>
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">SMTP Password:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.SMTPPassword, new { @maxlength = "25", @class = "form-control", @Name = "SMTPPassword", @Value = Model.SMTPPassword, @Id = "SMTPPassword" })
+                </div>
+            </div>
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">SMTP Port:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.SMTPPort, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "SMTPPort", @Value = Model.SMTPPort, @Id = "SMTPPort" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+        </div>
+
+        @* iX9: -- Code for Header Ends -- *@
+        <script>
+            function OpenTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+            document.getElementById("FirstTab").click();
+        </script>
+    </div>
+
+</section>
+
+@Html.HiddenFor(x => x.Mode, new { @id = "hdnMode" })
+@Html.HiddenFor(x => x.ParentCode, new { @id = "hdnParentCode" })
+@Html.HiddenFor(x => x.Code, new { @id = "hdnCode" })
+<input type="hidden" id="hdnUsersArray" />
+@Html.HiddenFor(x => x.TfatBranch_Users, new { @id = "hdnUsers" })
+<input type="hidden" id="controllername" />

@@ -1,0 +1,534 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.LCSetupVM
+@using Common;
+@{
+    ViewBag.Title = "LRSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+
+    $(document).ready(function () {
+
+        GetMyFavorites('@Model.ViewDataId');
+        $("#EditHours,#DeleteHours,#Class_Srl,#Class_BackDaysUpto,#Class_ForwardDaysUpto").constrain({ allow: { regex: "[0-9]" } });
+
+        $('#PrintFormat').val('');
+        var CommonValue = "";
+        if ('@Model.PrintFormat' != "") {
+            $.each('@Model.PrintFormat'.split(','), function (idx, val) {
+                $(".PrintFormatL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#PrintFormat').val(CommonValue);
+        }
+        $(".PrintFormatL").change(function () {
+            $('#PrintFormat').val('');
+            var selected = "";
+            $(".PrintFormatL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#PrintFormat').val(selected);
+            return false;
+        });
+        debugger;
+        $('.PrintFormatL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Default Print',
+        });
+        // Edit/View/Delete Time USe Below Code
+
+        if ('@Model.EditReq' == 'True') {
+            $("#EditHours").prop('disabled', false);
+        } else {
+            $("#EditHours").prop('disabled', true);
+        }
+        if ('@Model.DeleteReq'=='True') {
+            $("#DeleteHours").prop('disabled', false);
+        } else {
+            $("#DeleteHours").prop('disabled', true);
+        }
+
+        if ('@Model.FillFromCurr' != 'True') {
+            $("#FillFromAll").prop("checked", true);
+        } else {
+            $("#FillFromCurr").prop("checked", true);
+        }
+        $('#Class_BranchwiseSrlReq').change(function () {
+            if (this.checked) {
+                $("#Class_YearwiseSrlReq").prop('checked', false)
+                $("#Class_CetralisedSrlReq").prop('checked', false)
+            }
+        });
+        $('#Class_YearwiseSrlReq').change(function () {
+            if (this.checked) {
+                $("#Class_BranchwiseSrlReq").prop('checked', false)
+                $("#Class_CetralisedSrlReq").prop('checked', false)
+            }
+        });
+        $('#Class_CetralisedSrlReq').change(function () {
+            if (this.checked) {
+                $("#Class_BranchwiseSrlReq").prop('checked', false)
+                $("#Class_YearwiseSrlReq").prop('checked', false)
+            }
+        });
+        $('#YearwiseManualSrlReq').change(function () {
+            if (this.checked) {
+                $("#CetralisedManualSrlReq").prop('checked', false)
+            }
+        });
+        $('#CetralisedManualSrlReq').change(function () {
+            if (this.checked) {
+                $("#YearwiseManualSrlReq").prop('checked', false)
+            }
+        });
+
+        $("#EditReq").change(function () {
+            debugger;
+            if (this.checked) {
+
+                $("#EditHours").prop('disabled', false);
+            } else {
+                $("#EditHours").val('0');
+                $("#EditHours").prop('disabled', true);
+            }
+        });
+        $("#DeleteReq").change(function () {
+            debugger;
+            if (this.checked) {
+
+                $("#DeleteHours").prop('disabled', false);
+            } else {
+                $("#DeleteHours").val('0');
+                $("#DeleteHours").prop('disabled', true);
+            }
+        });
+
+        // End Edit/View/Delete Mode Code
+
+
+        //All Time USe Below Code
+
+        $('#LcAutomatic').change(function () {
+            if (this.checked) {
+                $("#LcManual").prop('checked', false)
+                $("#Both").prop('checked', false)
+                $("#CheckManualLC").prop('checked', false)
+                $("#CheckManualLC").prop('disabled', true)
+            }
+        });
+
+        $('#LcManual').change(function () {
+            if (this.checked) {
+                $("#LcAutomatic").prop('checked', false)
+                $("#Both").prop('checked', false)
+                $("#CheckManualLC").prop('disabled', false)
+            }
+        });
+        $('#Both').change(function () {
+            if (this.checked) {
+                $("#LcAutomatic").prop('checked', false)
+                $("#LcManual").prop('checked', false)
+                $("#CheckManualLC").prop('disabled', false)
+            }
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if (($("#Class_BranchwiseSrlReq").is(":checked") == false) && ($("#Class_YearwiseSrlReq").is(":checked") == false) && ($("#Class_CetralisedSrlReq").is(":checked") == false)) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select System Generate No...!');
+                return;
+            }
+            if ($("#Class_Srl").val() == null || $("#Class_Srl").val() == "0" || $("#Class_Srl").val() == "") {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Enter Start From...! ');
+                return;
+            }
+            if (($("#YearwiseManualSrlReq").is(":checked") == false) && ($("#CetralisedManualSrlReq").is(":checked") == false)) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select System Manual No...!');
+                return;
+            }
+            if (($("#LcAutomatic").is(":checked") == false) && ($("#LcManual").is(":checked") == false) && ($("#Both").is(":checked") == false)) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select LC Generate Mode...!');
+                return;
+            }
+
+            if (($("#FillFromCurr").is(":checked") == false) && ($("#FillFromAll").is(":checked") == false)) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select Fill From Combo...!');
+                return;
+            }
+
+            if ($("#EditReq").is(":checked") == true) {
+                if ($("#EditHours").val() == "" || $("#EditHours").val() == "0") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Edit Hours Required...!');
+                    return;
+                }
+            }
+            if ($("#DeleteReq").is(":checked") == true) {
+                if ($("#DeleteHours").val() == "" || $("#DeleteHours").val() == "0") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Delete Hours Required...!');
+                    return;
+                }
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Class_BranchwiseSrlReq"] = $("#Class_BranchwiseSrlReq").is(":checked");
+            ModelData["Class_YearwiseSrlReq"] = $("#Class_YearwiseSrlReq").is(":checked");
+            ModelData["Class_CetralisedSrlReq"] = $("#Class_CetralisedSrlReq").is(":checked");
+            ModelData["Class_Srl"] = $("#Class_Srl").val();
+
+            ModelData["CetralisedManualSrlReq"] = $("#CetralisedManualSrlReq").is(":checked");
+            ModelData["YearwiseManualSrlReq"] = $("#YearwiseManualSrlReq").is(":checked");
+
+            ModelData["Class_CurrDatetOnlyreq"] = $("#Class_CurrDatetOnlyreq").is(":checked");
+            ModelData["Class_BackDateAllow"] = $("#Class_BackDateAllow").is(":checked");
+            ModelData["Class_BackDaysUpto"] = $("#Class_BackDaysUpto").val();
+            ModelData["Class_ForwardDateAllow"] = $("#Class_ForwardDateAllow").is(":checked");
+            ModelData["Class_ForwardDaysUpto"] = $("#Class_ForwardDaysUpto").val();
+
+            ModelData["PrintFormat"] = $("#PrintFormat").val();
+
+
+            if (($("#Both").is(":checked") == true)) {
+                ModelData["Both"] = true;
+            } else {
+                if (($("#LcAutomatic").is(":checked") == true)) {
+                    ModelData["LcAutomatic"] = true;
+                } else {
+                    ModelData["LcAutomatic"] = false;
+                }
+            }
+            ModelData["CheckManualLC"] = $("#CheckManualLC").is(":checked");
+            ModelData["CheckLrDate"] = $("#CheckLrDate").is(":checked");
+
+
+
+            if (($("#FillFromCurr").is(":checked") == true)) {
+                ModelData["FillFromCurr"] = true;
+            } else {
+                ModelData["FillFromCurr"] = false;
+            }
+            ModelData["EditReq"] = $("#EditReq").is(":checked");
+            ModelData["DeleteReq"] = $("#DeleteReq").is(":checked");
+            ModelData["EditHours"] = $("#EditHours").val();
+            ModelData["DeleteHours"] = $("#DeleteHours").val();
+            ModelData["FooterDetails1"] = $("#FooterDetails1").val();
+            ModelData["FooterDetails2"] = $("#FooterDetails2").val();
+            ModelData["FooterDetails3"] = $("#FooterDetails3").val();
+            ModelData["FooterDetails4"] = $("#FooterDetails4").val();
+
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            ModelData["StartNo"] = $("#StartNo").val();
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/DashBoard/SetUP";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+
+
+</script>
+
+<style>
+    hr {
+        margin-top: 0%;
+        margin-bottom: 15px;
+        border: 0;
+        border-top: 2px solid #e0cbcb !important;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    legend {
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        
+        color: red;
+    }
+</style>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">Lorry Challan</b>
+
+        <span class="tools pull-right">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">Setup Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <span class="tools pull-right" style="    margin-right: 15px;">
+
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LCSetupMaster" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <fieldset class=" col-md-12" style="margin-top:0%;">
+                <legend>Lorry Challan</legend>
+                <div class="panel panel-default" style="height:430px;overflow:auto;">
+                    <div class="panel-body" style="padding-top: 5px;">
+                        <div class="tab">
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="List"> Basic Info</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable1')" style="width:140px;"> Restriction Info</button>
+                        </div>
+                        <div id="divLedgerTable" class="tabcontent" style="min-height: 380px;max-height: 380px;overflow-y:auto;overflow-x:hidden;  border: 1px solid;">
+                            <div class="form-group">
+                                <label class=" col-sm-2 control-label" style="font-weight: bold;" title=" How To Generate Serial No In System.">System Generate No<span style="color:red;padding-left: 5px;">*</span> :</label>
+                                <div class="col-sm-4">
+                                    <label class=" col-sm-3 control-label" style="font-weight:100;" title="Branch-Wise Generate Serial No Per Year In System.">Branch Wise:</label>
+                                    <div class="col-sm-1">
+                                        @Html.CheckBoxFor(x => x.Class_BranchwiseSrlReq, new { @class = "", @Value = Model.Class_BranchwiseSrlReq, style = "height: 20px;width: 35px;", @title = "Branch-Wise Generate Serial No Per Year In System." })
+                                    </div>
+                                    <label class=" col-sm-3 control-label" style="font-weight:100;" title="Year-Wise Generate Serial No Per Year In System.">Year Wise:</label>
+                                    <div class="col-sm-1">
+                                        @Html.CheckBoxFor(x => x.Class_YearwiseSrlReq, new { @class = "", @Value = Model.Class_YearwiseSrlReq, style = "height: 20px;width: 35px;", @title = "Year-Wise Generate Serial No Per Year In System." })
+                                    </div>
+                                    <label class=" col-sm-2 control-label" style="font-weight:100;" title="Cetralised Generate Serial No In System.">Centralised:</label>
+                                    <div class="col-sm-2">
+                                        @Html.CheckBoxFor(x => x.Class_CetralisedSrlReq, new { @class = "", @Value = Model.Class_CetralisedSrlReq, style = "height: 20px;width: 35px;", @title = "Cetralised Generate Serial No In System." })
+                                    </div>
+                                </div>
+                                <label class=" col-sm-2 control-label" style="font-weight: bold;" title="If Data Not Found In System Then System Generate Start From No. Or Also BranchWise And Year Wise Process Repeated.">Start From <span style="color:red;padding-left: 5px;">*</span> :</label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Class_Srl, new { @class = "form-control", @Value = Model.Class_Srl, @title = "If Data Not Found In System Then System Generate Start From No. Or Also BranchWise And Year Wise Process Repeated." })
+                                </div>
+
+                            </div>
+                            <div class="form-group">
+                                <label class=" col-sm-2 control-label" style="font-weight: bold;" title=" How To Manual Serial No In System.">System Manual No<span style="color:red;padding-left: 5px;">*</span> :</label>
+                                <div class="col-sm-4">
+                                    <label class="col-sm-offset-4 col-sm-3 control-label" style="font-weight:100;" title="Year-Wise Manual Serial No Per Year In System.">Year Wise:</label>
+                                    <div class="col-sm-1">
+                                        @Html.CheckBoxFor(x => x.YearwiseManualSrlReq, new { @class = "", @Value = Model.YearwiseManualSrlReq, style = "height: 20px;width: 35px;", @title = "Year-Wise Manual Serial No Per Year In System." })
+                                    </div>
+                                    <label class=" col-sm-2 control-label" style="font-weight:100;" title="Cetralised Manual Serial No In System.">Centralised:</label>
+                                    <div class="col-sm-2">
+                                        @Html.CheckBoxFor(x => x.CetralisedManualSrlReq, new { @class = "", @Value = Model.CetralisedManualSrlReq, style = "height: 20px;width: 35px;", @title = "Cetralised Manual Serial No In System." })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;" title="Set Default Print OF Lorry Challan.">Default Print :</label>
+                                <div class="col-sm-4">
+                                    <div class="col-sm-4">
+                                        @Html.ListBoxFor(x => x.PrintFormatsL, Model.PrintFormats, new { @class = "PrintFormatL", @id = "PrintFormatL" })
+                                    </div>
+                                </div>
+                                <label class=" col-sm-2 control-label" style="font-weight: bold;" title="Serial No Allow To How To Generate Auto,Manual  Or Both.">LC Generate Mode<span style="color:red;padding-left: 5px;">*</span> :</label>
+                                <div class="col-sm-3" style="padding-left: 0px;">
+                                    <label class=" col-sm-2 control-label" style="font-weight:100;">Auto:</label>
+                                    <div class="col-sm-2">
+                                        @Html.CheckBoxFor(x => x.LcAutomatic, new { @class = "", @Value = Model.LcAutomatic, style = "height: 20px;width: 35px;" })
+                                    </div>
+                                    <label class=" col-sm-2 control-label" style="font-weight:100;">Manual:</label>
+                                    <div class="col-sm-2">
+                                        @Html.CheckBoxFor(x => x.LcManual, new { @class = "", @Value = Model.LcManual, style = "height: 20px;width: 35px;" })
+                                    </div>
+                                    <label class=" col-sm-2 control-label" style="font-weight:100;">Both:</label>
+                                    <div class="col-sm-2">
+                                        @Html.CheckBoxFor(x => x.Both, new { @class = "", @Value = Model.Both, style = "height: 20px;width: 35px;" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;" title="Fill The Combo Branch Wise Or Centralised.">Fill From Combo  :</label>
+                                <div class="col-sm-4" style="display: flex;">
+                                    <input type="radio" class="form-control" name="FillFromCombo" id="FillFromCurr" title="Fill The Combo Branch Wise Only." value="FillFromCurr" style="height:20px;width:35px;" checked /><label class=" bold col-sm-4  control-label"> Current Branch</label>
+                                    <input type="radio" class="form-control" name="FillFromCombo" id="FillFromAll" title="Fill The Combo Centralised." value="FillFromAll" style="height:20px;width:35px;" /><label class=" bold col-sm-3 control-label"> All Area</label>
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;">Footer Details -:</label>
+                                <div class="col-sm-8" style="padding-right:0px;padding-left:15px;">
+                                    @Html.TextBoxFor(x => x.FooterDetails1, new { @maxlength = "75", @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.FooterDetails1 })
+                                    @Html.TextBoxFor(x => x.FooterDetails2, new { @maxlength = "75", @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.FooterDetails2 })
+                                    @Html.TextBoxFor(x => x.FooterDetails3, new { @maxlength = "75", @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.FooterDetails3 })
+                                    @Html.TextBoxFor(x => x.FooterDetails4, new { @maxlength = "75", @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.FooterDetails4 })
+                                </div>
+
+                            </div>
+                        </div>
+                        <div id="divLedgerTable1" class="tabcontent" style="min-height: 380px;max-height: 380px;overflow-y:auto;overflow-x:hidden;  border: 1px solid;">
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;" title="Lorry Challan DocDate Allow Only Current Date.">Current DocDate Req Only :</label>
+                                <div class="col-sm-2">
+                                    @Html.CheckBoxFor(x => x.Class_CurrDatetOnlyreq, new { @class = "", @Value = Model.Class_CurrDatetOnlyreq, style = "height: 20px;width: 35px;", @title = "Lorry Challan DocDate Allow Only Current Date." })
+                                </div>
+                                <label class="col-sm-offset-2 col-sm-2 control-label" style="font-weight: bold;" title="Lorry Challan Serial No Check In The Manual Range BranchWise.">Check Manual Range :</label>
+                                <div class="col-sm-2">
+                                    @Html.CheckBoxFor(x => x.CheckManualLC, new { @class = "", @Value = Model.CheckManualLC, style = "height: 20px;width: 35px;" })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;">Enable BackDated :</label>
+                                <div class="col-sm-1">
+                                    @Html.CheckBoxFor(x => x.Class_BackDateAllow, new { @id = "Class_BackDateAllow", @name = "Class_BackDateAllow", @class = "form-control", @Value = Model.Class_BackDateAllow, style = "height: 20px;width: 35px;" })
+                                </div>
+                                <label class="col-sm-1 control-label" style="font-weight: 100;">Back Days:</label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Class_BackDaysUpto, new { @id = "Class_BackDaysUpto", @name = "Class_BackDaysUpto", @class = "form-control", @Value = Model.Class_BackDaysUpto })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;">Enable Forward Date :</label>
+                                <div class="col-sm-1">
+                                    @Html.CheckBoxFor(x => x.Class_ForwardDateAllow, new { @id = "Class_ForwardDateAllow", @name = "Class_ForwardDateAllow", @class = "form-control", @Value = Model.Class_ForwardDateAllow, style = "height: 20px;width: 35px;" })
+                                </div>
+                                <label class="col-sm-1 control-label" style="font-weight: 100;">Forward Days:</label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Class_ForwardDaysUpto, new { @id = "Class_ForwardDaysUpto", @name = "Class_ForwardDaysUpto", @class = "form-control", @Value = Model.Class_ForwardDaysUpto })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;">Edit Mode :</label>
+                                <div class="col-sm-4" style="padding-left: 5px;">
+                                    <label class=" col-sm-3 control-label" style="font-weight:100;" title="Lorry Challan Update Will Stop.">Stop Edit :</label>
+                                    <div class="col-sm-1">
+                                        @Html.CheckBoxFor(x => x.EditReq, new { @class = "", @Value = Model.EditReq, style = "height: 20px;width: 35px;", @title = "Lorry Challan Update Will Stop." })
+                                    </div>
+                                    <label class=" col-sm-3 control-label" style="font-weight:100;" title="Lorry Challan Update Will Stop after Particular Hours Of The Docdate And Time.">After Hours :</label>
+                                    <div class="col-sm-2">
+                                        @Html.TextBoxFor(x => x.EditHours, new { @class = "form-control col-sm-6", @style = "margin-top:2px;", @Value = Model.EditHours, @title = "Lorry Challan Update Will Stop after Particular Hours Of The Docdate And Time." })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;">Delete Mode :</label>
+                                <div class="col-sm-4" style="padding-left: 5px;">
+                                    <label class=" col-sm-3 control-label" style="font-weight:100;" title="Lorry Challan Delete Will Stop.">Stop Delete :</label>
+                                    <div class="col-sm-1">
+                                        @Html.CheckBoxFor(x => x.DeleteReq, new { @class = "", @Value = Model.DeleteReq, style = "height: 20px;width: 35px;", @title = "Lorry Challan Delete Will Stop." })
+                                    </div>
+                                    <label class=" col-sm-3 control-label" style="font-weight:100;" title="Lorry Challan Delete Will Stop after Particular Hours Of The Docdate And Time.">After Hours :</label>
+                                    <div class="col-sm-2">
+                                        @Html.TextBoxFor(x => x.DeleteHours, new { @class = "form-control col-sm-6", @style = "margin-top:2px;", @Value = Model.DeleteHours, @title = "Lorry Challan Delete Will Stop after Particular Hours Of The Docdate And Time." })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;">Lorry Receipt :</label>
+                                <div class="col-sm-2" style="padding-left: 5px;">
+                                    <label class=" col-sm-6 control-label" style="font-weight:100;">Check Date :</label>
+                                    <div class="col-sm-4">
+                                        @Html.CheckBoxFor(x => x.CheckLrDate, new { @class = "", @Value = Model.CheckLrDate, style = "height: 20px;width: 35px;" })
+                                    </div>
+                                </div>
+                                <label class="control-label" style="font-size: 14px;font-weight: bold;color:red;"> ( IF Check Lr Date Then LC Allow Only LR Date Less Than Or Equal To LCDate...) </label>
+                            </div>
+                        </div>
+                        <script>
+                            function openCity(evt, cityName) {
+                                var i, tabcontent, tablinks;
+                                tabcontent = document.getElementsByClassName("tabcontent");
+                                for (i = 0; i < tabcontent.length; i++) {
+                                    tabcontent[i].style.display = "none";
+                                }
+                                tablinks = document.getElementsByClassName("tablinks");
+                                for (i = 0; i < tablinks.length; i++) {
+                                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                                }
+                                document.getElementById(cityName).style.display = "block";
+                                evt.currentTarget.className += " active";
+                            }
+                            document.getElementById("List").click();
+
+                        </script>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.LAT ERP-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.PrintFormat)

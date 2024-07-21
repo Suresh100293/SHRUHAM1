@@ -1,0 +1,190 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common
+
+
+<style>
+    .fixTableHead {
+        overflow-y: auto;
+        height: 300px;
+    }
+
+        .fixTableHead thead th {
+            position: sticky;
+            top: 0;
+        }
+</style>
+<script>
+    $(document).ready(function () {
+        $('button[action|="DeleteExpenses"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            var otherExpenses =
+            {
+                tempId: $(this).val(),
+            };
+
+            ModelData["otherExpenses"] = otherExpenses;
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteExpenses")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#MainExpensesDiv').html(data.Html);
+                    CalculateNetAmount();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnaddexpenses").click(function (event) {
+            event.preventDefault();
+
+            //if ($("#OtherExpAc").val() == "" || $("#OtherExpAc").val() == null) {
+            //    alert("Please Select Expenses Account....!");
+            //    return;
+            //}
+            var ModelData = {};
+            //ModelData["OtherExpAc"] = $("#OtherExpAc").val();
+            ModelData["Mode"] = "Add";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetBreakExpenses")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+
+                    $('#addexpenses').modal('show');
+                    $('#AddExpenses').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+
+        $('button[action|="EditExpenses"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            var otherExpenses =
+            {
+                tempId:$(this).val(),
+            };
+
+            ModelData["otherExpenses"] = otherExpenses;
+            ModelData["Mode"] = "Edit";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetBreakExpenses")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addexpenses').modal('show');
+                    $('#AddExpenses').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+</script>
+<div class="fixTableHead" id="SelectedledgerTable" style="max-height:330px;min-height:330px; width: auto; overflow: auto;">
+    <table id="tableexpensesdata" class="zui-table" style="border-color:gray;width:100%;">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+
+                <th colspan="2" style="width: 10%;vertical-align:inherit;"><button type="button" id="btnaddexpenses" class="btn btn-primary btn-sm" title="Add" style="border:1px solid black"><i class="fa fa-plus" style="color:black;"></i></button></th>
+                <th style="width: 10%;vertical-align:inherit;">Sr.</th>
+                <th style="width: 40%;vertical-align:inherit;">Account Name</th>
+                <th style="width: 20%;vertical-align:inherit;">Doc No</th>
+                <th style="width: 20%;vertical-align:inherit;">Amount</th>
+                <th class="hidden" style="width: 20%;vertical-align:inherit;">Type</th>
+                <th style="width: 20%;vertical-align:inherit;">Narr</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int i = 1;
+                if (Model.expenseslist != null)
+                {
+                    foreach (var item in @Model.expenseslist.ToList())
+                    {
+                        <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                            <td style="">
+                                <center><button type="button" action="EditExpenses" class="btn btn-warning btn-sm " value="@item.tempId" title="Edit" style="margin-right: 10%;"><i class="fa fa-edit"></i></button></center>
+                            </td>
+                            <td>
+                                <center><button type="button" action="DeleteExpenses" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button></center>
+                            </td>
+                            <td style="">@i</td>
+                            <td id="@item.ExpensesAc">@item.ExpensesAcName</td>
+                            <td style="">@item.DocNo</td>
+                            <td style="">@item.Amount.ToString("F2")</td>
+                            <td class="hidden">@item.RelatedTo</td>
+                            <td >@item.Narr</td>
+                        </tr>
+                        ++i;
+                    }
+                    decimal TotaAMt = 0;
+                    foreach (var item in @Model.expenseslist.ToList())
+                    {
+                        TotaAMt += item.Amount;
+                    }
+                    <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;" id="ExpensesTotalRow">
+                        <td colspan="2"></td>
+                        @*<td ><center>@Model.fMMasters.ToList().Count()</center></td>*@
+                        <td colspan="3">Total :-</td>
+                        <td colspan="2">@TotaAMt.ToString("F2")</td>
+                    </tr>
+                }
+            }
+
+        </tbody>
+
+    </table>
+</div>
+
+<div class="example-modal">
+    <div id="addexpenses" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog modal-lg">
+            <div id="AddExpenses">
+                @Html.Partial("AddNewExpenses")
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+

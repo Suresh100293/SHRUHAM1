@@ -1,0 +1,316 @@
+﻿@model LRInvoiceVM
+@using Common;
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Ledger Posting</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" id="LedgerPostTable" style="max-height:360px;min-height:360px; width:100%; overflow: scroll;">
+                <table id="LedgerPostgrid" class="zui-table">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                            <th style="width:3%">Sr.</th>
+                            <th style="width:15%">Code</th>
+                            <th style="width:35%">Account Descr</th>
+                            <th style="width:15%">Debit</th>
+                            <th style="width:15%">Credit</th>
+                            <th style="width:10%">Branch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.LedgerPostList != null)
+                        {
+                            foreach (var item in @Model.LedgerPostList.ToList())
+                            {
+                            <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;border:solid 1px lightgray;">
+                                <td style="width:3%;">@item.tempId</td>
+                                <td style="width:15%;">@item.Code</td>
+                                <td style="width:35%;">@item.AccountName</td>
+                                <td style="width:15%;text-align:right">@GetAbsolute(@item.Debit)</td>
+                                <td style="width:15%;text-align:right">@GetAbsolute(@item.Credit)</td>
+                                <td style="width:10%;" hidden="hidden">@item.Branch</td>
+                                <td style="width:10%;" hidden="hidden">@item.TDSFlag</td>
+                               <td>@item.FilBranch</td>
+                               <td class="hidden">@item.DelyCode</td>
+                            </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="font-family:Tahoma;font-size:9pt;font-weight:bolder;border: solid 1px lightgray;background-color:lightgray;">
+                            <td style="width:3%;"></td>
+                            <td style="width:15%;"></td>
+                            <td style="width:35%;">Total</td>
+                            <td style="width:15%;text-align:right" id="txtledpostdeb"></td>
+                            <td style="width:15%;text-align:right" id="txtledpostcred"></td>
+                            <td style="width:10%;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <button type="button" class="btn btn-warning" data-dismiss="modal" id="SaveLedgerPost">Save</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        document.getElementById('txtledpostdeb').innerHTML = parseFloat(@Model.TotDebit).toFixed(2);
+        document.getElementById('txtledpostcred').innerHTML = parseFloat(@Model.TotCredit).toFixed(2);
+        var tdeb = 0;
+        var tcred = 0;
+
+        $('#SaveLedgerPost').click(function (event) {
+            event.preventDefault();
+            $('#LedgerPostgrid tfoot').find('tr').each(function () {
+                var $tds = $(this).find('td');
+                tdeb += parseFloat($tds.eq(3).text());
+                tcred += parseFloat($tds.eq(4).text());
+
+            });
+           if (tdeb != tcred) {
+               alert('Credit and Debit doesnt Match cant Save')
+                return;
+            }
+            else {
+
+               var tab2size = $('#tabledata2 tbody tr').length;
+               if ($("#Account").val() == '') {
+                   alert('Select Party.');
+                   return;
+               }
+               if (tab2size == 0) {
+                   alert('Add Product.');
+                   return;
+               }
+               var ChargeList = [];
+               var AddonSerial = [];
+
+               $('#addongrid').find('tr[id="datacharge"]').each(function () {
+                   var $tds = $(this).find('td');
+                   var applselected = "";
+                   var selected = "";
+                   if ($tds.eq(4).text() == "X") {
+                       $tds.find(".addontxtfvalue input:checked").each(function () {
+                           selected = selected + $(this).val() + "^";
+                       })
+                       applselected = selected;
+                   }
+                   var myDets = {
+                       Fld: $tds.eq(0).text(),
+                       ApplCode: ($tds.eq(4).text() == "X") ? applselected : $tds.find(".addontxtfvalue").val(),
+                       FldType: $tds.eq(4).text(),
+                   }
+                   AddonSerial.push(myDets);
+               });
+
+               $('#sample-table-1 tbody tr').each(function () {
+                   var tds = $(this).find('td');
+                   var myDets = {
+                       Fld: tds.eq(4).text(),
+                       AddLess: tds.eq(1).text(),
+                       ChgPostCode: tds.eq(3).text(),
+                       Amt: tds.find("input[class='txtfvalue']").val(),
+                   }
+                   ChargeList.push(myDets);
+               });
+               if ($("#hdnSType").val() == "RP" || $("#hdnSType").val() == "CP" || $("#hdnSType").val() == "IM" || $("#hdnSType").val() == "NP" || $("#hdnSType").val() == "RS" || $("#hdnSType").val() == "CS" || $("#hdnSType").val() == "XS" || $("#hdnSType").val() == "NS") {
+                   $('#fixedbottom :input').prop("disabled", true);
+                   $('#frmpurchase :input').prop("disabled", true);
+                   $('.form-horizontal :input').prop("disabled", true);
+                   $('#ItemListTable :input').prop('disabled', true);
+
+                   var myLederArray = [];
+                   $('#LedgerPostgrid tbody').find('tr').each(function () {
+                       var tds = $(this).find('td');
+
+                       var myDets = {
+                           tempId: tds.eq(0).text(),
+                           Code: tds.eq(1).text(),
+                           Debit: tds.eq(3).text(),
+                           Credit: tds.eq(4).text(),
+                           TDSFlag: tds.eq(6).text(),
+                           DelyCode: tds.eq(8).text()
+                       }
+                       myLederArray.push(myDets);
+                   });
+                   var mAuthorise = $('#hdnAuthorise').val();
+                   
+
+                   var url = '@Url.Action("SaveData")';
+                   var ModelData = {};
+                   ModelData["LedgerPostList"] = myLederArray;
+                   ModelData["DocuDate"] = $("#DocuDate").val();
+                   
+                   ModelData["CrPeriod"] = $("#CrPeriod").val();
+                   ModelData["Account"] = $("#Account").val();
+                   ModelData["Customer"] = $("#Customer").val();
+                   ModelData["AccParentGrp"] = $("#AccParentGrp").val();
+                   ModelData["GSTType"] = $("#GSTType").val();
+                   ModelData["AltAddress"] = $("#AltAddress").val();
+                   ModelData["MainType"] = $("#hdnMType").val();
+                   ModelData["SubType"] = $("#hdnSType").val();
+                   ModelData["Type"] = $("#hdnType").val();
+                   ModelData["Charges"] = ChargeList;
+                   ModelData["Mode"] = $('#hdnMode').val();
+                   ModelData["TableName"] = $('#hdnTableName').val();
+                   ModelData["ParentKey"] = $("#hdnParentKey").val();
+                   ModelData["Srl"] = $("#Srl").val();
+                   ModelData["Prefix"] = $("#hdnPrefix").val();
+                   ModelData["Amt"] = $("#txtinvamt").val();
+                   ModelData["AddOnList"] = AddonSerial;
+                   ModelData["RoundOff"] = $('#txtRoundOffVal').val();
+                   ModelData["Authorise"] = mAuthorise;
+                   ModelData["AuthLock"] = $('#hdnAuthLock').val();
+                   ModelData["AuthNoPrint"] = $('#hdnAuthNoPrint').val();
+                   ModelData["AuthReq"] = $('#hdnAuthReq').val();
+                   ModelData["AuthAgain"] = $('#hdnAuthAgain').val();
+                   ModelData["IsManual"] = $('#hdnIsManual').val();
+                   ModelData["CrLimit"] = $('#CrLimit').text();//Label
+                   ModelData["Header"] = $('#Header').val();
+                   ModelData["CutTDS"] = $('#CutTDS').is(':checked');
+                   ModelData["TDSCode"] = $('#TDSCode').val();
+                   
+                   ModelData["PlaceOfSupply"] = $("#PlaceOfSupply").val();
+                   ModelData["AccountName"] = $('#Account').select2('data').text;
+                   ModelData["ChequeNo"] = $('#ChequeNo').val();
+                   ModelData["BillNarr"] = $("#BillNarr").val();
+
+                   ModelData["LRCutTDS"] = $('#hdnLRCutTDS').val();
+                   ModelData["AccParentGrp"] = $('#AccParentGrp').val();
+                   ModelData["LRGenerate"] = $('#hdnLRGenerate').val();
+                   ModelData["Branch"] = $('#hdnBranch').val();
+                   ModelData["Taxable"] = $('#txttottxable').val();
+
+                   if ($('#addGSTNoItc').is(":checked")) {
+
+                       ModelData["GSTFlag"] = $('#addGSTNoItc').is(":checked");
+                       ModelData["GSTCode"] = $("#addGSTCode").val();
+                       ModelData["CGSTAmt"] = $('#txttotcgst').val();
+                       ModelData["SGSTAmt"] = $('#txttotsgst').val();
+                       ModelData["IGSTAmt"] = $('#txttotigst').val();
+                       ModelData["CGSTRate"] = $('#addCGSTRate').val();
+                       ModelData["IGSTRate"] = $('#addIGSTRate').val();
+                       ModelData["SGSTRate"] = $('#addSGSTRate').val();
+                   }
+                   if ($('#addTDSFlag').is(":checked")) {
+                       ModelData["TDSFlag"] = $('#addTDSFlag').is(":checked");
+                       ModelData["TDSCode"] = $("#addTDSCode").val();
+                       ModelData["TDSRate"] = $("#addTDSRate").val();
+                       ModelData["TDSAmt"] = $('#TDSAmt').val();
+                   }
+
+                   var DTO = { Model: ModelData };
+                   $.ajax({
+                       type: "POST",
+                       dataType: "json",
+                       data: JSON.stringify(DTO),
+                       cache: false,
+                       url: url,
+                       contentType: "application/json; charset=utf-8",
+                       beforeSend: function () {
+                           $('.spinner').show();
+                       },
+                       success: function (data) {
+                           $('.spinner').hide();
+                           if (data.Status == 'AutoDocumentAlert') {
+                               FreightBillAlertNoteMaster(data.Message);
+                               $('#fixedbottom :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+                           }
+                           else if (data.Status == 'CancelError') {
+                               $('#fixedbottom :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+                               alert(data.Message);
+                           }
+                           else if (data.Status == 'PrimaryKeyError') {
+                               alert(data.Message);
+                               $('#fixedbottom :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+
+                           }
+                           else if (data.Status == 'Success')
+                           {
+                               alert("Document Saved as " + data.NewSrl.substring(13) + "");
+                               $('#hdnEditDocument').val(data.NewSrl);
+                               if (PrintLR == "SavePrint") {
+                                   $('.spinner').hide();
+                                   $('#printpostmodel').modal('show');
+                               }
+                               else
+                               {
+                                   if ($('#hdnMode').val() != "Add") {
+                                       window.location.href = "/Accounts/MasterGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2";
+                                   }
+                                   else {
+                                       window.location.href = "/Accounts/" + '@Model.Controller2' + "/Index?Type=" + '@Model.Type' + '&ChangeLog=Add&Mode=Add' + '&ViewDataId=' + '@Model.ViewDataId' + '&Header=' + '@Model.Header' + '&Module=' + '@Model.Module' + '&TableName=' + '@Model.TableName' + '&OptionType=' + '@Model.optiontype' + '&OptionCode=' + '@Model.OptionCode' + '&Controller2=' + '@Model.Controller2';
+                                   }
+                               }
+                           }
+                           else if (data.Status == 'Error')
+                           {
+                               alert(data.Message);
+                               $('#fixedbottom :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+                               $("#ErrorMessage").show();
+                               $("#ErrorMessage").text(data.Message);
+
+                           }
+                           else {
+                               alert('Status not Success')
+                               $('#fixedbottom :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+                               $("#ErrorMessage").show();
+                               $("#ErrorMessage").html(data.html);
+
+                           }
+                       },
+                       error: function (ex) {
+                           alert(JSON.stringify(ex))
+                           alert("Error occured while processing your request.");
+                           $('#fixedbottom :input').prop("disabled", false);
+                           $('#frmpurchase :input').prop("disabled", false);
+                           $('.form-horizontal :input').prop("disabled", false);
+                           $('#ItemListTable :input').prop('disabled', false);
+                       }
+                   });
+               }
+
+           }
+        });
+    });
+</script>
+
+
+
+@functions {
+    decimal GetAbsolute(decimal dcb)
+    {
+        var msg = Math.Abs(dcb);
+        return msg;
+    }
+
+    string GetFixedTwo(decimal dcb)
+    {
+        decimal d = Math.Floor(100 * dcb) / 100;
+        string s = d.ToString("N2");
+        return s;
+    }
+}

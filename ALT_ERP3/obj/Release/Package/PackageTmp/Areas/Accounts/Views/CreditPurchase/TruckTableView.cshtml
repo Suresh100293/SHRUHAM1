@@ -1,0 +1,429 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.CreditPurchaseVM
+@using Common
+<table id="" class="zui-table" style="width:100%;">
+    <thead>
+        <tr>
+            <th style="font-weight: bold;border-right: none;">
+                Save Cost Center:
+            </th>
+            <th>
+                @Html.CheckBoxFor(x => x.SaveCostCenter, new { @value = Model.SaveCostCenter, @class = "col-sm-1", @style = "height:23px;width:26px;margin:0px;" })
+            </th>
+        </tr>
+    </thead>
+</table>
+<table id="truckrelatedtable" class="zui-table" style="width:100%;">
+    <thead>
+    </thead>
+    <tbody>
+        @if (Model.AddOnList != null)
+        {
+            foreach (var item in @Model.AddOnList.ToList())
+            {
+                <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;background-color:@item.BackColor">
+                    <td style="width:10%;" hidden="hidden">@item.Fld</td>
+                    <td style="width:20%;">@item.Head</td>
+
+                    @if (item.FldType == "C")
+                    {
+                        <td style="width:40%;">
+                            <select class="addontxtfvalue" id="txtf_@item.Fld" alt="@item.Fld" style="width:100%">
+
+                                @{
+                                    var Text = item.QueryText.Split('^');
+                                    var Codes = item.QueryCode.Split('^');
+                                    for (int i = 0; i < Text.Length; i++)
+                                    {
+                                        <option value="@Codes[i]" @(Codes[i] == item.ApplCode ? "selected" : "")>@Text[i]</option>
+                                    }
+                                }
+                                @*@foreach (var item2 in item.QueryText.Split('^').ToList())
+                                    {
+                                        <option value="@item2" @(item2 == item.ApplCode ? "selected" : "")>@item2</option>
+
+                                    }*@
+                            </select>
+                        </td>
+
+                    }
+                    else if (item.FldType == "M")
+                    {
+
+                        <td style="width:50%;"><textarea type="textarea" rows="5" cols="20" id="txtf_@item.Fld" alt="@item.Fld" class="addontxtfvalue" style="width:100%;">@item.ApplCode</textarea></td>
+
+                    }
+                    else if (item.FldType == "D")
+                    {
+                        <td style="width:50%;"><input type="date" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="addontxtfvalue" style="width:100%;" maxlength="250" /></td>
+                    }
+                    else if (item.FldType == "N")
+                    {
+                        <td style="width:50%;"><input type="number" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="addontxtfvalue" style="width:100%;" maxlength="250" /></td>
+                    }
+                    else if (item.FldType == "R")
+                    {
+                        <td style="width:50%;">
+                            <div>
+                                @foreach (var item2 in item.QueryText.Split('^').ToList())
+                                {
+                                    <div class="col-sm-2 control-label" style="padding-top:0px;">
+                                        @item2:  <input @(item2 == item.ApplCode ? "checked=checked" : "") class="addontxtfvalue" name="addontxtfvalue" style="padding-left:0px;width:20px;height:20px;" type="radio" value="@item2">
+                                    </div>
+
+
+                                }
+
+                            </div>
+
+                        </td>
+
+                    }
+                    else
+                    {
+
+                        <td style="width:50%;"><input type="text" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="addontxtfvalue" style="width:100%;" maxlength="250" /></td>
+                    }
+                    <td style="width:1%;" hidden="hidden">@item.FldType</td>
+                </tr>
+
+            }
+        }
+
+    </tbody>
+</table>
+
+<script>
+    $(document).ready(function () {
+        debugger;
+        if ('@Model.SaveCostCenter' == "True" &&'@Model.Mode' == "Edit" && ('@Model.RelatedTo' == "000100345" || '@Model.Code' == "000100345"))
+        {
+            if ($("input[name=addontxtfvalue]:checked").val() == "Stepnee")
+            {
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F003") {
+                        tds.eq(1).html('Stepnee No');
+                    }
+                });
+                $("input[name=addontxtfvalue]").prop("disabled", true);
+            }
+            else
+            {
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F003") {
+                        tds.eq(1).html('Tyre Placed No');
+                    }
+                });
+                $("input[name=addontxtfvalue]").prop("disabled", true);
+            }
+            $("#txtAccount").prop("disabled", true);
+            $("#RelatedChoice").prop("disabled", true);
+            $('#truckrelatedtable tbody tr').each(function () {
+                var tds = $(this).find('td');
+                if (tds.eq(0).text() == "F001") {
+                    tds.find(".addontxtfvalue").prop("disabled", true);
+                }
+                else if (tds.eq(0).text() == "F002") {
+                    tds.find(".addontxtfvalue").prop("disabled", true);
+                }
+                else if (tds.eq(0).text() == "F004") {
+                    tds.find(".addontxtfvalue").prop("disabled", true);
+                }
+            });
+        }
+        $("#SaveCostCenter").change(function (event) {
+            event.preventDefault();
+            debugger;
+
+            if ($("#SaveCostCenter").is(':checked')) {
+                $("#truckrelatedtable tbody").show();
+            } else {
+                $("#truckrelatedtable tbody").hide();
+            }
+        });
+        $("#truckrelatedtable tbody").on('change', '.addontxtfvalue', function () {
+            var currentRow = $(this).closest("tr");
+            var tds = currentRow.find('td').eq(0).text();
+
+            if (($('#RelatedTo').val() == "000100341" || $("#txtAccount").val() == "000100341") && tds == "F001") {
+                var mStartDate = new Date();
+                var mEndDate = new Date();
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+
+                    if (tds.eq(0).text() == "F002") {
+                        var newDate = tds.find(".addontxtfvalue").val().split('-');
+                        var a = newDate[1] + "/" + newDate[2] + "/" + newDate[0];
+                        mEndDate = new Date(a);
+
+                    }
+                })
+                var mstDate = currentRow.find('td').find(".addontxtfvalue").val().split('-');
+                var mstn = mstDate[1] + "/" + mstDate[2] + "/" + mstDate[0];
+                mStartDate = new Date(mstn);
+                if (mStartDate > mEndDate) {
+                    alert('Start Date cant be Greater than End Date please check')
+                    return;
+                }
+                else {
+                    $('#truckrelatedtable tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        if (tds.eq(0).text() == "F003") {
+                            var Difference_In_Time = mEndDate.getTime() - mStartDate.getTime();
+                            var Difference_In_Days = Difference_In_Time / (1000 * 3600 * 24);
+                            tds.find(".addontxtfvalue").val(Difference_In_Days);
+                        }
+
+                    });
+                }
+            }
+
+            if (($('#RelatedTo').val() == "000100341" || $("#txtAccount").val() == "000100341")  && tds == "F002")
+            {
+                var mStartDate = new Date();
+                var mEndDate = new Date();
+                $('#truckrelatedtable tbody tr').each(function ()
+                {
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F001") {
+                     var newDate = tds.find(".addontxtfvalue").val().split('-');
+                     var a = newDate[1] + "/" + newDate[2] + "/" + newDate[0];
+                     mStartDate = new Date(a);
+                    }
+                })
+
+                var meNdDate = currentRow.find('td').find(".addontxtfvalue").val().split('-');
+                var medn = meNdDate[1] + "/" + meNdDate[2] + "/" + meNdDate[0];
+                mEndDate = new Date(medn);
+
+                if (mStartDate > mEndDate) {
+                 alert('Start Date cant be Greater than End Date please check')
+                 return;
+                }
+                else
+                {
+                    $('#truckrelatedtable tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        if (tds.eq(0).text() == "F003") {
+                            var Difference_In_Time = mEndDate.getTime() - mStartDate.getTime();
+                            var Difference_In_Days = Difference_In_Time / (1000 * 3600 * 24);
+                            tds.find(".addontxtfvalue").val(Difference_In_Days);
+                        }
+                    });
+                }
+            }
+
+            if (($('#RelatedTo').val() == "000100341" || $("#txtAccount").val() == "000100341")  && tds == "F004")
+            {
+                var mstkms = 0;
+                var menkms = 0;
+                var mCharges = 0;
+                $('#truckrelatedtable tbody tr').each(function () {
+                 var tds = $(this).find('td');
+
+                 if (tds.eq(0).text() == "F004") {
+                     mstkms = parseFloat(tds.find(".addontxtfvalue").val());
+
+                 }
+                 if (tds.eq(0).text() == "F005") {
+                     menkms = parseFloat(tds.find(".addontxtfvalue").val());
+
+                 }
+                 if (tds.eq(0).text() == "F006") {
+
+                     if (menkms < mstkms) {
+                         alert('End Km cant be less than Start km please check')
+                         return;
+                     }
+                     else {
+                         mCharges = menkms - mstkms;
+                         tds.find(".addontxtfvalue").val(mCharges);
+                     }
+
+                 }
+             })
+            }
+
+            if (($('#RelatedTo').val() == "000100341" || $("#txtAccount").val() == "000100341") && tds == "F005")
+            {
+                var mstkms = 0;
+                var menkms = 0;
+                var mCharges = 0;
+                $('#truckrelatedtable tbody tr').each(function () {
+                 var tds = $(this).find('td');
+
+                 if (tds.eq(0).text() == "F004") {
+                     mstkms = parseFloat(tds.find(".addontxtfvalue").val());
+
+                 }
+                 if (tds.eq(0).text() == "F005") {
+                     menkms = parseFloat(tds.find(".addontxtfvalue").val());
+
+                 }
+                 if (tds.eq(0).text() == "F006") {
+                     if (menkms < mstkms) {
+                         alert('End Km cant be less than Start km please check')
+                         return;
+                     }
+                     else {
+                         mCharges = menkms - mstkms;
+                         tds.find(".addontxtfvalue").val(mCharges);
+                     }
+                 }
+             })
+            }
+
+            if (($('#RelatedTo').val() == "000100341" || $("#txtAccount").val() == "000100341") && tds == "F006") {
+                var mRate = 0;
+                var mKms = 0;
+                var mCharges = 0;
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+
+                    if (tds.eq(0).text() == "F006") {
+                        mKms = parseFloat(tds.find(".addontxtfvalue").val());
+
+                    }
+                    if (tds.eq(0).text() == "F007") {
+                        mRate = parseFloat(tds.find(".addontxtfvalue").val());
+
+                    }
+                    if (tds.eq(0).text() == "F008") {
+                        mCharges = mRate * mKms;
+
+                        tds.find(".addontxtfvalue").val(mCharges);
+                        if (parseInt($("#addAmt").val())==0) {
+                            $("#addAmt,#addTaxable").val(mCharges);
+                        }
+                    }
+                })
+            }
+
+            if (($('#RelatedTo').val() == "000100341" || $("#txtAccount").val() == "000100341") && tds == "F007") {
+                var mRate = 0;
+                var mKms = 0;
+                var mCharges = 0;
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+
+                    if (tds.eq(0).text() == "F006") {
+                        mKms = parseFloat(tds.find(".addontxtfvalue").val());
+
+                    }
+                    if (tds.eq(0).text() == "F007") {
+                        mRate = parseFloat(tds.find(".addontxtfvalue").val());
+
+                    }
+                    if (tds.eq(0).text() == "F008") {
+                        mCharges = mRate * mKms;
+
+                        tds.find(".addontxtfvalue").val(mCharges);
+                        if (parseInt($("#addAmt").val()) == 0) {
+                            $("#addAmt,#addTaxable").val(mCharges);
+                        }
+                    }
+                });
+            }
+
+            if (($('#RelatedTo').val() == "000100345" || $("#txtAccount").val() == "000100345") && tds == "F002") {
+                if ($("input[name=addontxtfvalue]:checked").val() == "Stepnee") {
+                    $('#truckrelatedtable tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        if (tds.eq(0).text() == "F003") {
+                            tds.eq(1).html('Stepnee No');
+                        }
+                    });
+                }
+                else {
+                    $('#truckrelatedtable tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        if (tds.eq(0).text() == "F003") {
+                            tds.eq(1).html('Tyre Placed No');
+                        }
+                    });
+                }
+            }
+        });
+        $("#truckrelatedtable tbody").on('focusout', '.addontxtfvalue', function ()
+        {
+            var currentRow = $(this).closest("tr");
+            var tds = currentRow.find('td').eq(0).text();
+
+            if (($('#RelatedTo').val() == "000100345" || $("#txtAccount").val() == "000100345") && tds == "F003")
+            {
+                var mvehicle = '';
+                var mNo = '';
+                var mTyreStep = '';
+                var mCode = '';
+                if ($('#txtAccount').val() == "000100345") {
+                    mvehicle = $("#RelatedChoice").val();
+                }
+                else if ($('#RelatedTo').val() == "000100345") {
+                    mvehicle = $("#txtAccount").val();
+                }
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F003") {
+                        mNo = tds.find(".addontxtfvalue").val();
+                    }
+                    if (tds.eq(0).text() == "F002") {
+                        mCode = tds.find(".addontxtfvalue").val();
+                    }
+                    if (tds.eq(0).text() == "F002") {
+                        mTyreStep = tds.find("input[name=addontxtfvalue]:checked").val();
+                    }
+                });
+                $('#itemrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F003") {
+                        mCode = tds.find(".addontxtfvalue").val();
+                    }
+                });
+
+                var ModelData = {};
+                ModelData["VehicleNo"] = mvehicle;
+                ModelData["TyreNo"] = mNo;
+                ModelData["Fld"] = mTyreStep;
+                ModelData["Type"] = mCode;
+                ModelData["Document"] = $("#hdnDocument").val();
+                ModelData["SessionFlag"] = $("#hdnSessionFlag").val();
+                ModelData["TableKey"] = $("#hdnAccTableKey").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("GetTyreStockDetail")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "Valid") {
+                            alert(data.Message);
+                            $('#truckrelatedtable tbody tr').each(function () {
+                                var tds = $(this).find('td');
+                                if (tds.eq(0).text() == "F003") {
+                                    tds.find(".addontxtfvalue").val("");
+                                }
+                            });
+                            return;
+                        }
+                        else if (data.Status == "Success") {
+                            $('#hdnDivTyreStkSrl').html(data.Html);
+                            $('#hdnDivTyreStkSrl').show();
+                        }
+
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+    });
+</script>

@@ -1,0 +1,353 @@
+﻿@model GridOption
+@using Common;
+
+@*<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>*@
+
+<style>
+    .panel-heading .nav {
+        margin: -23px -15px -23px;
+    }
+
+    .table, th, td {
+        border: 0px solid;
+    }
+
+    .select2-container-multi .select2-choices {
+        width: 180px;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#codePurchase').hide();
+        $('#TextInput4').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        $("#fetchid").keyup(function () {
+            var v = $(this).val();
+            var url = '@Url.Action("FetchMaster")?term=' + v;
+                $.ajax({
+                    url: url,
+                    type: "POST",
+                    dataType: "json",
+                    contentType: "application/json; charset=utf-8",
+                    success: function (data) {
+                        $('tbody#emp').empty();
+                        $(data).each(function (index, item) {
+                            var questionId = data[index].id;
+                            var question = data[index].question;
+
+                            $('tbody#emp').append(
+                            '<tr><td>'
+                            + questionId
+                            + '</td><td>'
+                            + question
+                            + '</td></tr>')
+                            
+                        });
+                    },
+                    error: function (data) { alert(data.responseText); }
+                });
+           
+        });
+
+        $('#multicoltbl tbody').on("click", "tr", function () {
+            
+            var $tds = $(this).find('td');
+            
+            psrl = $tds.eq(0).text();
+            $("#fetchid").val(psrl);
+        });
+
+        GetReportCode();
+        loadAccount();
+        FillJSTree();
+        PurchaseSubtype()
+        $('#submit').click(function () {
+            var divText = [];
+            $("#onflycheckboxes").jstree("get_checked", null, true).each
+                (function () {
+                    divText.push($(this).children('a').text());
+                });
+
+            $('#hdnTreeArray').val(divText.toString());
+        });
+
+
+        $("#PurchType").change(function () {
+            var selected = [];
+            $("#PurchType :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnPurchArray').val(selected)
+            return false;
+        });
+
+        $("#PurchCode").change(function () {
+            var selected = [];
+            $("#PurchCode :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnPurchCodeArray').val(selected)
+            return false;
+        });
+
+        $("#PurchType").change(function () {
+            $("#PurchCode").empty();
+            var url = '@Url.Action("GetPurchaseCode")?PurchType=' + $('#hdnPurchArray').val();
+            $.ajax({
+                type: 'POST',
+                url: url,
+                dataType: 'json',
+                data: { Country: $('#Item').val() },
+                success: function (result) {
+                    $.each(result, function (i, item) {
+                        $("#PurchCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+                    $('#codePurchase').show();
+                    $('.spinner').hide();
+                    $("#Itemgrp").show();
+
+                },
+                error: function (ex) {
+                    alert("Error occured while processing your request." + ex);
+                }
+            });
+            return false;
+        });
+    });
+
+    function PurchaseSubtype() {
+        var url = '@Url.Action("GetPurchaseType")?MainType=' + '@Model.MainType';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Country: $('#PurchType').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#PurchType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    function GetReportCode() {
+        var url = '@Url.Action("GetViewCodes")?term=' + '@Model.ViewDataId';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#ViewCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+
+    };
+
+    function FillJSTree() {
+        $("#onflycheckboxes").jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/PurchSalesRegStock/GetTreeData",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: true
+            },
+            plugins: ["themes", "json_data", "ui", "checkbox"]
+        });
+    };
+
+    function loadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Code + ' ' + item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var elementText = $(element).attr('data-init-text');
+                xcallback({ "term": elementText });
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<script src="~/Scripts/jquery.jstree.js"></script>
+<div class="modal-content" style="width:600px;padding-bottom:0px;">
+    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title"><b>Parameters</b></h4>
+    </div>
+    <div class="modal-body" style="padding-top:-15px;">
+        <div class="form-horizontal" id="fixedasstesinfo" style="min-height:350px;">
+            <div id="ErrorMessage3" name="ErrorMessage3" class="alert alert-danger" style="display: none"></div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label"></label>
+                <div class="col-sm-4"></div>
+                <label class="col-sm-2 control-label">Format</label>
+                <div class="col-sm-5">
+                    @Html.DropDownListFor(x => x.ViewCode, DropdownHelper.EmptyList(), new { @Id = "ViewCode", @Name = "ViewCode" ,@style="width:100%" })
+                </div>
+            </div>
+            <div class="form-group">
+
+                <label class="col-md-3 control-label">Account</label>
+                <div class="col-sm-6">
+                    <input type="text" id="Account" class="input-large search-query" style="width: 100%;" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Type</label>
+                <div id="onflycheckboxes" style="min-height:100px;overflow-y:scroll;max-height:100px;padding-left:10px;font-size:11px;">
+                </div>
+            </div>
+            <div class="form-group">
+
+                <label class="col-md-3 control-label">Text I</label>
+                <div class="col-sm-4">
+                    <input type="text" id="TextInput1" name="TextInput1" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+            <div class="form-group">
+
+                <label class="col-md-3 control-label">Numeric I/P</label>
+                <div class="col-sm-4">
+                    <input type="number" id="TextInput2" name="TextInput2" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+            <div class="form-group">
+
+                <label class="col-md-3 control-label">Checkbox I/P</label>
+                <div class="col-sm-4">
+                    <input type="checkbox" id="TextInput3" name="TextInput3" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">DatePicker I/P</label>
+                <div class="col-sm-4">
+                    <input type="text" id="TextInput4" name="TextInput4" value="@DateTime.Now.ToString("dd-MM-yyyy")" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Multi Combo </label>
+                <div class="col-sm-4">
+                    @Html.DropDownListFor(x => x.PurchType, DropdownHelper.EmptyList(), new { multiple = "multiple", @Id = "PurchType", @Name = "PurchType" })
+                </div>
+            </div>
+
+            <div class="form-group" id="codePurchase">
+                <label class="col-md-3 control-label">Dependent Combo</label>
+                <div class="col-sm-4">
+                    @Html.DropDownListFor(x => x.PurchCode, DropdownHelper.EmptyList(), new { multiple = "multiple", @Id = "PurchCode", @Name = "PurchCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Fixed Combo</label>
+                <div class="col-sm-4">
+                    <select class="form-control" id="TransMode">
+                        <option value="Select">-- Select --</option>
+                        <option value="Road">Road</option>
+                        <option value="Rail">Rail</option>
+                        <option value="Air">Air</option>
+                        <option value="Sea">Sea</option>
+                        <option value="Courier">Courier</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Textarea</label>
+                <div class="col-sm-4">
+                    <textarea class="form-control" rows="6"></textarea>
+                </div>
+            </div>
+            <div class="form-group">
+
+                <label class="col-md-3 control-label">Radio I/P</label>
+                <div class="col-sm-4">
+                    <input type="radio" id="gender" name="gender" value="male"> Male<br>
+                    <input type="radio" id="gender" name="gender" value="female"> Female<br>
+                    <input type="radio" id="gender" name="gender" value="other"> Other
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-md-3 control-label">Multi Col I/P</label>
+                <div class="col-sm-9">
+                    <input type="text" class="form-control" id="fetchid" style="width:40%;"/>
+                    <div style="max-height:110px;min-height:110px;overflow:scroll;">
+                        <table id="multicoltbl" class="zui-tableww">
+                            <tbody id="emp"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+        <button type="button" class="btn btn-success" data-dismiss="modal" id="submit">Save</button>
+        <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+    </div>
+</div>
+
+@*<input type="hidden" id="hdnItem" />*@
+

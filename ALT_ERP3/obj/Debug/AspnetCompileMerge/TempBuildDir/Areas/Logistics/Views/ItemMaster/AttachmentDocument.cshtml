@@ -1,0 +1,199 @@
+﻿
+@model TFATERPWebApplication.Areas.Logistics.Models.ItemMasterVM
+
+@if (Model.Mode == "Add")
+{
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $("#btnAddDocument").click(function (event) {
+                event.preventDefault();
+                var size = 0;
+                var formData = new FormData();
+                var totalFiles = document.getElementById("FileUpload").files.length;
+                for (var i = 0; i < totalFiles; i++) {
+                    var file = document.getElementById("FileUpload").files[i];
+                    size += file.size;
+                    if (file.size < 1048576) {
+                        formData.append("FileUpload", file);
+                    }
+                    else {
+                        alert('File Size Must Not Exceed 1 MB')
+                        return;
+                    }
+                }
+                if (size > 1048576) {
+                    alert('File Size Must Not Exceed 1 MB')
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: '@Url.Action("AttachDocument")',
+                    data: formData,
+                    dataType: 'json',
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        $('#divLedgerTable14').html(data.Html);
+                    },
+                    error: function (error) {
+                        alert("errror");
+                    }
+                });
+            });
+        });
+    </script>
+
+    <div class="panel-body" style="margin-left:25px;">
+        <div class="position-center" style="margin-left:25px;">
+            <form role="form" style="margin-left:25px;">
+                <div class="form-group">
+                    <label>File input</label>
+                    <input type="file" id="FileUpload" multiple="multiple" />
+                </div>
+                <input type="submit" value="Upload" class="btn btn-warning" id="btnAddDocument" />
+            </form>
+        </div>
+
+        <div class="grid" id="docDetailTable">
+            <table id="tabledata" class="zui-tableww" style="width:500px;">
+                <thead>
+                    <tr role="row" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                        <th style="width:15%">Images</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.DocumentList != null)
+                    {
+                        foreach (var item in @Model.DocumentList.ToList())
+                        {
+                            <tr role="row" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;width:250px;">
+                                <td> <input type="image" src="@item.ImageStr" id="imgitemid" style="width:200px;height:200px;" /> </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+
+            $("#btnAddDocument").click(function (event) {
+                event.preventDefault();
+                var size = 0;
+                var formData = new FormData();
+                var totalFiles = document.getElementById("FileUpload").files.length;
+                for (var i = 0; i < totalFiles; i++) {
+                    var file = document.getElementById("FileUpload").files[i];
+                    size += file.size;
+                    if (file.size < 1048576) {
+                        formData.append("FileUpload", file);
+                    }
+                    else {
+                        alert('File Size Must Not Exceed 1 MB')
+                        return;
+                    }
+                }
+                if (size > 1048576) {
+                    alert('File Size Must Not Exceed 1 MB')
+                    return;
+                }
+                $.ajax({
+                    type: "POST",
+                    url: '/ItemMaster/EditImage?Document=' + $('#Code').val(),
+                    data: formData,
+                    dataType: 'json',
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        $('#divLedgerTable14').html(data.Html);
+                    },
+                    error: function (error) {
+                        alert(JSON.stringify(error));
+                    }
+                });
+            });
+
+            $('button[action|="Delete"]').click(function (event) {
+                event.preventDefault();
+                var url = '@Url.Action("DeleteUploadFile")';
+                var ModelData = {};
+                ModelData["Code"] = $("#Code").val();
+                ModelData["tempId"] = $(this).val();
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('#divLedgerTable14').html(data.Html);
+                        $('.spinner').hide();
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("An error occurred while processing the request.");
+                    }
+                });
+            });
+        });
+    </script>
+
+
+
+    <div class="panel-body">
+        <div class="position-center">
+            <div class="form-group">
+                <label>File input</label>
+                <input type="file" id="FileUpload" multiple />
+            </div>
+            <input type="submit" value="Upload" class="btn btn-warning" id="btnAddDocument" />
+            <table class="zui-tableww" style="width:300px;">
+                <tbody>
+                    <tr>
+                        <th>Name</th>
+                        <th>Delete</th>
+
+                    </tr>
+                    @if (Model.DocumentList != null)
+                    {
+                        foreach (var item in @Model.DocumentList.ToList())
+                        {
+
+                            <tr role="row" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;width:250px;">
+
+                                <td> <input type="image" src="@item.ImageStr" id="imgitemid" style="width:200px;height:200px;" /> </td>
+                                <td> <button type="button" action="Delete" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button></td>
+
+
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+            <br />
+            <br />
+
+
+        </div>
+    </div>
+
+
+}
+
+@Html.HiddenFor(x => x.AllFileStr, new { @Id = "hdnAllFileStr" })
+
+@Html.HiddenFor(x => x.FileNameStr, new { @Id = "hdnFileNameStr" })
+
+
+
+

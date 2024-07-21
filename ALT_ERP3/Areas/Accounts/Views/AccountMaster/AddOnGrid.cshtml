@@ -1,0 +1,118 @@
+﻿
+@model ALT_ERP3.Areas.Accounts.Models.MasterVM
+@using Common;
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#btnedtSave").click(function (event) {
+            event.preventDefault();
+            $('#hdnAddonSaved').val('1');
+        });
+
+        $(".addontxtfvalue").focusout(function (event) {
+            event.preventDefault();
+            var PPSerial = [];
+            $('#addongrid').find('tr[id="datacharge"]').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    ApplCode: (tds.eq(4).text() == "C" || tds.eq(4).text() == "M") ? tds.find(".addontxtfvalue").val() : tds.find("input[class='addontxtfvalue']").val(),
+                    FldType: tds.eq(4).text(),
+                }
+                PPSerial.push(myDets);
+            });
+            var ModelData = {};
+            ModelData["Fld"] = $(this).attr("alt");
+            ModelData["AddonValueLast"] = PPSerial;
+            ModelData["Mode"] = $("#hdnMode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("CalByEquationAddon")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('#Dialog').html(data.Html);
+                    $('#addongrid input[id=txtf_' + data.Fld + ']').focus();
+                    $('#addongrid textarea[id=txtf_' + data.Fld + ']').focus();
+                    $('#addongrid select[id=txtf_' + data.Fld + ']').focus();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+
+    });
+
+</script>
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>AddOns</b></h4>
+        </div>
+        <div class="modal-body">
+
+            <div class="grid" id="PickTable" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+                <table id="addongrid" class="zui-table">
+                    <thead>
+                    </thead>
+                    <tbody>
+                        @if (Model.AddOnList != null)
+                        {
+                            foreach (var item in @Model.AddOnList.ToList())
+                            {
+                                <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                    <td style="width:10%;">@item.Fld</td>
+                                    <td style="width:20%;">@item.Head</td>
+                                    <td style="width:1%;" hidden="hidden">@item.Eqsn</td>
+
+                                    @if (item.FldType == "C")
+                                    {
+                                        <td style="width:40%;">
+                                            <select class="addontxtfvalue" id="txtf_@item.Fld" alt="@item.Fld" style="width:100%">
+                                                @foreach (var item2 in item.QueryText.Split('^').ToList())
+                                                {
+
+                                                    <option value="@item2" @(item2 == item.ApplCode ? "selected" : "")>@item2</option>
+
+                                                }
+                                            </select>
+                                        </td>
+
+                                    }
+                                    else if (item.FldType == "M")
+                                    {
+
+                                        <td style="width:50%;"><textarea type="textarea" rows="5" cols="20" id="txtf_@item.Fld" alt="@item.Fld" class="addontxtfvalue" style="width:100%;">@item.ApplCode</textarea></td>
+
+                                    }
+                                    else
+                                    {
+
+                                        <td style="width:50%;"><input type="text" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="addontxtfvalue" style="width:100%;" maxlength="250" /></td>
+                                    }
+                                    <td style="width:1%;" hidden="hidden">@item.FldType</td>
+                                </tr>
+
+                            }
+                        }
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <button type="button" class="btn btn-warning" data-dismiss="modal" id="btnedtSave">Save</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+        </div>
+    </div>
+</div>
+

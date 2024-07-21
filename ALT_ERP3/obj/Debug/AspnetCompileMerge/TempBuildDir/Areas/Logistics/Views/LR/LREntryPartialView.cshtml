@@ -1,0 +1,2711 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.LRVM
+@using Common;
+@{
+    ViewBag.Title = "Consigner Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+
+<link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet">
+<script src="https://gitcdn.github.io/bootstrap-toggle/2.2.2/js/bootstrap-toggle.min.js"></script>
+
+<style>
+    .bold {
+        font-weight: bold !important;
+    }
+
+    hr {
+        border: 1px solid #dec0c0;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+
+    .legend {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        background-color: white;
+        color: red !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 45px 5px 45px;
+    }
+
+    .legend2 {
+        top: -0.0em;
+        color: black;
+        position: absolute;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #bec3c5;
+        width: auto;
+        line-height: 0.7em;
+        left: 100px;
+        margin-top: -15px;
+    }
+
+    .legend3 {
+        top: -0.0em;
+        color: black;
+        position: absolute;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #bec3c5;
+        width: auto;
+        line-height: 0.7em;
+        left: 265px;
+        margin-top: -15px;
+    }
+
+    .toggle {
+        border-radius: 15px !important;
+        margin-top: -35px !important;
+    }
+</style>
+<style>
+    #menu li {
+        list-style: none;
+        text-align: center;
+        color: black;
+        margin-left: 0px;
+        position: relative;
+    }
+
+    #menu ul li:hover {
+        cursor: pointer;
+        background-color: coral;
+        padding: 2px 0px 2px 0px;
+        text-align: center;
+        color: white;
+    }
+
+    /*#menu ul li:hover a {
+            color: white !important;
+        }*/
+
+    ul, .list-unstyled {
+        padding-left: 0px;
+    }
+</style>
+<style>
+    a:hover {
+        cursor: pointer;
+    }
+
+    .Ordertable {
+        display: table;
+    }
+
+    /*#Orderlist:hover a {
+        background-color: #d8b9dc;
+        color: white !important;
+
+    }*/
+    .legend2:hover, .legend3:hover {
+        background-color: #1fb5ad;
+        color: white;
+    }
+
+    .Ordertable-row:hover {
+        /*background-color: #d8b9dc;*/
+        background-color: #c7c1a1;
+    }
+
+        .Ordertable-row:hover a {
+            /*color: white;*/
+        }
+
+    .Ordertable-row {
+        display: table-row;
+    }
+
+    .Ordertable-cell {
+        display: table-cell;
+        border: 1px solid black;
+        padding: 5px;
+        text-align: center;
+        /*border-bottom: 1px solid;*/
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        $('#DocDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+        if ('@Model.Mode'!='Add') {
+            $("#DocDate").datepicker("setDate", '@Model.DocDate');
+        }
+        
+
+        $("#btnPhotoupload").click(function (event) {
+
+            event.preventDefault();
+            var size = 0;
+            var formData = new FormData();
+            var totalFiles = document.getElementById("Attachment_UploadFile").files.length;
+            for (var i = 0; i < totalFiles; i++) {
+                var file = document.getElementById("Attachment_UploadFile").files[i];
+                size += file.size;
+                if (file.size < 1048576) {
+                    formData.append("UploadFile", file);
+                }
+                else {
+                    alert('File Size Must Not Exceed 1 MB')
+                    return;
+                }
+            }
+            if (size > 1048576) {
+                alert('File Size Must Not Exceed 1 MB')
+                return;
+            }
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("AttachDocument")',
+                data: formData,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    $('#ShowAllFile').html(data.Html);
+                    //hideorshowtable();
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+
+
+        if ('@Model.LRSetup.LR_Both' == 'True') {
+            $("#BothCHK").removeAttr("disabled");
+        } else {
+            $("#BothCHK").attr("disabled", true);
+        }
+
+        if ('@Model.Mode' == "Add")
+        {
+            $('#btnBlock').prop('disabled', false);
+            $("#btnListPrint").attr("disabled", true);
+            $("#btnShare").attr("disabled", true);
+            $("#btnDownload").attr("disabled", true);
+            $("#btnDispachLC").attr("disabled", true);
+            $("#btnDispachFM").attr("disabled", true);
+
+            $("#Edit").attr("disabled", true);
+            $("#btnDelete").attr("disabled", true);
+        } else if ('@Model.Mode' == "View")
+        {
+            if ('@Model.PickDraft'=='True' || '@Model.Draft'=='True') {
+                $("#btnBlock").attr("disabled", true);
+            }
+            $("#btnListPrint").attr("disabled", true);
+            $("#SaveDraft").attr("disabled", true);
+            $("#Submit").attr("disabled", true);
+            $("#SubmitPrint").attr("disabled", true);
+            $("#Edit").attr("disabled", true);
+        } else if ('@Model.Mode' == "Edit")
+        {
+            @*if ('@Model.PickDraft'=='True' || '@Model.Draft'=='True') {
+                $("#btnBlock").attr("disabled", true);
+            }*@
+            $("#btnListPrint").attr("disabled", true);
+            $("#btnShare").attr("disabled", true);
+            $("#btnDownload").attr("disabled", true);
+            $("#btnPrint").attr("disabled", true);
+            debugger;
+            if ('@Model.Dispach'=='True') {
+                $("#btnDispachLC").attr("disabled", true);
+                $("#btnDispachFM").attr("disabled", true);
+            } else {
+                if ('@Model.DispatchLC'=='True') {
+                    $("#btnDispachLC").attr("disabled", true);
+                }
+                if ('@Model.DispatchFM'=='True') {
+                    $("#btnDispachFM").attr("disabled", true);
+                }
+
+            }
+
+            $("#Edit").attr("disabled", true);
+        } else if ('@Model.Mode' == "Delete")
+        {
+            $("#btnListPrint").attr("disabled", true);
+            $("#btnBlock").attr("disabled", true);
+            $("#btnShare").attr("disabled", true);
+            $("#btnDownload").attr("disabled", true);
+            $("#btnAttachment").attr("disabled", true);
+            $("#SaveDraft").attr("disabled", true);
+            $("#btnPrint").attr("disabled", true);
+            if ('@Model.Dispach'=='True') {
+                $("#btnDispachLC").attr("disabled", true);
+                $("#btnDispachFM").attr("disabled", true);
+            } else {
+                if ('@Model.DispatchLC'=='True') {
+                    $("#btnDispachLC").attr("disabled", true);
+                }
+                if ('@Model.DispatchFM'=='True') {
+                    $("#btnDispachFM").attr("disabled", true);
+                }
+            }
+            $("#Submit").attr("disabled", true);
+            $("#SubmitPrint").attr("disabled", true);
+            $("#Edit").attr("disabled", true);
+        }
+
+        if ('@Model.Mode'=="Add") {
+            if ('@Model.LRSetup.Colln' == 'Yes')
+            {
+                $("#Yes").prop("checked", true);
+            } else {
+                $("#No").prop("checked", true);
+            }
+
+            if ('@Model.LRSetup.Del' == 'D')
+            {
+                $("#Door").prop("checked", true);
+            } else {
+                $("#Godown").prop("checked", true);
+            }
+        } else {
+            if ('@Model.Colln' == 'Y')
+            {
+                $("#Yes").prop("checked", true);
+            } else {
+                $("#No").prop("checked", true);
+                $("#CollNArea").prop("disabled", true);
+            }
+
+            if ('@Model.DelAt' == 'D')
+            {
+                $("#Door").prop("checked", true);
+            } else {
+                $("#Godown").prop("checked", true);
+                $("#DeliveryAtSearch").prop("disabled", true);
+            }
+        }
+
+
+        $("#PackQty").blur(function () {
+
+            if ('@Model.PickDraft' == 'True') {
+                if (!(parseInt($("#PackQty").val()) <= parseInt(@Model.PackQty))) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('PackQty Not Greater than @Model.PackQty');
+                    return;
+                }
+            }
+
+
+
+            if ('@Model.PickOrder' != '') {
+                if (!(parseInt($("#PackQty").val()) <= (parseInt(@Model.PickOrderBalQty) + parseInt(@Model.PackQty)))) {
+                    var TotalQty=parseInt(@Model.PickOrderBalQty) + parseInt(@Model.PackQty)
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('PackQty Not Greater than  ' + TotalQty);
+                    return;
+                }
+            }
+
+
+        });
+
+
+        $("#SaveNamePopUp").dialog({
+            autoOpen: false,
+            modal: true,
+            title: "Enter Draft Name"
+        });
+        LoadLRType();
+        LoadServiceType();
+        LoadConsigner();
+        LoadConsignee();
+        LoadBillingParty();
+        LoadFrom();
+        LoadTo();
+        LoadBillAt();
+        LoadUnit();
+        LoadParticular();
+        LoadChargeType();
+        LoadDelivery();
+        LoadCollArea();
+
+        $("#ChargeDiv :text").each(function () {
+            $(this).focus(function () {
+                if ($(this).val() == "0") {
+                    $(this).val("");
+                }
+            });
+            $(this).blur(function () {
+                if ($(this).val() == "" || $(this).val() == null) {
+                    $(this).val("0");
+                }
+            });
+        });
+
+        $('#All').change(function () {
+            if (this.checked) {
+                $("#Dispach").prop("checked", true);
+                $("#Delivery").prop("checked", true);
+                $("#Billing").prop("checked", true);
+            } else {
+                $("#Dispach").prop("checked", false);
+                $("#Delivery").prop("checked", false);
+                $("#Billing").prop("checked", false);
+            }
+        });
+
+        $("#Dispach,#Delivery,#Billing").click(function () {
+            $("#All").prop("checked", false);
+        });
+
+
+
+        $('#BothCHK').change(function () {
+            if (this.checked) {
+                $("#LrNo").removeAttr("disabled");
+            } else {
+                $("#LrNo").attr("disabled", "disabled");
+            }
+        });
+
+
+        $('#ActWt').blur(function () {
+            $("#ChgWt").val($("#ActWt").val());
+        });
+
+        $("input[name$='Delivery']").change(function () {
+            if ($("#Door").is(":checked") == true) {
+                $("#Godown").prop("checked", false);
+                $("#DeliveryAtSearch").prop("disabled", false);
+            }
+            else {
+                $("#Door").prop("checked", false);
+                $("#DeliveryAtSearch").prop("disabled", true);
+            }
+        });
+
+        if ($("#Door").is(":checked") == true) {
+            $("#Godown").prop("checked", false);
+            $("#DeliveryAtSearch").prop("disabled", false);
+        }
+
+        $("input[name$='Collection']").change(function () {
+
+            if ($("#Yes").is(":checked") == true)
+            {
+                $("#No").prop("checked", false);
+                $("#CollNArea").prop("disabled", false);
+            }
+            else
+            {
+                $("#Yes").prop("checked", false);
+                $("#CollNArea").prop("disabled", true);
+            }
+        });
+
+        if ($("#Yes").is(":checked") == true) {
+            $("#No").prop("checked", false);
+            $("#CollNArea").prop("disabled", false);
+        }
+
+        $('#ChargeDiv :text').blur(function () {
+            var amt = 0;
+            $("#ChargeDiv :text").each(function () {
+                amt += parseFloat($(this).val());
+            });
+            $("#Amt").val((amt.toFixed(2)).toString());
+        });
+
+
+
+        if ('@Model.Mode' == "Delete" || '@Model.Mode' == "View") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        $(".CalculationTxt").constrain({ allow: { regex: "[0-9]" } });
+        //$("#ShortName").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+        //$("input[name=setRegex]").constrain({ allow: { regex: "[0-9]" } });
+        $("#Name").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        $("#Contact_Person").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        $("#Contact_Person1").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        // $("#Contact_Person #Contact_Person1").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Address").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#City").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Pincode").constrain({ allow: { regex: "[0-9]" } });
+        $("#District").constrain({ allow: { regex: "[a-zA-Z" } });
+        $("#Contact_No #Contact_No1").constrain({ allow: { regex: "[0-9]" } });
+        $("#Fax").constrain({ allow: { regex: "[0-9+]" } });
+
+
+
+        $('#btnDelete').click(function (event)
+        {
+            event.preventDefault();
+            var result = confirm("Are you sure you want to delete?");
+            if (result)
+            {
+                debugger;
+                var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = 'Delete';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        if (data.Status == 'Success')
+                        {
+                            $('.spinner').hide();
+                        window.location.href = "/Logistics/LR/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                            $("#ErrorMessage").hide();
+                        }
+                        else
+                        {
+                            $('.spinner').hide();
+                            alert(data.Message);
+                        }
+                    },
+                });
+            } else {
+                $('.spinner').hide();
+                //window.location.href = "/Logistics/LR/Index1?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                window.location.href = "/Logistics/LR/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                $("#ErrorMessage").hide();
+            }
+        });
+
+        $("#DocDate").blur(function (event) {
+            event.preventDefault();
+            CheckLRDateFormat();
+        });
+
+        $('#SaveDraftName').click(function (event) {
+            $('#SaveNamePopUp').dialog('close');
+
+            if ($("#Draft_Name").val() == '' || $("#Draft_Name").val() == null) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Draft_Name Required.');
+                return;
+            }
+            else
+            {
+                CHeckLrNoExistOrNot("Draft_LorryPrt");
+            }
+        });
+        $('#SaveDraft').click(function (event) {
+            $('#SaveNamePopUp').dialog('open');
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            CHeckLrNoExistOrNot("lrbill");
+        });
+
+        $('#expandall').click(function () {
+            ExpandOrCollapse();
+        });
+
+    });
+
+    function CHeckLrNoExistOrNot(tablename) {
+
+        var url = '@Url.Action("CheckExistLR")';
+        if (tablename =="Draft_LorryPrt") {
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { TableName: tablename, Colfield: "[LRno]", Value: $('#Draft_Name').val(), SkipColumnName: "LRno", PKValue: '@Model.Document' },
+                success: function (result) {
+
+                    if (result.Message == "T") {
+                        SaveDraft();
+                    } else {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Draft_Name Exist Please CHange Draft_Name.');
+                        return;
+                    }
+                }
+            });
+        } else {
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { TableName: tablename, Colfield: "[LRno]", Value: $('#LrNo').val(), SkipColumnName: "LRno", PKValue: '@Model.Document' },
+                success: function (result) {
+
+                    if (result.Message == "T") {
+                        SaveLRBILL();
+                    } else {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('LrNo Exist Please CHange Lr No.');
+                        return;
+                    }
+                }
+            });
+        }
+    }
+
+    function SaveLRBILL() {
+
+        var DocDate = $("#DocDate").val().split("/");
+            var EndDate = '@Model.ExtendedDocDate'.split("/");
+            var StartDate = '@Model.Doc_CurrDate'.split("/");
+            if (parseInt(StartDate[2]) <= parseInt(DocDate[2]))
+            {
+                if (parseInt(StartDate[1]) == parseInt(DocDate[1]))
+                {
+                    if (!(parseInt(StartDate[0]) <= parseInt(DocDate[0])))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                        return;
+                    }
+                }
+                else
+                {
+                     if (parseInt(StartDate[1]) > parseInt(DocDate[1]))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                return;
+            }
+            if (parseInt(DocDate[2]) <= parseInt(EndDate[2]))
+            {
+                if (parseInt(DocDate[1]) == parseInt(EndDate[1]))
+                {
+                    if (!(parseInt(DocDate[0]) <= parseInt(EndDate[0])))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.ExtendedDocDate');
+                        return;
+                    }
+                }
+                else
+                {
+                    if (parseInt(DocDate[1]) > parseInt(EndDate[1]))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.ExtendedDocDate');
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate Should Be less Than @Model.ExtendedDocDate');
+                return;
+            }
+
+        if ($("#LRtype").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('LRtype is required..');
+                return;
+            }
+            if ($("#ServiceType").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('ServiceType is required..');
+                return;
+            }
+            if ($("#RecCode").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Consigner is required..');
+                return;
+            }
+            if ($("#SendCode").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Consignee_Code is required..');
+                return;
+            }
+            if ($("#BillParty").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Billing_Party is required..');
+                return;
+            }
+            if ($("#Source").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('From is required..');
+                return;
+            }
+            if ($("#Dest").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To is required..');
+                return;
+            }
+            if ($("#BillBran").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Billed_At is required..');
+                return;
+            }
+            if ($("#PackQty").val() == '' || $("#PackQty").val() == '0') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('PackQty is required..');
+                return;
+
+            }
+            if ($("#UnitCode").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Unit is required..');
+                return;
+            }
+            if ($("#ActWt").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Actual_Weight is required..');
+                return;
+            }
+            if ($("#ChgWt").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Charged_Weight is required..');
+                return;
+            }
+
+            if ((parseFloat($("#ActWt").val()).toFixed(2)) > (parseFloat($("#ChgWt").val()).toFixed(2))) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Actual_Weight Should Be Less Than Or Equal To Charged_Weight ..');
+                return;
+            }
+            if ($("#ChgType").val() == '') {
+
+                    $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Charge_Type is required..');
+                    return;
+            }
+            if ($("#Descr").val() == '' && $("#DescrTxt").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Particulars is required..');
+                return;
+            }
+
+            if ('@Model.LRSetup.Party_Challan' == 'True') {
+                if ($("#PartyRef").val() == '') {
+
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Party_Challan is required..');
+                    return;
+                }
+            }
+            if ('@Model.LRSetup.Party_Invoice' == 'True') {
+                if ($("#PartyInvoice").val() == '') {
+
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('PartyInvoice is required..');
+                    return;
+                }
+            }
+        if ('@Model.LRSetup.DeclareValueZero'!='True') {
+            if ($("#DecVal").val() == "0.00") {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DecVal is required..');
+                return;
+            }
+        }
+
+            if (parseInt($('#DecVal').val()) >= parseInt(@Model.LRSetup.Declare_Value)) {
+                if ('@Model.LRSetup.GST' == 'True') {
+                    if ($("#GSTNO").val() == '') {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('GSTNO is required..');
+                        return;
+                    }
+                }
+                if ('@Model.LRSetup.Eway_Bill' == 'True') {
+                    if ($("#EwayBill").val() == '') {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('EwayBill is required..');
+                        return;
+                    }
+                }
+            }
+            if ('@Model.LRSetup.Vehicle' == 'True') {
+                if ($("#VehicleNo").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('VehicleNo is required..');
+                    return;
+                }
+            }
+
+        if ($("#Door").is(":checked") == true)
+        {
+                if ( $('#DeliveryAtSearch').val() == '')
+                {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Delivery At is required..');
+                    return;
+                }
+            }
+
+        if ($("#Yes").is(":checked") == true)
+            {
+                if ($("#CollNArea").val() == '' ) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('CollNArea is required..');
+                    return;
+                }
+        }
+
+        var Val1 = "";
+        var amt1 = 0;
+        $("#ChargeDiv :text").each(function () {
+            Val1 += $(this).val() + "^";
+            amt1 += parseFloat($(this).val());
+        });
+        if (amt1==0) {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Please Enter Charges..');
+            return;
+        }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+        var ModelData = {};
+
+        if ($("#All").prop("checked") == true) {
+            ModelData["Dispach"] = true;
+            ModelData["Delivery"] = true;
+            ModelData["Billing"] = true;
+            ModelData["All"] = true;
+        } else {
+
+            if ($("#Dispach").prop("checked") == true) {
+                ModelData["Dispach"] = true;
+            } else {
+                ModelData["Dispach"] = false;
+            }
+            if ($("#Delivery").prop("checked") == true) {
+                ModelData["Delivery"] = true;
+            } else {
+                ModelData["Delivery"] = false;
+            }
+            if ($("#Billing").prop("checked") == true) {
+                ModelData["Billing"] = true;
+            } else {
+                ModelData["Billing"] = false;
+            }
+        }
+
+        ModelData["Remark"] = $("#Remark").val();
+        ModelData["Note"] = $("#Note").val();
+        ModelData["Document"] = $("#Document").val();
+            ModelData["LrNo"] = $("#LrNo").val();
+            ModelData["Time"] = $("#Time").val();
+            ModelData["DocDate"] = $("#DocDate").val();
+            ModelData["TrType"] = $("#TrType").val();
+            ModelData["RecCode"] = $("#RecCode").val();
+            ModelData["SendCode"] = $("#SendCode").val();
+            ModelData["BillParty"] = $("#BillParty").val();
+            ModelData["BillBran"] = $("#BillBran").val();
+            ModelData["Source"] = $("#Source").val();
+            ModelData["Dest"] = $("#Dest").val();
+            ModelData["UnitCode"] = $("#UnitCode").val();
+            ModelData["Descr"] = $("#Descr").val();
+            ModelData["DescrTxt"] = $("#DescrTxt").val();
+            ModelData["PackQty"] = $("#PackQty").val();
+            ModelData["ActWt"] = $("#ActWt").val();
+            ModelData["ChgWt"] = $("#ChgWt").val();
+            ModelData["ChgType"] = $("#ChgType").val();
+            ModelData["PartyRef"] = $("#PartyRef").val();
+            ModelData["DecVal"] = $("#DecVal").val();
+            ModelData["DeliveryAtTxt"] = $("#DeliveryAtTxt").val();
+            ModelData["CollNArea1"] = $("#CollNArea1").val();
+            ModelData["Narr"] = $("#Narr").val();
+            ModelData["ExtendedDocDate"] = '@Model.ExtendedDocDate';
+            ModelData["Doc_CurrDate"] = '@Model.Doc_CurrDate';
+
+            var Val = "";
+            var amt=0;
+            $("#ChargeDiv :text").each(function () {
+                Val += $(this).val() + "^";
+                amt += parseFloat($(this).val());
+            });
+
+            ModelData["Amt"] = $("#Amt").val();//(amt.toFixed(2)).toString();
+            ModelData["Val1"] = Val.substring(0, (Val.length-1));;
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["PartyInvoice"] = $("#PartyInvoice").val();
+            ModelData["GSTNO"] = $("#GSTNO").val();
+            ModelData["EwayBill"] = $("#EwayBill").val();
+            ModelData["VehicleNo"] = $("#VehicleNo").val();
+            ModelData["ConsignerEXTRAInfo"] = $("#ConsignerEXTRAInfo").val();
+            ModelData["ConsigneeEXTRAInfo"] = $("#ConsigneeEXTRAInfo").val();
+            ModelData["BillingPartyEXTRAInfo"] = $("#BillingPartyEXTRAInfo").val();
+            ModelData["LRtype"] = $("#LRtype").val();
+            ModelData["ServiceType"] = $("#ServiceType").val();
+
+        if ($("#Door").is(":checked") == false) {
+            ModelData["DeliveryAtSearch"] = null;
+
+            ModelData["DelAt"] = "G";
+        } else {
+            ModelData["DeliveryAtSearch"] = $("#DeliveryAtSearch").val();
+            ModelData["DelAt"] = "D";
+
+        }
+
+        if ($("#Yes").is(":checked") == false) {
+            ModelData["CollNArea"] = null;
+
+            ModelData["Colln"] = "N";
+        } else {
+            ModelData["CollNArea"] = $("#CollNArea").val();
+            ModelData["Colln"] = "Y";
+        }
+
+            if ('@Model.Draft' == 'True') {
+                ModelData["Document"] = null;
+                ModelData["Mode"] = 'Add';
+                ModelData["Draft"] = false;
+
+            }
+            //ComingFromDraft
+        if ('@Model.PickDraft'=='True') {
+            ModelData["OrderNo"] = $("#Document").val();
+            ModelData["Document"] = null;
+            ModelData["PickDraft"] = true;
+            ModelData["Mode"] = 'Add';
+        }
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/LR/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+    }
+
+
+    function SaveDraft()
+    {
+            if ('@Model.Draft'=='False') {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Draft Create Not Allow');
+            return;
+        }
+
+        if ($('#ErrorMessage').is(':visible'))
+        {
+            $("#ErrorMessage").text('LrNo Exist Please CHange Lr No.');
+        }
+
+            var DocDate = $("#DocDate").val().split("/");
+            var EndDate = '@Model.ExtendedDocDate'.split("/");
+            var StartDate = '@Model.Doc_CurrDate'.split("/");
+            if (parseInt(StartDate[2]) <= parseInt(DocDate[2]))
+            {
+                if (parseInt(StartDate[1]) == parseInt(DocDate[1]))
+                {
+                    if (!(parseInt(StartDate[0]) <= parseInt(DocDate[0])))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                        return;
+                    }
+                }
+                else
+                {
+                     if (parseInt(StartDate[1]) > parseInt(DocDate[1]))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                return;
+            }
+            if (parseInt(DocDate[2]) <= parseInt(EndDate[2]))
+            {
+                if (parseInt(DocDate[1]) == parseInt(EndDate[1]))
+                {
+                    if (!(parseInt(DocDate[0]) <= parseInt(EndDate[0])))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.ExtendedDocDate');
+                        return;
+                    }
+                }
+                else
+                {
+                    if (parseInt(DocDate[1]) > parseInt(EndDate[1]))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.ExtendedDocDate');
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate Should Be less Than @Model.ExtendedDocDate');
+                return;
+            }
+
+            if ($("#RecCode").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Consigner is required..');
+                return;
+            }
+            if ($("#SendCode").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Consignee_Code is required..');
+                return;
+            }
+            if ($("#BillParty").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Billing_Party is required..');
+                return;
+            }
+            if ($("#Source").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('From is required..');
+                return;
+            }
+            if ($("#Dest").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To is required..');
+                return;
+            }
+            if ($("#BillBran").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Billed_At is required..');
+                return;
+            }
+            if ($("#PackQty").val() == '' || $("#PackQty").val() == '0') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('PackQty is required..');
+                return;
+
+            }
+            if ($("#UnitCode").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Unit is required..');
+                return;
+            }
+            if ($("#ActWt").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Actual_Weight is required..');
+                return;
+            }
+            if ($("#ChgWt").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Charged_Weight is required..');
+                return;
+            }
+
+            if ((parseFloat($("#ActWt").val()).toFixed(2)) > (parseFloat($("#ChgWt").val()).toFixed(2))) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Actual_Weight Should Be Less Than Or Equal To Charged_Weight ..');
+                return;
+            }
+            if ($("#ChgType").val() == '') {
+
+                    $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Charge_Type is required..');
+                    return;
+            }
+            if ($("#Descr").val() == '' && $("#DescrTxt").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Particulars is required..');
+                return;
+            }
+
+            if ('@Model.LRSetup.Party_Challan' == 'True') {
+                if ($("#PartyRef").val() == '') {
+
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Party_Challan is required..');
+                    return;
+                }
+            }
+            if ('@Model.LRSetup.Party_Invoice' == 'True') {
+                if ($("#PartyInvoice").val() == '') {
+
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('PartyInvoice is required..');
+                    return;
+
+                }
+            }
+        if ('@Model.LRSetup.DeclareValueZero'!='True') {
+            if ($("#DecVal").val() == "0.00") {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DecVal is required..');
+                return;
+
+            }
+        }
+
+            if (parseInt($('#DecVal').val()) >= parseInt(@Model.LRSetup.Declare_Value)) {
+                if ('@Model.LRSetup.GST' == 'True') {
+                    if ($("#GSTNO").val() == '') {
+
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('GSTNO is required..');
+                        return;
+                    }
+                }
+                if ('@Model.LRSetup.Eway_Bill' == 'True') {
+                    if ($("#EwayBill").val() == '') {
+
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('EwayBill is required..');
+                        return;
+                    }
+                }
+            }
+            if ('@Model.LRSetup.Vehicle' == 'True') {
+                if ($("#VehicleNo").val() == '') {
+
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('VehicleNo is required..');
+                    return;
+                }
+            }
+        if ($("#Door").is(":checked") == true) {
+
+                if ( $('#DeliveryAtSearch').val() == '')
+                {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Delivery At is required..');
+                    return;
+                }
+            }
+
+        if ($("#Yes").is(":checked") == true)
+            {
+                if ($("#CollNArea").val() == '' ) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('CollNArea is required..');
+                    return;
+                }
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+        var ModelData = {};
+        ModelData["Draft"] = '@Model.Draft';
+        ModelData["Time"] = $("#Time").val();
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Document"] = $("#Document").val();
+        ModelData["LrNo"] = $("#LrNo").val();
+        ModelData["DocDate"] = $("#DocDate").val();
+        ModelData["TrType"] = $("#TrType").val();
+        ModelData["RecCode"] = $("#RecCode").val();
+        ModelData["SendCode"] = $("#SendCode").val();
+        ModelData["BillParty"] = $("#BillParty").val();
+        ModelData["BillBran"] = $("#BillBran").val();
+        ModelData["Source"] = $("#Source").val();
+        ModelData["Dest"] = $("#Dest").val();
+        ModelData["UnitCode"] = $("#UnitCode").val();
+        ModelData["Descr"] = $("#Descr").val();
+        ModelData["DescrTxt"] = $("#DescrTxt").val();
+        ModelData["PackQty"] = $("#PackQty").val();
+        ModelData["ActWt"] = $("#ActWt").val();
+        ModelData["ChgWt"] = $("#ChgWt").val();
+        ModelData["ChgType"] = $("#ChgType").val();
+        ModelData["PartyRef"] = $("#PartyRef").val();
+        ModelData["DecVal"] = $("#DecVal").val();
+        ModelData["DeliveryAtTxt"] = $("#DeliveryAtTxt").val();
+        ModelData["CollNArea1"] = $("#CollNArea1").val();
+
+
+        if ($("#Yes").is(":checked") == false) {
+            ModelData["CollNArea"] = null;
+            ModelData["Colln"] = "N";
+        } else {
+            ModelData["CollNArea"] = $("#CollNArea").val();
+            ModelData["Colln"] = "Y";
+        }
+        if ($("#Door").is(":checked") == false) {
+            ModelData["DeliveryAtSearch"] = null;
+            ModelData["DelAt"] = "G";
+        } else {
+            ModelData["DeliveryAtSearch"] = $("#DeliveryAtSearch").val();
+            ModelData["DelAt"] = "D";
+        }
+
+
+            ModelData["Narr"] = $("#Narr").val();
+            ModelData["ExtendedDocDate"] = '@Model.ExtendedDocDate';
+            ModelData["Doc_CurrDate"] = '@Model.Doc_CurrDate';
+
+            var Val = "";
+            var amt=0;
+            $("#ChargeDiv :text").each(function () {
+                Val += $(this).val() + "^";
+                amt += parseFloat($(this).val());
+            });
+
+            ModelData["Amt"] = $("#Amt").val();//(amt.toFixed(2)).toString();
+            ModelData["Val1"] = Val.substring(0, (Val.length-1));;
+
+            ModelData["PartyInvoice"] = $("#PartyInvoice").val();
+            ModelData["GSTNO"] = $("#GSTNO").val();
+            ModelData["EwayBill"] = $("#EwayBill").val();
+            ModelData["VehicleNo"] = $("#VehicleNo").val();
+            ModelData["ConsignerEXTRAInfo"] = $("#ConsignerEXTRAInfo").val();
+            ModelData["ConsigneeEXTRAInfo"] = $("#ConsigneeEXTRAInfo").val();
+            ModelData["BillingPartyEXTRAInfo"] = $("#BillingPartyEXTRAInfo").val();
+            ModelData["Draft_Name"] = $("#Draft_Name").val();
+            ModelData["LRtype"] = $("#LRtype").val();
+            ModelData["ServiceType"] = $("#ServiceType").val();
+
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/LR/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        }
+
+
+
+
+
+    function CheckLRDateFormat() {
+        $("#ErrorMessage").hide();
+            var DocDate = $("#DocDate").val().split("/");
+            var EndDate = '@Model.ExtendedDocDate'.split("/");
+            var StartDate = '@Model.Doc_CurrDate'.split("/");
+            if (parseInt(StartDate[2]) <= parseInt(DocDate[2]))
+            {
+                if (parseInt(StartDate[1]) == parseInt(DocDate[1]))
+                {
+                    if (!(parseInt(StartDate[0]) <= parseInt(DocDate[0])))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                        return;
+                    }
+                }
+                else
+                {
+                     if (parseInt(StartDate[1]) > parseInt(DocDate[1]))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.Doc_CurrDate');
+                return;
+            }
+            if (parseInt(DocDate[2]) <= parseInt(EndDate[2]))
+            {
+                if (parseInt(DocDate[1]) == parseInt(EndDate[1]))
+                {
+                    if (!(parseInt(DocDate[0]) <= parseInt(EndDate[0])))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.ExtendedDocDate');
+                        return;
+                    }
+                }
+                else
+                {
+                    if (parseInt(DocDate[1]) > parseInt(EndDate[1]))
+                    {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('DocDate Should Be Grater Than @Model.ExtendedDocDate');
+                        return;
+                    }
+                }
+            }
+            else
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate Should Be less Than @Model.ExtendedDocDate');
+                return;
+            }
+    }
+
+    function LoadFrom() {
+
+        var flag = false;
+        if ('@Model.LRSetup.Branch_Area'== 'True') {
+            flag = true;
+        }
+
+        var url = '@Url.Action("From")'
+        $('#Source').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Flag: flag
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Source', text: '@Model.Source_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadChargeType() {
+
+        var url = '@Url.Action("ChargeType")'
+        $('#ChgType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ChgType', text: '@Model.ChgType_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadUnit() {
+
+        var url = '@Url.Action("GetUnit")'
+        $('#UnitCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.UnitCode', text: '@Model.Unit_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadParticular() {
+
+        var url = '@Url.Action("GetParticulars")'
+        $('#Descr').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Descr', text: '@Model.Descr_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadLRType() {
+
+        var url = '@Url.Action("GetLRType")'
+        $('#LRtype').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.LRtype', text: '@Model.LRtype_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadServiceType() {
+
+        var url = '@Url.Action("GetServiceType")'
+        $('#ServiceType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ServiceType', text: '@Model.ServiceType_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadDelivery() {
+        var url = '@Url.Action("LoadDeliveryAtSearch")'
+        $('#DeliveryAtSearch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        From: $('#Source').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DeliveryAtSearch', text: '@Model.DeliveryAtSearch_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadBillAt() {
+        var url = '@Url.Action("BillatBranch")'
+        $('#BillBran').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BillBran', text: '@Model.BillBran_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadTo() {
+        var url = '@Url.Action("To")'
+        $('#Dest').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        From: $('#Source').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Dest', text: '@Model.Dest_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+     function LoadCollArea() {
+        var url = '@Url.Action("CollArea")'
+         $('#CollNArea').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                        //From: $('#Source').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CollNArea', text: '@Model.CollNArea_Code' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadConsigner() {
+        var url = '@Url.Action("GetConsigner")'
+        $('#RecCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.RecCode', text: '@Model.RecName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                GetAddress();
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+
+            },
+        })
+    };
+
+    function LoadBillingParty() {
+        var url = '@Url.Action("GetConsigner")'
+        $('#BillParty').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BillParty', text: '@Model.BillPartyName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                GetAddress();
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+
+    function LoadConsignee() {
+
+        var url = '@Url.Action("GetConsignee")'
+        $('#SendCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Consigner: $('#Consigner').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.SendCode', text: '@Model.SendName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                GetAddress();
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function myFunction() {
+
+        if ($("#hdnAreaID").val() == null || $("#hdnAreaID").val() == '') {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Select Branch..');
+            return;
+
+        }
+    }
+
+
+
+
+
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function CheckName() {
+
+            NameFlag = "False";
+        var currValue = $('#Name').val()
+        var url = '@Url.Action("CheckExist")';
+        if (currValue != null || currValue != "") {
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                //url: "/Base/CheckExist",
+                url: url,
+                data: { TableName: "Consigner", Colfield: "Name", Value: $('#Name').val(), SkipColumnName: "Code", PKValue: '@Model.Document' },
+                success: function (result) {
+                    if (result.Message == "F") {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Name is Exist Please Change The Name..');
+                        $('#Submit').prop('disabled', true);
+                        return;
+                    } else {
+                        $("#ErrorMessage").hide();
+                        $('#Submit').prop('disabled', false);
+                    }
+                }
+            });
+        }
+    }
+    function GetAddress() {
+
+
+        var Consigner = $('#RecCode').val();
+        var Consignee = $('#SendCode').val();
+        var BillParty = $('#BillParty').val();
+
+        var url = '@Url.Action("GetAddress")';
+
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                //url: "/Base/CheckExist",
+                url: url,
+                data: { Consigner: Consigner, Consignee: Consignee, BillingParty: BillParty},
+                success: function (result) {
+
+                    $("#RecCodeAddr").val(result.Message);
+                    $("#SendCodeAddr").val(result.Message1);
+                    $("#BillPartyAddr").val(result.Message2);
+
+
+                }
+            });
+    }
+
+
+
+
+    function ExpandOrCollapse() {
+
+        if (isTreeOpen == false) {
+            $("#treeviewcontrol").jstree("open_all", "#0");
+            isTreeOpen = true;
+
+
+        } else {
+            $("#treeviewcontrol").jstree("close_all", "#0");
+            isTreeOpen = false;
+        }
+    }
+
+    //function FillTreeView() {
+    //    $("#treeviewcontrol").jstree({
+    //        json_data: {
+    //            "ajax": {
+    //                "url": "/LR/TreeView",
+    //                "type": "POST",
+    //                "dataType": "json",
+    //                "contentType": "application/json charset=utf-8"
+    //            }
+    //        },
+    //        checkbox: {
+    //            real_checkboxes: false,
+    //            checked_parent_open: false
+    //        },
+    //        plugins: ["themes", "json_data", "ui", ""]
+    //    });
+    //};
+
+
+
+
+
+
+
+
+
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/LR/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <span class="tools pull-right" style="    margin-right: 15px;">
+
+        </span>
+    </div>
+</header>
+
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:30px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+            <fieldset class=" col-md-12" style="margin-top: 15px;">
+
+                @if (Model.LRSetup.LR_Generate == true || Model.LRSetup.LR_Both == true)
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="info" data-offstyle="danger" data-on="Manual" data-off="Auto" style="width: 73px !important;height: 34px;">
+                }
+                else
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="danger" data-offstyle="info" data-on="Auto" data-off="Manual" style="width: 73px !important;height: 34px;">
+                }
+                <button type="button" class="btn  btn-lg legend2" data-toggle="modal" data-target="#myModal">Pick From Draft</button>
+                <button type="button" class="btn  btn-lg legend3" data-toggle="modal" data-target="#PickOrderModal">Pick Order</button>
+
+                <div class="panel panel-default">
+                    <div class="panel-body " style="padding-left: 20px;">
+                        <div class="col-md-9">
+                            <div class="form-group" style="margin-top: 0px;">
+                                <label class=" bold   col-md-1 control-label">LR No:</label>
+                                <div class="col-md-1" style="display: flex;">
+
+                                    @if (Model.LRSetup.LR_Generate == false && Model.LRSetup.LR_Both == false)
+                                    {
+                                        @Html.TextBoxFor(x => x.LrNo, new { @class = "form-control", @Value = Model.LrNo })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.LrNo, new { @class = "form-control", @Value = Model.LrNo, @disabled = "disabled" })
+                                    }
+                                </div>
+
+                                <label class=" bold col-sm-offset-2  col-sm-1 control-label">LR Date :</label>
+                                <div class="col-sm-1">
+                                    @if (Model.LRSetup.LR_Date)
+                                    {
+                                        @Html.TextBoxFor(x => x.DocDate, new { @class = "form-control", @Value = Model.DocDate })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.DocDate, new { @class = "form-control", @Value = Model.DocDate, @disabled = "disabled" })
+                                    }
+                                </div>
+                                <label class=" bold  col-sm-1 control-label">LR Time :</label>
+                                <div class=" col-sm-1">
+                                    @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @type = "time", @style = "width:105px;margin-left:-9px;", @Value = Model.Time })
+                                </div>
+                                <label class=" bold  col-sm-1 control-label">LR Type :</label>
+                                <div class="col-sm-3">
+                                    @Html.TextBoxFor(x => x.LRtype, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.LRtype })
+                                </div>
+
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label">Consigner:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.RecCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.RecCode })
+                                </div>
+                                <label class=" bold  col-md-1 control-label">Consignee_Code:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.SendCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.SendCode })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Billing Party:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillParty, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.BillParty })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextAreaFor(x => x.RecCodeAddr, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @disabled = "disabled", @Value = Model.RecCodeAddr })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextAreaFor(x => x.SendCodeAddr, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @disabled = "disabled", @Value = Model.SendCodeAddr })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextAreaFor(x => x.BillPartyAddr, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @disabled = "disabled", @Value = Model.BillPartyAddr })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.ConsignerEXTRAInfo, new { @class = "form-control", @Value = Model.ConsignerEXTRAInfo, @placeholder = "Consigner Extra Info" })
+                                </div>
+                                <label class=" bold  col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.ConsigneeEXTRAInfo, new { @class = "form-control", @Value = Model.ConsigneeEXTRAInfo, @placeholder = "Consignee Extra Info" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillingPartyEXTRAInfo, new { @class = "form-control", @Value = Model.BillingPartyEXTRAInfo, @placeholder = "BillParty Extra Info" })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label">From:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.Source, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Source })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">To:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.Dest, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Dest })
+                                </div>
+                                <label class=" bold   col-md-1 control-label" style="">Bill At(Branch):</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillBran, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.BillBran })
+                                </div>
+                            </div>
+                            <div class="form-group " style="">
+                                <label class=" bold   col-md-1 control-label">Collection :</label>
+                                <div class="col-md-3" style="display: flex;">
+                                    <input type="radio" class="form-control" name="Collection" id="Yes" value="Yes" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Yes</label>
+                                    <input type="radio" class="form-control" name="Collection" id="No" value="No" style="height:20px;width:35px;" /><label class=" bold control-label"> No</label>
+                                </div>
+
+                                <label class=" bold   col-md-1 control-label">Delivery :</label>
+                                <div class="col-md-3" style="display: flex;">
+                                    <input type="radio" class="form-control" name="Delivery" id="Door" value="Yes" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Door</label>
+                                    <input type="radio" class="form-control" name="Delivery" id="Godown" value="No" style="height:20px;width:35px;" /><label class=" bold control-label"> Godown</label>
+                                </div>
+                                <label class=" bold  col-sm-1 control-label">Service Type :</label>
+                                <div class="col-sm-3">
+                                    @Html.TextBoxFor(x => x.ServiceType, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.ServiceType })
+                                </div>
+                            </div>
+                            <div class="form-group " style="">
+
+                                <label class=" bold   col-md-1 control-label">Collection Area:</label>
+                                <div class="col-md-3" style="">
+                                    @Html.TextBoxFor(x => x.CollNArea, new { @class = "input-large-query ", @style = "width:100%;" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Delivery At:</label>
+                                <div class="col-md-3" style="">
+                                    @Html.TextBoxFor(x => x.DeliveryAtSearch, new { @class = "input-large-query ", @style = "width:100%;" })
+                                </div>
+                            </div>
+                            <div class="form-group " style="">
+                                <div id="" class="">
+                                    <label class=" bold   col-md-1 control-label"></label>
+                                    <div class="col-md-3" style="">
+                                        @Html.TextBoxFor(x => x.CollNArea1, new { @class = "form-control ", @Value = Model.CollNArea1, @placeholder = "Collection Area Extra Info" })
+                                    </div>
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3" style="">
+                                    @Html.TextBoxFor(x => x.DeliveryAtTxt, new { @class = "form-control ", @Value = Model.DeliveryAtTxt, @placeholder = "Delivery At Extra Info" })
+                                </div>
+                            </div>
+                            <hr />
+                            <div class="form-group ">
+                                <label class=" bold  col-md-1 control-label">Package :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.PackQty, new { @class = "form-control", @Value = Model.PackQty })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Unit :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.UnitCode, new { @class = "input-large-query", @style = "width:100%;" })
+                                </div>
+                                <label class=" bold  col-md-1 control-label">Actual Wt :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.ActWt, new { @class = "form-control", @Value = Model.ActWt })
+                                </div>
+                                <label class=" bold  col-md-1 control-label" style="">Charged Wt :</label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.ChgWt, new { @class = "form-control", @Value = Model.ChgWt })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold  col-md-1 control-label">Charge Type :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.ChgType, new { @class = "input-large-query", @style = "width:100%;" })
+                                </div>
+                                <label class=" bold  col-md-1 control-label">Particulars :</label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.Descr, new { @class = "input-large-query ", @style = "width:100%;" })
+                                    @*@Html.TextBoxFor(x => x.DescrTxt, new { @class = "form-control hidden", @Value = Model.DescrTxt })
+                                        @Html.CheckBoxFor(x => x.DescrChk, new { @style = "height: 20px;width: 35px;", @value = Model.DescrChk })*@
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Party Challan :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.PartyRef, new { @class = "form-control", @Value = Model.PartyRef })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Party Invoice :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.PartyInvoice, new { @class = "form-control", @Value = Model.PartyInvoice })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold  col-md-1 control-label"></label>
+                                <div class="col-md-2">
+                                </div>
+                                <label class=" bold  col-md-1 control-label"></label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.DescrTxt, new { @class = "form-control", @Value = Model.DescrTxt, @placeholder = "Description Extra Info" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-2">
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-2">
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label" style="">Declared Value:</label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.DecVal, new { @class = "form-control", @Value = String.Format("{0:0.00}", Model.DecVal) })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">GST NO :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.GSTNO, new { @class = "form-control", @Value = Model.GSTNO })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">EwayBill No :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.EwayBill, new { @class = "form-control", @Value = Model.EwayBill })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Vehicle No :</label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.VehicleNo, new { @class = "form-control", @Value = Model.VehicleNo })
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 0px;">
+                                <label class=" bold  col-md-1 control-label">Remark :</label>
+                                <div class="col-md-11">
+                                    @Html.TextAreaFor(x => x.Narr, new { @class = "form-control", @Value = Model.Narr, @rows = "1", @maxlength = 100 })
+                                </div>
+                            </div>
+                        </div>
+                        <div class=" col-md-3  " style="border: 3px solid #dec0c0;overflow:scroll;width: 23%;margin-left: 20px;height:465px;">
+                            <div class="form-group" id="ChargeDiv" style="position:relative;">
+
+                                @if (Model.ChargeName != null)
+                                {
+                                    for (int i = 0; i < Model.ChargeName.Length; i++)
+                                    {
+                                        if (Model.ChargeName[i] != null)
+                                        {
+                                            <div class="form-group" style="margin-top:5px;">
+                                                <label class=" bold col-md-6 control-label" style="margin-left: 10px;">@Model.ChargeName[i] :</label>
+                                                <div class=" col-md-4">
+                                                    @Html.TextBoxFor(x => x.ChargeName[i], new { @class = "form-control CalculationTxt", @Value = Model.ChargeValue[i] })
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                }
+                            </div>
+
+                            <div class="form-group" style="position:absolute;bottom:0px;width: -webkit-fill-available;">
+                                <label class=" bold col-md-6 control-label" style="margin-left: 10px;">Total Amout :</label>
+                                <div class=" col-md-4">
+                                    @Html.TextBoxFor(x => x.Amt, new { @class = "form-control", @Value = String.Format("{0:0.00}", Model.Amt), @style = "margin-left: -10px;height: 40px;width: 100%;" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+    <!--Save Draft Name Modal -->
+    <div id="SaveNamePopUp" style="display: none">
+        <div class="form-group ">
+            <div class="col-sm-12">
+                @Html.TextBoxFor(x => x.Draft_Name, new { @class = "form-control", @Value = Model.Draft_Name })
+            </div>
+            <div class="col-sm-offset-4 col-sm-8">
+                <button class="btn btn-info" id="SaveDraftName">Save</button>
+            </div>
+        </div>
+    </div>
+    <!--Draft Modal -->
+    <div class="modal fade" id="myModal" role="dialog">
+        <div class="modal-dialog modal-lg modal-sm modal-xl" style="width: fit-content;margin: auto;margin-top: 8%;">
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-body" style="padding: 15px;">
+                    <div id="menu">
+                        <div class="Ordertable table-bordered table-info table-responsive-md" style="font-family:Verdana; margin-top:-1px;height:auto;width:100%;background-color:whitesmoke;">
+
+                            <div>
+                                <div class="Ordertable-cell " style="font-weight: bold;width: 120px;color: #ad225c;">Draft Name</div>
+                                <div class="Ordertable-cell " style="font-weight: bold;width: 120px;color: #ad225c;">Document Date</div>
+                                <div class="Ordertable-cell " style="width: 185px;font-weight: bold;color: #ad225c;">Consigner</div>
+                                <div class="Ordertable-cell " style="width: 185px;font-weight: bold;color: #ad225c;">Consignee</div>
+                                <div class="Ordertable-cell " style="width: 100px;font-weight: bold;color: #ad225c;">From</div>
+                                <div class="Ordertable-cell " style="width: 100px;font-weight: bold;color: #ad225c;">To</div>
+                                <div class="Ordertable-cell " style="width: 80px;font-weight: bold;color: #ad225c;">Total Qty</div>
+                            </div>
+
+                            @foreach (var item in Model.DraftVM)
+                            {
+                                if (item.Mode == "Add")
+                                {
+                                    <div class="Ordertable-row hover Ordertable-cell" id="Orderlist">
+                                        <a href="/Logistics/@Model.Controller2/Index1?TableName=@Model.TableName&MainType=@Model.MainType&Mode=Add&Header=@Model.Header&ViewDataId=@Model.ViewDataId&Controller2=@Model.Controller2&Module=@Model.Module&optiontype=@Model.OptionType&optioncode=@Model.OptionCode&Draft=true&Mode=@item.Mode">
+                                            <li style="padding-bottom:5px;font-weight:bold;">@item.Name</li>
+                                        </a>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="Ordertable-row hover" id="Orderlist">
+                                        <a href="/Logistics/@Model.Controller2/Index1?Document=@item.Document&TableName=@Model.TableName&MainType=@Model.MainType&Mode=Edit&Header=@Model.Header&ViewDataId=@Model.ViewDataId&Controller2=@Model.Controller2&Module=@Model.Module&optiontype=@Model.OptionType&optioncode=@Model.OptionCode&Draft=true&Mode=@item.Mode">
+                                            <div class="Ordertable-cell " style="font-weight: bold;width: 120px;">@item.DraftName</div>
+                                            <div class="Ordertable-cell " style="width: 120px;font-weight: bold;">@item.DocDate</div>
+                                            <div class="Ordertable-cell " style="width: 185px;font-weight: bold;">@item.RecCode</div>
+                                            <div class="Ordertable-cell " style="width: 185px;font-weight: bold;">@item.SendCode</div>
+                                            <div class="Ordertable-cell " style="width: 100px;font-weight: bold;">@item.Source</div>
+                                            <div class="Ordertable-cell " style="width: 100px;font-weight: bold;">@item.Dest</div>
+                                            <div class="Ordertable-cell " style="width: 80px;font-weight: bold;">@item.PackQty</div>
+                                        </a>
+                                    </div>
+                                }
+
+
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--PickOrder Modal -->
+    <div class="modal fade" id="PickOrderModal" role="dialog">
+        <div class="modal-dialog modal-lg modal-sm modal-xl" style="width: fit-content;margin: auto;margin-top: 8%;">
+            <!-- Modal content-->
+            <div class="modal-content">
+                <div class="modal-body" style="padding: 15px;">
+                    <div id="menu">
+                        <div class="Ordertable table-bordered table-info table-responsive-md" style="font-family:Verdana; margin-top:-1px;height:auto;width:100%;background-color:whitesmoke;">
+                            <div>
+                                <div class="Ordertable-cell " style="font-weight: bold;width: 90px;color: #ad225c;">Order No</div>
+                                <div class="Ordertable-cell " style="font-weight: bold;width: 97px;color: #ad225c;">Order Date</div>
+                                <div class="Ordertable-cell " style="width: 185px;font-weight: bold;color: #ad225c;">Consigner</div>
+                                <div class="Ordertable-cell " style="width: 185px;font-weight: bold;color: #ad225c;">Consignee</div>
+                                <div class="Ordertable-cell " style="width: 100px;font-weight: bold;color: #ad225c;">From</div>
+                                <div class="Ordertable-cell " style="width: 100px;font-weight: bold;color: #ad225c;">To</div>
+                                <div class="Ordertable-cell " style="width: 80px;font-weight: bold;color: #ad225c;">Total Qty</div>
+                                <div class="Ordertable-cell " style="width: 80px;font-weight: bold;color: #ad225c;">Bal Qty</div>
+                            </div>
+                            @foreach (var item in Model.pickOrders)
+                            {
+                                <div class="Ordertable-row hover" id="Orderlist">
+                                    <a href="/Logistics/@Model.Controller2/Index1?Document=@item.OrderNo&TableName=@Model.TableName&MainType=@Model.MainType&Mode=Edit&Header=@Model.Header&ViewDataId=@Model.ViewDataId&Controller2=@Model.Controller2&Module=@Model.Module&optiontype=@Model.OptionType&optioncode=@Model.OptionCode&PickDraft=true&Mode=@item.Mode">
+                                        <div class="Ordertable-cell " style="font-weight: bold;width: 90px;">@item.OrderNo</div>
+                                        <div class="Ordertable-cell " style="width: 97px;font-weight: bold;">@item.OrderDate</div>
+                                        <div class="Ordertable-cell " style="width: 185px;font-weight: bold;">@item.RecCode</div>
+                                        <div class="Ordertable-cell " style="width: 185px;font-weight: bold;">@item.SendCode</div>
+                                        <div class="Ordertable-cell " style="width: 100px;font-weight: bold;">@item.Source</div>
+                                        <div class="Ordertable-cell " style="width: 100px;font-weight: bold;">@item.Dest</div>
+                                        <div class="Ordertable-cell " style="width: 80px;font-weight: bold;">@item.PackQty</div>
+                                        <div class="Ordertable-cell " style="width: 80px;font-weight: bold;">@item.BalQty</div>
+                                    </a>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!--Lock Modal -->
+    <div class="modal" id="LockModal" style="margin-top: 8%;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+
+                <!-- Modal Header -->
+                <div class="modal-header">
+                    <h4 class="modal-title" style="font-weight:bold;text-align:center;">Lock System</h4>
+                </div>
+
+                <!-- Modal body -->
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class=" bold  col-md-1 control-label" style="color:black;">ALL </label>
+                        <div class="col-md-1" style="">
+                            @Html.CheckBoxFor(x => x.All, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.All })
+                        </div>
+                        <label class=" bold  col-md-1 control-label" style="color:black;">Dispach </label>
+                        <div class="col-md-1" style="">
+                            @Html.CheckBoxFor(x => x.Dispach, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.Dispach })
+                        </div>
+                        <label class=" bold  col-md-1 control-label" style="color:black;">Delivery </label>
+                        <div class="col-md-1" style="">
+                            @Html.CheckBoxFor(x => x.Delivery, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.Delivery })
+                        </div>
+                        <label class=" bold  col-md-1 control-label" style="color:black;">Billing </label>
+                        <div class="col-md-1" style="">
+                            @Html.CheckBoxFor(x => x.Billing, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.Billing })
+                        </div>
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class=" bold  col-md-1 control-label" style="color:black;">Remark </label>
+                    <div class="col-md-11" style="margin-left: -15px;">
+                        @Html.TextAreaFor(x => x.Remark, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @Value = Model.Remark })
+                    </div>
+                </div>
+                <br />
+                <br />
+                <br />
+                <br />
+
+                <!-- Modal footer -->
+                <div class="modal-footer">
+                    <div class="form-group">
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SaveLock" data-dismiss="modal">Save</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:60px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+
+                <button class="btn btn-danger" data-toggle="modal" data-target="#LockModal" style="font-size: 13px;padding:3px 12px;" id="btnBlock"><i class="glyphicon glyphicon-ban-circle" style="font-size: 2em;"></i><br />Lock</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnListPrint"><i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />List Print</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnShare"><i class="glyphicon glyphicon-share" style="font-size: 2em;"></i><br />Share</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnDownload"><i class="glyphicon glyphicon-download" style="font-size: 2em;"></i><br />Download</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnAttachment" data-toggle="modal" data-target="#Attachmentmodal"><i class="glyphicon glyphicon-paperclip" style="font-size: 2em;"></i><br />Attachment</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnPrint"><i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />Print</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="SaveDraft"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i><br />Save Draft</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="SaveDraft" data-toggle="modal" data-target="#Notemodal"><i class="glyphicon glyphicon-file" style="font-size: 2em;"></i><br />Save Note</button>
+            </div>
+        </div>
+        <div class="col-sm-offset-1 col-sm-2" style="">
+            <div class="pull-left">
+
+
+                <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnDispachLC"><i class="glyphicon glyphicon-forward" style="font-size: 2em;"></i><br />Dispach LC</button>
+
+                <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnDispachFM"><i class="glyphicon glyphicon-forward" style="font-size: 2em;"></i><br />Dispach FM</button>
+
+
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Submit"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i><br />Save</button>
+                <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="SubmitPrint"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i>&nbsp;&nbsp;&nbsp;<i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />Save And Print</button>
+                <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Edit" onclick="EditEntry();"><i class="glyphicon glyphicon-edit" style="font-size: 2em;"></i><br /> Edit</button>
+                <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete"><i class="glyphicon glyphicon-trash" style="font-size: 2em;"></i><br />Delete</button>
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel"><i class="glyphicon glyphicon-remove" style="font-size: 2em;"></i><br />Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+<input type="hidden" id="hdnAreaID" />
+@Html.HiddenFor(x => x.Document)
+
+<!--Attachment Modal -->
+<div class="example-modal">
+    <div id="Attachmentmodal" class="modal modal-default">
+        <div class="modal-dialog " style="width:1080px;">
+            <div id="AttachmentmodalDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Attachment</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="grid" id="FormatTable" style="max-height:600px;min-height:600px; width:100%; overflow: scroll;">
+                                <div id="" class="" style="width:100%;">
+                                    <div class="form-group">
+                                        <div class="col-sm-3" style="padding-top: 5px;">
+                                            <label class="col-sm-12 control-label" style="font-weight:bold;color:black;">Upload File:</label>
+                                        </div>
+                                        <div class="col-sm-5">
+                                            @Html.TextBoxFor(x => x.Attachment.UploadFile, new { @type = "file", @class = "form-control"@*, @style = "font-size:12pt;font-weight:bolder;"*@})
+                                        </div>
+                                        <div class="col-sm-4">
+                                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPhotoupload">Upload</button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-sm-12" id="ShowAllFile">
+                                        <hr />
+                                        @Html.Partial("LRAttachmentView", Model)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Note Modal -->
+<div class="example-modal">
+    <div id="Notemodal" class="modal modal-default">
+        <div class="modal-dialog " style="width:1080px;">
+            <div id="NotemodalDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Note</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="grid" id="FormatTable" style="max-height:600px;min-height:600px; width:100%; overflow: scroll;">
+                                <div id="" class="" style="width:100%;">
+                                    <div class="form-group">
+                                        <div class="col-sm-1" style="padding-top: 5px;">
+                                            <label class="col-sm-12 control-label" style="font-weight:bold;color:black;">Note:</label>
+                                        </div>
+                                        <div class="col-sm-10">
+                                            @Html.TextAreaFor(x => x.Note, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "1", @Value = Model.Note })
+                                        </div>
+
+                                    </div>
+                                    <div class="form-group col-sm-12" id="ShowAllFile" style="padding-top:5px;">
+                                        <div class="col-sm-2" style="float:right;">
+                                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnNote" data-dismiss="modal">Submit</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--View Modal -->
+<div class="example-modal">
+    <div id="updTfatsearch1" class="modal modal-default">
+        <div class="modal-dialog" style="width:1080px;">
+            <div id="updTfatsearchDiv1">
+                @*@Html.Partial("ImageView")*@
+            </div>
+        </div>
+    </div>
+</div>

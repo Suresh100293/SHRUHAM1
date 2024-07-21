@@ -1,0 +1,207 @@
+﻿@model ALT_ERP3.PurchaseVM
+@using Common;
+
+<script>
+    $(document).ready(function () {
+        LoadDelyCode()
+
+        $('#DelyCode').change(function () {
+
+            var ModelData = {};
+            ModelData["Code"] = $("#DelyCode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetShippingPartyDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    if ($('#hdnMType').val() == "SL") {
+                        $('#PlaceOfSDiv').html(result.PlsHtml);
+                    }
+                    var tab2size = $('#tabledata2 tbody tr').length;
+                    if (tab2size > 0) {
+                    CurrRateChange();
+                    }
+                    $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+            GetDelyAltAddByDely()
+            GetDelyContactByDely()
+            GetDisplayGSTId2ByDely()
+            //GetGSTCalculation()
+            //Calculation()
+        });
+    });
+
+    function LoadDelyCode() {
+        var url = '@Url.Action("GetPartyList")?BaseGr=' + $("#hdnMType").val() + '&Code=' + $("#hdnType").val();
+        $('#DelyCode').select2({
+            minimumInputLength: @Session["MinAcc"],
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength: @Session["MinAcc"],
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1,
+                            term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DelyCode', text: '@Model.DelyName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function GetDelyAltAddByDely() {
+        $("#DelyAltAdd").empty();
+        var url = '@Url.Action("GetDelyAltAddByDely")?DelyCode=' + $('#DelyCode').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#DelyAltAdd").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#DelyAltAdd').val('@Model.DelyAltAdd').attr("selected", "selected");
+                GetAddressToByDely()
+                GetDisplayGSTId2ByDely()
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function GetAddressToByDely() {
+        var url = '@Url.Action("GetAddressToSnoByDely")?Sno=' + $("#DelyAltAdd").val() + '&DelyCode=' + $('#DelyCode').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#AddressTo').text(result);
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function GetDisplayGSTId2ByDely() {
+        var url = '@Url.Action("PopulateGSTIDByDely")?Sno=' + $("#DelyAltAdd").val() + '&DelyCode=' + $('#DelyCode').val() + '&VATGSTApp=' + $("#hdnVATGSTApp").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#DisplayGSTId2').val(result.DisplayGSTId);
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function GetDelyContactByDely() {
+        $("#DelyContact").empty();
+        var url = '@Url.Action("GetDelyContactByDely")?DelyCode='+ $('#DelyCode').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#DelyContact").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#DelyContact').val('@Model.DelyContact').attr("selected", "selected");
+
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+</script>
+<div class="col-sm-6" style="padding-right:0px;">
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Ship-To Party:</label>
+        <div class="col-sm-6">
+            @Html.TextBoxFor(x => x.DelyCode, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;", @id = "DelyCode", @name = "DelyCode" })
+        </div>
+    </div>
+</div>

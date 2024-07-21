@@ -1,0 +1,140 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AccountOpeningVM
+@using Common;
+<script>
+    $(document).ready(function () {
+        $("#btnaddcc").click(function (event) {
+            event.preventDefault();
+            $('#ErrorMessage').hide();
+            var ModelData = {};
+            ModelData["SessionFlag"] = "Add";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetCCBreakLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addnewccentre').modal('show');
+                    $('#AddnNewCentreList').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="EditCCentre"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tEmpID"] = $(this).val();
+            ModelData["SessionFlag"] = "Edit";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetCCBreakLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addnewccentre').modal('show');
+                    $('#AddnNewCentreList').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="DeleteCCentre"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tEmpID"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteCCLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable2').html(data.Html);
+                    $('#Amount').val(data.Amount);
+                    if (data.AmtType == "Debit") {
+                        $('input:radio[name="AmtType"]').filter('[value="Debit"]').attr('checked', true);
+                    }
+                    if (data.AmtType == "Credit") {
+                        $('input:radio[name="AmtType"]').filter('[value="Credit"]').attr('checked', true);
+                    }
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    })
+</script>
+
+<table id="CCCentre" class="zui-table">
+    <thead>
+        <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+            <th style="width:1%;">Sr.</th>
+            @*<th style="width:10%;">Cost-Centre</th>*@
+            <th style="width:10%;">Branch</th>
+            <th style="width:10%;">Debit</th>
+            <th style="width:10%;">Credit</th>
+            <th colspan="4" style="width:10%;"><button type="button" id="btnaddcc" class="btn btn-primary btn-sm" title="Add" style="margin-left:10px;height:25px;border:1px solid black"><i class="fa fa-plus" style="color:black;"></i></button></th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.CostCentreList != null)
+        {
+            foreach (var item in Model.CostCentreList)
+            {
+                <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                    <td style="width:1%;">@item.tEmpID</td>
+                    @*<td style="width:10%;">@item.CostCentreName</td>*@
+                    <td style="width:10%;">@item.CostBranchN</td>
+                    @*<td contenteditable="true" style="width:10%;text-align:right">@item.Amount</td>*@
+                    <td style="width:10%;text-align:right">@item.Debit</td>
+                    <td style="width:10%;text-align:right">@item.Credit</td>
+                    <td colspan="4">
+                        <button type="button" action="EditCCentre" class="btn btn-warning btn-sm" value="@item.tEmpID" title="Edit"><i class="fa fa-edit"></i></button>
+                        <button type="button" action="DeleteCCentre" class="btn btn-danger btn-sm" value="@item.tEmpID" title="Edit"><i class="fa fa-trash-o"></i></button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+
+<div class="example-modal">
+    <div id="addnewccentre" class="modal modal-default">
+        <div class="modal-dialog" style="width:1040px;overflow:unset">
+            <div id="AddnNewCentreList">
+                @Html.Partial("CostCentreAdd")
+            </div>
+        </div>
+    </div>
+</div>

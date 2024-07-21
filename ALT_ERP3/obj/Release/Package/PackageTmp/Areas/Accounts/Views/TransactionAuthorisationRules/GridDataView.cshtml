@@ -1,0 +1,361 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.TransactionAuthorisationRulesVM
+@using Common;
+@{
+    ViewBag.Title = "";
+    Layout = null;
+}
+
+
+<script>
+    $(document).ready(function () {
+
+
+        var values = $('#hdnAppBranch').val();
+        $("#hdnAppBranch").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $(".listbox option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+        $(".listbox").change(function () {
+            $('#hdnAppBranch').val('');
+            var selected = [];
+            $(".listbox :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnAppBranch').val(selected)
+            return false;
+        });
+        $('.listbox,.listbox1').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '220',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Branch',
+        })
+
+
+        $(".listbox1").multiselect('selectAll', false);
+        $(".listbox1").multiselect('updateButtonText');
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadUserID()
+
+        $("#btnAddtoTable").click(function (event) {
+            event.preventDefault();
+
+            if ($('#TfatUserAudit_UserID').val() == "" || $('#TfatUserAudit_UserID').val() == null) {
+                alert("Please Select USer...!");
+                return;
+            }
+            //if ($('#hdnAppBranch').val() == "" || $('#hdnAppBranch').val() == null) {
+            //    alert("Please Select Branch...!");
+            //    return;
+            //}
+
+
+            var ModelData = {};
+            ModelData["TfatUserAudit_Sno"] = $('#TfatUserAudit_Sno').val();
+            ModelData["TfatUserAudit_UserLevel"] = $('#TfatUserAudit_UserLevel').val();
+            var UserIDname = $('#TfatUserAudit_UserID').select2('data').text;
+            ModelData["UserIDName"] = UserIDname;
+            ModelData["TfatUserAudit_UserID"] = $('#TfatUserAudit_UserID').val();
+            ModelData["TfatUserAudit_SancLimit"] = $('#TfatUserAudit_SancLimit').val();
+            ModelData["TfatUserAudit_SendEmail"] = $('#TfatUserAudit_SendEmail').is(':checked');
+            ModelData["TfatUserAudit_SendMSG"] = $('#TfatUserAudit_SendMSG').is(':checked');
+            ModelData["TfatUserAudit_SendSMS"] = $('#TfatUserAudit_SendSMS').is(':checked');
+            ModelData["AppBranch"] = $('#hdnAppBranch').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddToTable")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message);
+                    }
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="editgriddatarow"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tEmpID"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("PickFromTable")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#griddatatable').html(data.Html);
+                    debugger;
+                    $("#hdnAppBranch").val(data.AppBranch);
+                    //if (data.AppBranch != "" && data.AppBranch != null)
+                    //{
+                    //    var values = data.AppBranch;
+                    //    $("#hdnAppBranch").val(values);
+                    //    if (values == "") {
+                    //    }
+                    //    else
+                    //    {
+                    //        $.each(values.split(","), function (i, e)
+                    //        {
+                    //            $(".listbox option[value='" + e + "']").prop("selected", true);
+                    //        });
+                    //    }
+                    //}
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnSaveEdit").click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["tEmpID"] = $('#tEmpID').val();
+            ModelData["TfatUserAudit_Sno"] = $('#TfatUserAudit_Sno').val();
+            ModelData["TfatUserAudit_UserLevel"] = $('#TfatUserAudit_UserLevel').val();
+            var UserIDname = $('#TfatUserAudit_UserID').select2('data').text;
+            ModelData["UserIDName"] = UserIDname;
+            ModelData["TfatUserAudit_UserID"] = $('#TfatUserAudit_UserID').val();
+            ModelData["TfatUserAudit_SancLimit"] = $('#TfatUserAudit_SancLimit').val();
+            ModelData["TfatUserAudit_SendEmail"] = $('#TfatUserAudit_SendEmail').is(':checked');
+            ModelData["TfatUserAudit_SendMSG"] = $('#TfatUserAudit_SendMSG').is(':checked');
+            ModelData["TfatUserAudit_SendSMS"] = $('#TfatUserAudit_SendSMS').is(':checked');
+            ModelData["AppBranch"] = $('#hdnAppBranch').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddToTableEdit")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="deletegriddatarow"]').click(function (event) {
+            event.preventDefault(event);
+            var url = '@Url.Action("DeleteTableRow")?tEmpID=' + $(this).val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadUserID() {
+        var url = '@Url.Action("AutoCompleteUserID")'
+        $('#TfatUserAudit_UserID').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatUserAudit_UserID', text: '@Model.UserIDName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function SetListBox() {
+
+    }
+</script>
+
+<div class="grid" id="griddatatable" style=" min-height: 300px; max-height: 300px; width: auto;overflow:auto; ">
+    <table id="gridtable" class="zui-table">
+        <thead>
+            <tr role="row" style="font-family:Verdana;font-size:10pt;">
+                <th style="width: 7%;vertical-align:inherit;">Sr.</th>
+                <th style="width: 8%;vertical-align:inherit;">Level</th>
+                <th style="width: 22%;vertical-align:inherit;">UserID</th>
+                <th style="width: 22%;vertical-align:inherit;">Branch</th>
+                <th style="width: 13%;vertical-align:inherit;">Limit Amt</th>
+                <th style="width: 12%;vertical-align:inherit;">Email</th>
+                <th style="width: 12%;vertical-align:inherit;">Msg</th>
+                <th style="width: 12%;vertical-align:inherit;">SMS</th>
+                <th style="width: 3%;"></th>
+                <th style="width: 3%;"></th>
+            </tr>
+            <tr style="background-color:gainsboro">
+                <td>
+                    @Html.TextBoxFor(x => x.tEmpID, new { @class = "form-control", @readonly = "readonly", @style = "text-align:right;", @Name = "tEmpID", @Id = "tEmpID" })
+                </td>
+                <td style="text-align:right;">
+                    @Html.TextBoxFor(x => x.TfatUserAudit_UserLevel, new { @class = "form-control", @style = "text-align:right;", @Name = "TfatUserAudit_UserLevel", @Id = "TfatUserAudit_UserLevel" })
+                </td>
+                <td style="text-align:left;">
+                    @Html.TextBoxFor(x => x.TfatUserAudit_UserID, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatUserAudit_UserID", @Name = "TfatUserAudit_UserID" })
+                </td>
+                <td style="text-align:left;padding: 0% 0% 0% 1%;">
+                    @Html.ListBoxFor(x => Model.AppBranchL, Model.Branches, new { @class = "listbox", @id = "AppBranch", @style = "margin-left:10% !important;" })
+                </td>
+                <td style="text-align:right;">
+                    @Html.TextBoxFor(x => x.TfatUserAudit_SancLimit, new { @class = "form-control", @style = "text-align:right;", @Name = "TfatUserAudit_SancLimit", @Id = "TfatUserAudit_SancLimit" })
+                </td>
+                <td style="text-align:center;">
+                    @Html.CheckBoxFor(x => x.TfatUserAudit_SendEmail, new { @id = "TfatUserAudit_SendEmail", @Name = "TfatUserAudit_SendEmail", @style = "height:16px;width:16px;" })
+                </td>
+                <td style="text-align:center;">
+                    @Html.CheckBoxFor(x => x.TfatUserAudit_SendMSG, new { @id = "TfatUserAudit_SendMSG", @Name = "TfatUserAudit_SendMSG", @style = "height:16px;width:16px;" })
+                </td>
+                <td style="text-align:center;">
+                    @Html.CheckBoxFor(x => x.TfatUserAudit_SendSMS, new { @id = "TfatUserAudit_SendSMS", @Name = "TfatUserAudit_SendSMS", @style = "height:16px;width:16px;" })
+                </td>
+                <td style="vertical-align:inherit;" colspan="1">
+                    @if (Model.Mode != "Delete")
+                    {
+                        <button type="button" id="btnAddtoTable" class="btn btn-primary btn-sm" title="Add" style="margin-left:7px;width:25px;height:25px;border:1px solid black;"><i class="fa fa-plus" style="color:black;"></i></button>
+                    }
+                </td>
+                <td>
+                    @if (Model.Mode != "Delete")
+                    {
+                        <button type="button" id="btnSaveEdit" class="btn btn-primary btn-sm" title="Save" style="margin-left:7px;width:25px;height:25px;border:1px solid black;"><i class="fa fa-save" style="color:black;"></i></button>
+                    }
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.GridDataVM != null)
+            {
+                foreach (var item in @Model.GridDataVM.Where(x => x.tempIsDeleted == false).ToList())
+                {
+                    <tr style="font-family:Verdana;font-size:10pt;">
+                        <td style="vertical-align:inherit;">@item.tEmpID</td>
+                        <td style="text-align:right;vertical-align:inherit;">@item.TfatUserAudit_UserLevel</td>
+                        <td style="text-align:left;vertical-align:inherit;">@item.UserIDName</td>
+                        <td style="text-align:left;vertical-align:inherit;padding: 0% 0% 0% 1%;">
+                            @*<center>@Html.ListBoxFor(m => m.AppBranch, new MultiSelectList(Model.Branches)).</center>*@
+                            @*@Html.ListBoxFor(x => item.AppBranch, new SelectList(item.Branches, "Value", "Text"), new { @class = "listbox" })*@
+                            @Html.ListBoxFor(x => item.AppBranch, new SelectList(item.Branches, "Value", "Text"), new { @class = "listbox1" })
+                        </td>
+                        <td style="text-align:right;vertical-align:inherit;">@item.TfatUserAudit_SancLimit</td>
+                        <td style="text-align:center;vertical-align:inherit;">@item.TfatUserAudit_SendEmail</td>
+                        <td style="text-align:center;vertical-align:inherit;">@item.TfatUserAudit_SendMSG</td>
+                        <td style="text-align:center;vertical-align:inherit;">@item.TfatUserAudit_SendSMS</td>
+                        <td>
+                            @if (Model.Mode != "Delete")
+                            {
+                                <button type="button" action="editgriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-warning btn-sm" value="@item.tEmpID" title="Edit"><i class="fa fa-edit"></i></button>
+                            }
+                        </td>
+                        <td>
+                            @if (Model.Mode != "Delete")
+                            {
+                                <button type="button" action="deletegriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-danger btn-sm" value="@item.tEmpID" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            }
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+
+
+@Html.HiddenFor(x => x.AppBranch, new { @id = "hdnAppBranch" })
+
+
+@* Code Auto Generated on Mon 22-Apr-2019 04:49 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 32
+    by Team Shruham Software *@

@@ -1,0 +1,274 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.MyReportCentreVM
+@using Common;
+@{
+    ViewBag.Title = "Report Centre";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#MyReportCentre').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                ReportHeader_Code: {required: true,},
+                ReportHeader_SubCodeOf: {required: true,},
+               },
+            messages: {
+                ReportHeader_Code: {required: 'Code is Required',},
+                ReportHeader_SubCodeOf: {required: 'SubCodeOf is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#ReportHeader_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#ReportHeader_SubCodeOf").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#ReportHeader_FontSize").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#MyReportCentre").validate().form() == false)
+            //    return;
+
+            if ($("#ReportHeader_Code").val() == null || $("#ReportHeader_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Format Code is Required..');
+                return;
+            }
+            if ($("#ReportHeader_SubCodeOf").val() == null || $("#ReportHeader_SubCodeOf").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Parent Format is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["ReportHeader_Code"] = $("#ReportHeader_Code").val();
+            ModelData["ReportHeader_DefaultReport"] = $("#ReportHeader_DefaultReport").is(':checked');
+            ModelData["ReportHeader_RunAtStart"] = $("#ReportHeader_RunAtStart").is(':checked');
+            ModelData["ReportHeader_SubCodeOf"] = $("#ReportHeader_SubCodeOf").val();
+            ModelData["ReportHeader_FormatHead"] = $("#ReportHeader_FormatHead").val();
+            ModelData["ReportHeader_Locked"] = $("#ReportHeader_Locked").is(':checked');
+            ModelData["ReportHeader_SelectQuery"] = $("#ReportHeader_SelectQuery").val();
+            ModelData["ReportHeader_Tables"] = $("#ReportHeader_Tables").val();
+            ModelData["ReportHeader_OrderBy"] = $("#ReportHeader_OrderBy").val();
+            ModelData["ReportHeader_UserQuery"] = $("#ReportHeader_UserQuery").val();
+            ModelData["ReportHeader_InputPara"] = $("#ReportHeader_InputPara").val();
+            ModelData["ReportHeader_ParaString"] = $("#ReportHeader_ParaString").val();
+            ModelData["ReportHeader_SubTotalOn"] = $("#ReportHeader_SubTotalOn").val();
+            ModelData["ReportHeader_SortedOn"] = $("#ReportHeader_SortedOn").val();
+            ModelData["ReportHeader_DrillQuery"] = $("#ReportHeader_DrillQuery").val();
+            ModelData["ReportHeader_FontName"] = $("#ReportHeader_FontName").val();
+            ModelData["ReportHeader_FontSize"] = $("#ReportHeader_FontSize").val();
+            ModelData["ReportHeader_ForeColor"] = $("#ReportHeader_ForeColor").val();
+            ModelData["ReportHeader_DontSort"] = $("#ReportHeader_DontSort").is(':checked');
+            ModelData["ReportHeader_DontPrintTotal"] = $("#ReportHeader_DontPrintTotal").is(':checked');
+            ModelData["ReportHeader_RemoveUnused"] = $("#ReportHeader_RemoveUnused").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="MyReportCentre" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Format Code:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.ReportHeader_Code, new { @maxlength = "75", @readonly = "readonly", @class = "form-control", @Name = "ReportHeader_Code", @Value = Model.ReportHeader_Code, @Id = "ReportHeader_Code" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.ReportHeader_Code, new { @maxlength = "75", @class = "form-control", @Name = "ReportHeader_Code", @Value = Model.ReportHeader_Code, @Id = "ReportHeader_Code" })
+                    }
+                </div>
+                <label class="col-sm-1 control-label">is Default?:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.ReportHeader_DefaultReport, new { @value = Model.ReportHeader_DefaultReport, @id = "ReportHeader_DefaultReport", @name = "ReportHeader_DefaultReport", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Run At Start:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.ReportHeader_RunAtStart, new { @value = Model.ReportHeader_RunAtStart, @id = "ReportHeader_RunAtStart", @name = "ReportHeader_RunAtStart", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Parent Format:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_SubCodeOf, new { @maxlength = "30", @class = "form-control", @Name = "ReportHeader_SubCodeOf", @Value = Model.ReportHeader_SubCodeOf, @Id = "ReportHeader_SubCodeOf" })
+                </div>
+                <label class="col-sm-1 control-label">Format Head:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_FormatHead, new { @maxlength = "100", @class = "form-control", @Name = "ReportHeader_FormatHead", @Value = Model.ReportHeader_FormatHead, @Id = "ReportHeader_FormatHead" })
+                </div>
+                <label class="col-sm-1 control-label">Format Locked:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.ReportHeader_Locked, new { @value = Model.ReportHeader_Locked, @id = "ReportHeader_Locked", @name = "ReportHeader_Locked", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Select Query:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_SelectQuery, new { @maxlength = "10", @class = "form-control", @Name = "ReportHeader_SelectQuery", @Value = Model.ReportHeader_SelectQuery, @Id = "ReportHeader_SelectQuery" })
+                </div>
+                <label class="col-sm-1 control-label">From Clause:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_Tables, new { @maxlength = "100", @class = "form-control", @Name = "ReportHeader_Tables", @Value = Model.ReportHeader_Tables, @Id = "ReportHeader_Tables" })
+                </div>
+                <label class="col-sm-1 control-label">Order By:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_OrderBy, new { @maxlength = "100", @class = "form-control", @Name = "ReportHeader_OrderBy", @Value = Model.ReportHeader_OrderBy, @Id = "ReportHeader_OrderBy" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Where Clause:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_UserQuery, new { @maxlength = "10", @class = "form-control", @Name = "ReportHeader_UserQuery", @Value = Model.ReportHeader_UserQuery, @Id = "ReportHeader_UserQuery" })
+                </div>
+                <label class="col-sm-1 control-label">User Parameters:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_InputPara, new { @maxlength = "255", @class = "form-control", @Name = "ReportHeader_InputPara", @Value = Model.ReportHeader_InputPara, @Id = "ReportHeader_InputPara" })
+                </div>
+                <label class="col-sm-1 control-label">Fixed Para:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_ParaString, new { @maxlength = "100", @class = "form-control", @Name = "ReportHeader_ParaString", @Value = Model.ReportHeader_ParaString, @Id = "ReportHeader_ParaString" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Sub-Total On:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_SubTotalOn, new { @maxlength = "30", @class = "form-control", @Name = "ReportHeader_SubTotalOn", @Value = Model.ReportHeader_SubTotalOn, @Id = "ReportHeader_SubTotalOn" })
+                </div>
+                <label class="col-sm-1 control-label">Sorted On:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_SortedOn, new { @maxlength = "30", @class = "form-control", @Name = "ReportHeader_SortedOn", @Value = Model.ReportHeader_SortedOn, @Id = "ReportHeader_SortedOn" })
+                </div>
+                <label class="col-sm-1 control-label">Sub-Grid Format:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_DrillQuery, new { @maxlength = "10", @class = "form-control", @Name = "ReportHeader_DrillQuery", @Value = Model.ReportHeader_DrillQuery, @Id = "ReportHeader_DrillQuery" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Font Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_FontName, new { @maxlength = "25", @class = "form-control", @Name = "ReportHeader_FontName", @Value = Model.ReportHeader_FontName, @Id = "ReportHeader_FontName" })
+                </div>
+                <label class="col-sm-1 control-label">Font Size:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.ReportHeader_FontSize, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "ReportHeader_FontSize", @Value = Model.ReportHeader_FontSize, @Id = "ReportHeader_FontSize" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Fore Color:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ReportHeader_ForeColor, new { @maxlength = "15", @class = "form-control", @Name = "ReportHeader_ForeColor", @Value = Model.ReportHeader_ForeColor, @Id = "ReportHeader_ForeColor" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Don't Sort Cols:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.ReportHeader_DontSort, new { @value = Model.ReportHeader_DontSort, @id = "ReportHeader_DontSort", @name = "ReportHeader_DontSort", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">No Totals:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.ReportHeader_DontPrintTotal, new { @value = Model.ReportHeader_DontPrintTotal, @id = "ReportHeader_DontPrintTotal", @name = "ReportHeader_DontPrintTotal", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Remove Unused:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.ReportHeader_RemoveUnused, new { @value = Model.ReportHeader_RemoveUnused, @id = "ReportHeader_RemoveUnused", @name = "ReportHeader_RemoveUnused", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            @* iX9: -- Code for Body Starts -- *@
+            @* iX9: Tab Body Panels *@
+            @* iX9: -- Call Grid Partial View -- *@
+            <div>
+                @Html.Partial("GridDataView")
+            </div>
+            @* iX9: -- Code for Body Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Sat 20-Jul-2019 12:31 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 48
+    by Team Suchan, T.FAT *@
+

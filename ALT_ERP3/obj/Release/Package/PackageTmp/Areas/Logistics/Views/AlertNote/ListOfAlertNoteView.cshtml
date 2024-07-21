@@ -1,0 +1,273 @@
+﻿@model IEnumerable<ALT_ERP3.Areas.Logistics.Models.AlertNoteVM>
+@using Common;
+@{
+    ViewBag.Title = "Alert Note";
+    Layout = null;
+}
+<link href="https://fonts.googleapis.com/css?family=Roboto+Condensed:300,400,700" rel="stylesheet" type="text/css">
+<style>
+    .spanBlink {
+        background-color: #d0d4d3;
+        font-size: 10pt;
+        font-family: Tahoma;
+        font-weight: bold;
+        color: #f90e90fa;
+        animation: blink 2s linear infinite;
+    }
+
+    @@keyframes blink {
+        0% {
+            opacity: 0;
+        }
+
+        50% {
+            opacity: .5;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    #HideImg {
+        visibility: hidden;
+        display: none;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        right: 0px;
+        box-shadow: 0px 0px 20px 0px black;
+        width: 90%;
+        height: 80%;
+        margin: 5%;
+        padding: 7px;
+        background-color: white;
+    }
+
+    #close_image {
+        width: 24px;
+        height: 22px;
+        visibility: hidden;
+        display: none;
+        position: absolute;
+    }
+
+    #close_image {
+        top: 9.5%;
+        left: 820px;
+        background-color: red;
+        color: white;
+    }
+</style>
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $("#close_image").click(function () {
+            close();
+        });
+
+        $('button[action|="DeleteAlertNote"]').click(function (event) {
+            debugger;
+            event.preventDefault();
+            debugger;
+            $('.spinner').show();
+            var url = '/Logistics/AlertNote/DeleteAlertNote';
+            var Row = $(this).closest("tr");
+            var ModelData = {};
+            ModelData["DocReceived"] = $(this).val();
+            ModelData["Type"] = Row.find('td').eq(0).text();
+            ModelData["TypeCode"] = Row.find('td').eq(1).text();
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $('.spinner').hide();
+                    if (data.Status == "Success") {
+                        Row.remove();
+                    } else {
+                        alert(data.Message);
+                    }
+
+                },
+            });
+        });
+
+    });
+
+    function Commonbig_image(src, index) {
+        debugger;
+        $("#CommonHideImg1").fadeIn(1000);
+        $('#CommonHideImg1').attr('src', src);
+        Commonvisibility();
+        document.getElementById("Commonimg_no").value = index;
+    }
+    function Commonvisibility() {
+        $('#CommonImgView3').modal('show');
+        document.getElementById("CommonHideImg1").style.visibility = "visible";
+        document.getElementById("CommonHideImg1").style.display = "block";
+    }
+    function CommonHideOnlyCurrntModel() {
+        $('#CommonImgView3').modal('hide');
+    }
+</script>
+
+
+<div class="form-group">
+    @*@if (Model != null || Model.Count() > 0)*@
+
+    <table class="zui-table" style="width:100%;">
+        <thead>
+            <tr>
+                <th style="width:5%;" class="hidden">Type</th>
+                <th style="width:5%;" class="hidden">Serial</th>
+                <th style="width:5%;">Alert/Note</th>
+                <th style="width:5%;">Alert Type</th>
+                <th style="width:5%;">Branch</th>
+                <th style="width:60%;">Details</th>
+                <th style="width:5%;">Action</th>
+                <th style="width:20%;" colspan="3">Attachment</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td class="hidden">
+                        @item.Type
+                    </td>
+                    <td class="hidden">
+                        @item.TypeCode
+                    </td>
+                    @if (String.IsNullOrEmpty(item.RefType))
+                    {
+                        <td>
+                            NOTE
+                        </td>
+                        <td></td>
+                    }
+                    else
+                    {
+                        <td>
+                            ALERT
+                        </td>
+                        <td>
+                            @item.RefType
+                        </td>
+                    }
+
+                    <td>
+                        @item.Branch
+                    </td>
+                    <td>
+                        @{
+                            var MSH = "";
+                            if (item.Stop)
+                            {
+                                MSH = "ALERTNOTE " + item.TypeCode + " BY  " + item.ENTEREDBY + " DT: " + item.DocDate + " ACTIVITY STOP";
+                            }
+                            else
+                            {
+                                MSH = "ALERTNOTE " + item.TypeCode + " BY  " + item.ENTEREDBY + " DT: " + item.DocDate;
+                            }
+
+                        }
+                        <table class="zui-table" style="width:100%;">
+                            <tbody>
+                                <tr>
+                                    @if (item.Bling)
+                                    {
+                                        <td class="spanBlink">@MSH</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="">@MSH</td>
+                                    }
+                                </tr>
+                                <tr>
+                                    <td class="">@item.Remark</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                    <td>
+                        @if (item.AllowDelete)
+                        {
+                            <center><button type="button" action="DeleteAlertNote" value="@item.DocReceived" style="padding: 4px 8px;all:unset;cursor:pointer;" title="Delete"><i class="glyphicon glyphicon-trash" style="color: red;font-size:30px;"></i></button></center>
+                        }
+                    </td>
+                    @if (item.attachments.Count() != 0)
+                    {
+                        <td style="display: flex;">
+                            @foreach (var attachment in item.attachments)
+                            {
+                                <a class="btnShow" id="@attachment.tempId"><img src="@string.Format("data:image/gif;base64,{0}", attachment.ImageStr)" alt=@attachment.FileName class="img-thumbnail" onclick="Commonbig_image(this.src,4)" style="height:50px;width:100px;" /></a>
+                            }
+                        </td>
+                    }
+                    else
+                    {
+                        <td></td>
+                    }
+
+
+
+
+
+                </tr>
+                if (item.LoadingMessage != "" && item.LoadingMessage != null)
+                {
+                    <tr>
+                        <td colspan="6" style="color:red;"><center>@item.LoadingMessage</center></td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+</div>
+
+<input type="hidden" id="Commonimg_no" value="1">
+
+<!--Attachment View Modal -->
+<div class="example-modal">
+    <div id="CommonImgView3" class="modal modal-default" style="margin-top:0%;height:fit-content;width:fit-content;">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="CommonImgView3Div">
+                <div class="modal-body" style="">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" onclick="CommonHideOnlyCurrntModel();" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>View Attachment</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+
+                                <img src="" id="CommonHideImg1" style="height: 400px;width: auto;">
+
+                            </div>
+                            <br />
+
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button onclick="CommonHideOnlyCurrntModel();" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+

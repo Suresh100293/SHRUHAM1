@@ -1,0 +1,1162 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.ContractMasterVM
+@using Common;
+@{
+    ViewBag.Title = "NEWIndex";
+    Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+<style>
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    legend {
+        margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;
+    }
+</style>
+<script type="text/javascript">
+
+    var isTreeOpen = false;
+    $(document).ready(function () {
+
+        
+        
+
+
+        if ('@Model.Charge_On_Actual_Weight'=="true") {
+            $("#Charge_On_Actual_Weight").prop("checked", true);
+        } else if ('@Model.Charge_On_Charged_Weight'=="true") {
+            $("#Charge_On_Charged_Weight").prop("checked", true);
+        }
+
+        if ('@Model.Type_Of_Charges_WT' == "true") {
+            $("#Type_Of_Charges_WT").prop("checked", true);
+        } else if ('@Model.Type_Of_Charges_Slab' == "true") {
+            $("#Type_Of_Charges_Slab").prop("checked", true);
+        }
+
+        
+
+        $(".BasedOnService").hide();
+        Services();
+        FillTreeView();
+        LoadFrom();
+        LoadTo();
+
+        if ('@Model.Mode'=="Add") {
+        if ($('#hdnAreaID').val()=='') {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Please Select Area Then We Start The Process.');
+
+            }
+        }
+
+
+        $("#Rate").blur(function () {
+            $("#Freight").val($("#Rate").val());
+        });
+
+        $('#expandall').click(function () {
+            
+            ExpandOrCollapse();
+        });
+
+        $('#GetArea').click(function (event) {
+            event.preventDefault();
+
+            var divId = [];
+            $("#treeviewcontrol").jstree("get_selected").each(function (key, value) {
+                divId.push(this.id);
+            });
+            if (divId == '') { return; }
+            $('#hdnAreaID').val(divId);
+            if ($('#hdnAreaID').val() == '') {
+                $("#ShowPanel").hide();
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select Area Then We Start The Process.');
+
+            } else {
+                $("#ShowPanel").show();
+                $("#ErrorMessage").hide();
+            }
+
+
+
+
+            //alert(divId);
+        });
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        $("#From_Date").blur(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var date = $("#From_Date").val();
+            var regex = /(((0|1)[0-9]|2[0-9]|3[0-1])\.(0[1-9]|1[0-2])\.((19|20)\d\d))$/;
+            if (!(regex.test(date))) {
+                //$("#From_Date").css("background-color", "red");
+
+                $("#FDisallow").show();
+                $("#FAllow").hide();
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please provide valid date in format dd.mm.yyyy, including leading zero. Exapmle: 01.02.2015');
+                return;
+            } else {
+                $("#FAllow").show();
+                $("#FDisallow").hide();
+            }
+        });
+
+        $("#To_Date").blur(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var date = $("#To_Date").val();
+            var regex = /(((0|1)[0-9]|2[0-9]|3[0-1])\.(0[1-9]|1[0-2])\.((19|20)\d\d))$/;
+            if (!(regex.test(date))) {
+                $("#TDisallow").show();
+                $("#TAllow").hide();
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please provide valid date in format dd.mm.yyyy, including leading zero. Exapmle: 01.02.2015');
+                return;
+            } else {
+                $("#TAllow").show();
+                $("#TDisallow").hide();
+            }
+        });
+
+
+
+
+
+
+
+
+
+
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+
+            var result = confirm("Are you sure you want to delete?");
+            if (result) {
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/ContractMaster/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+            } else {
+                $('.spinner').hide();
+                window.location.href = "/Accounts/ContractMaster/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+            }
+
+
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            
+            if ('@Model.Mode' == "Add") {
+                if ($('#hdnAreaID').val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Select Area Then We Start The Process.');
+                    return;
+                }
+            }
+            if ($("#Customer_Name").val() == null || $("#Customer_Name").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Customer_Name is Required..');
+                return;
+            }
+
+
+
+            if ($("#From_Date").val() == null || $("#From_Date").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Valid From is Required..');
+                return;
+            } else {
+                
+                var date = $("#From_Date").val();
+                var regex = /(((0|1)[0-9]|2[0-9]|3[0-1])\.(0[1-9]|1[0-2])\.((19|20)\d\d))$/;
+                if (!(regex.test(date))) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please provide valid date in format dd.mm.yyyy, including leading zero. Exapmle: 01.02.2015');
+                    return;
+                }
+            }
+
+            if ($("#To_Date").val() == null || $("#To_Date").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Valid To is Required..');
+                return;
+            } else {
+                
+                var date = $("#To_Date").val();
+                var regex = /(((0|1)[0-9]|2[0-9]|3[0-1])\.(0[1-9]|1[0-2])\.((19|20)\d\d))$/;
+                if (!(regex.test(date))) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please provide valid date in format dd.mm.yyyy, including leading zero. Exapmle: 01.02.2015');
+                    return;
+                }
+            }
+            //Sur
+
+            if ($("#From").val() == null || $("#From").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Source is Required..');
+                return;
+            }
+
+            if ($("#To").val() == null || $("#To").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Destination is Required..');
+                return;
+            }
+
+
+            if ($("#Services").val() == null || $("#Services").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Package  is Required..');
+                return;
+            }
+
+            if (($("#Services").val() == "100002") || ($("#Services").val() == "100003")) {
+
+                var fflag = false;
+                
+                //Type_Of_Charges_WT
+                //Type_Of_Charges_Slab
+
+                if ($("#Type_Of_Charges_WT").prop("checked")) {
+                    fflag = true;
+                } else if ($("#Type_Of_Charges_Slab").prop("checked")) {
+                    fflag = true;
+                }
+
+
+
+                //if ($("#Type_Of_Charges_WT").prop("checked", true)) {
+                //    fflag = true;
+                //}else if ($("#Type_Of_Charges_Slab").prop("checked", true)) {
+                //    fflag = true;
+                //}
+
+                if (!(fflag)) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Type Of Charge is Required..');
+                    return;
+                }
+
+                if ($("#Start_Range").val() == null || $("#Start_Range").val() == '' || $("#Start_Range").val() == '0') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Range From is Required..');
+                    return;
+                }
+
+                if ($("#End_Range").val() == null || $("#End_Range").val() == '' || $("#End_Range").val() == '0') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Range To is Required..');
+                    return;
+                }
+
+            }
+
+
+            // fflag = false;
+
+            //if ($("#Charge_On_Actual_Weight").prop("checked", true)) {
+            //    fflag = true;
+            //} else  if ($("#Charge_On_Charged_Weight").prop("checked", true)) {
+            //    fflag = true;
+            //}
+
+            //if (!(fflag)) {
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Charge_On is Required..');
+            //    return;
+            //}
+
+
+            if ($("#Rate").val() == null || $("#Rate").val() == '' || $("#Rate").val() == '0') {
+                $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Rate is Required..');
+                return;
+            }
+
+
+
+
+
+            if ($("#LR_Charges").val() == null || $("#LR_Charges").val() == '' || $("#LR_Charges").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('LR Charges is Required..');
+                return;
+            }
+
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Area"] = $("#hdnAreaID").val();
+            ModelData["Customer_Name"] = $("#Customer_Name").val();
+            ModelData["From_Date"] = $("#From_Date").val();
+            ModelData["To_Date"] = $("#To_Date").val();
+            ModelData["From"] = $("#From").val();
+            ModelData["To"] = $("#To").val();
+            ModelData["Services"] = $("#Services").val();
+            if (($("#Services").val() == "100002") || ($("#Services").val() == "100003")) {
+                //hdnChargeOn hdnType_Of_Charge
+
+                //if ($("hdnType_Of_Charge").val() =="Type_Of_Charges_WT") {
+                //    ModelData["Type_Of_Charges_WT"] = true;
+                //} else if ($("hdnType_Of_Charge").val() == "Type_Of_Charges_Slab") {
+                //    ModelData["Type_Of_Charges_Slab"] = true;
+                //}
+                
+                if ($("input[name='Type_Of_Charges']:checked").val() =="Type_Of_Charges_WT") {
+                    ModelData["Type_Of_Charges_WT"] = true;
+                } else {
+                    ModelData["Type_Of_Charges_Slab"] = true;
+                }
+
+                //if ($("#Type_Of_Charges_WT").prop("checked", true)) {
+                //    ModelData["Type_Of_Charges_WT"] = true;
+                //}else if ($("#Type_Of_Charges_Slab").prop("checked", true)) {
+                //    ModelData["Type_Of_Charges_Slab"] = true;
+                //}
+
+                ModelData["Start_Range"] = $("#Start_Range").val();
+                ModelData["End_Range"] = $("#End_Range").val();
+            }
+
+            ModelData["Rate"] = $("#Rate").val();
+            //new
+            //if ($("hdnChargeOn").val() == "Charge_On_Actual_Weight") {
+            //    ModelData["Charge_On_Actual_Weight"] = true;
+            //} else if ($("hdnChargeOn").val() == "Charge_On_Charged_Weight") {
+            //    ModelData["Charge_On_Charged_Weight"] = true;
+            //}
+
+
+            if ($("input[name='Charge_On']:checked").val() == "Charge_On_Actual_Weight") {
+                ModelData["Charge_On_Actual_Weight"] = true;
+            } else {
+                ModelData["Charge_On_Charged_Weight"] = true;
+            }
+
+            //if ($("#Charge_On_Actual_Weight").prop("checked", true)) {
+            //    ModelData["Charge_On_Actual_Weight"] = true;
+            //} else if ($("#Charge_On_Charged_Weight").prop("checked", true)) {
+            //    ModelData["Charge_On_Charged_Weight"] = true;
+            //}
+
+            ModelData["Freight"] = $("#Freight").val();
+            ModelData["LR_Charges"] = $("#LR_Charges").val();
+            ModelData["Hamali_Expenses"] = $("#Hamali_Expenses").val();
+            ModelData["Collection_Charges"] = $("#Collection_Charges").val();
+            ModelData["Door_Delivery"] = $("#Door_Delivery").val();
+            ModelData["Varai_Charges"] = $("#Varai_Charges").val();
+            ModelData["Loading_Charges"] = $("#Loading_Charges").val();
+            ModelData["UnLoading_Charges"] = $("#UnLoading_Charges").val();
+            ModelData["Detention_Charges"] = $("#Detention_Charges").val();
+            ModelData["Octroi_Charges"] = $("#Octroi_Charges").val();
+            ModelData["Octroi_Cleaning"] = $("#Octroi_Cleaning").val();
+            ModelData["Union_Charges"] = $("#Union_Charges").val();
+            ModelData["OverLoad_Charges"] = $("#OverLoad_Charges").val();
+            ModelData["WareHousing_Charges"] = $("#WareHousing_Charges").val();
+            ModelData["Other_Charges"] = $("#Other_Charges").val();
+            ModelData["Service_Tax"] = $("#Service_Tax").val();
+            ModelData["Handling_Charges"] = $("#Handling_Charges").val();
+            ModelData["TDs_Deduction"] = $("#TDs_Deduction").val();
+            ModelData["Swachh_Bharat_Cess"] = $("#Swachh_Bharat_Cess").val();
+            ModelData["Krishi_Kalyan_Cess"] = $("#Krishi_Kalyan_Cess").val();
+            ModelData["FreightC"] = $("#FreightC").val();
+            ModelData["LR_ChargesC"] = $("#LR_ChargesC").val();
+            ModelData["Hamali_ExpensesC"] = $("#Hamali_ExpensesC").val();
+            ModelData["Collection_ChargesC"] = $("#Collection_ChargesC").val();
+            ModelData["Door_DeliveryC"] = $("#Door_DeliveryC").val();
+            ModelData["Varai_ChargesC"] = $("#Varai_ChargesC").val();
+            ModelData["Loading_ChargesC"] = $("#Loading_ChargesC").val();
+            ModelData["UnLoading_ChargesC"] = $("#UnLoading_ChargesC").val();
+            ModelData["Detention_ChargesC"] = $("#Detention_ChargesC").val();
+            ModelData["Octroi_ChargesC"] = $("#Octroi_ChargesC").val();
+            ModelData["Octroi_CleaningC"] = $("#Octroi_CleaningC").val();
+            ModelData["Union_ChargesC"] = $("#Union_ChargesC").val();
+            ModelData["OverLoad_ChargesC"] = $("#OverLoad_ChargesC").val();
+            ModelData["WareHousing_ChargesC"] = $("#WareHousing_ChargesC").val();
+            ModelData["Other_ChargesC"] = $("#Other_ChargesC").val();
+            ModelData["Service_TaxC"] = $("#Service_TaxC").val();
+            ModelData["Handling_ChargesC"] = $("#Handling_ChargesC").val();
+            ModelData["TDs_DeductionC"] = $("#TDs_DeductionC").val();
+            ModelData["Swachh_Bharat_CessC"] = $("#Swachh_Bharat_CessC").val();
+            ModelData["Krishi_Kalyan_CessC"] = $("#Krishi_Kalyan_CessC").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/ContractMaster/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+    //hdnChargeOn hdnType_Of_Charge
+
+    function CheckService() {
+        if (($("#Services").val() == "100002") || ($("#Services").val() == "100003")) {
+            $(".BasedOnService").show();
+        } else {
+            $(".BasedOnService").hide();
+        }
+    }
+
+
+    function ExpandOrCollapse() {
+        
+        if (isTreeOpen == false) {
+            $("#treeviewcontrol").jstree("open_all", "#0");
+            isTreeOpen = true;
+
+
+        } else {
+            $("#treeviewcontrol").jstree("close_all", "#0");
+            isTreeOpen = false;
+        }
+    }
+
+    function FillTreeView() {
+
+
+
+        $("#treeviewcontrol").jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/OrderRequest/TreeView",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: false,
+                checked_parent_open: false
+            },
+            plugins: ["themes", "json_data", "ui", ""]
+        });
+
+    };
+
+    function Services() {
+        
+        var url = '@Url.Action("Services")'
+        $('#Services').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Services', text: '@Model.Services_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                CheckService();
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+    function LoadFrom() {
+        var url = '@Url.Action("From")'
+        $('#From').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.From', text: '@Model.From_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadTo() {
+        var url = '@Url.Action("To")'
+        $('#To').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        From: $('#From').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.To', text: '@Model.To_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">Contract Master</b>
+
+        <span class="tools pull-right">
+            <a href="~/Accounts/ContractMaster/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <span class="tools pull-right" style="margin-right   :5px;">
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+                Show Tree
+            </button>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:35px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <fieldset class="col-md-offset-2 col-md-8" style="margin-top: 0px;">
+                <legend>Customer Details</legend>
+
+                <div class="panel panel-default">
+                    <div class="panel-body" id="ShowPanel">
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Customer Name:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.Customer_Name, new { @class = "form-control" })
+                            </div>
+                            @if (Model.Mode == "Edit")
+                            {
+                                <label class="col-md-offset-1 col-sm-2 control-label">Area:</label>
+                                <div class="col-sm-3">
+                                    @Html.TextBoxFor(x => x.Area, new { @class = "form-control" })
+                                </div>
+                            }
+
+
+                            <label class="col-sm-1 control-label"></label>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Valid From:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.From_Date, new { @class = "form-control Date" })
+                            </div>
+
+                            <div class="col-md-1" style="float:left;margin-top:3px;" hidden id="FAllow">
+                                <button class="btn btn-info btn-xs btn-round" style="margin-left: -15px;" disabled>
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                </button>
+                            </div>
+                            <div class="col-md-1" style="float:left;margin-top:3px;" id="FDisallow">
+                                <button class="btn btn-info btn-xs btn-round" style="margin-left: -15px;" disabled>
+                                    <span class="glyphicon glyphicon-remove"></span>
+                                </button>
+                            </div>
+
+                            <label class="col-sm-2 control-label">Valid To:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.To_Date, new { @class = "form-control Date" })
+                            </div>
+                            <div class="col-md-1" style="float:left;margin-top:3px;" hidden id="TAllow">
+                                <button class="btn btn-info btn-xs btn-round" style="margin-left: -15px;" disabled>
+                                    <span class="glyphicon glyphicon-ok"></span>
+                                </button>
+                            </div>
+                            <div class="col-md-1" style="float:left;margin-top:3px;" id="TDisallow">
+                                <button class="btn btn-info btn-xs btn-round" style="margin-left: -15px;" disabled>
+                                    <span class="glyphicon glyphicon-remove"></span>
+                                </button>
+                            </div>
+
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Source:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.From, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.From })
+                            </div>
+                            <label class="col-md-offset-1 col-sm-2 control-label">Destination:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.To, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.To })
+                            </div>
+                            <label class="col-sm-1 control-label"></label>
+                        </div>
+
+
+
+                    </div>
+                </div>
+
+            </fieldset>
+
+            <div class="form-group">
+            </div>
+
+
+
+            <fieldset class=" col-md-12" style="margin-top: 15px;">
+                <legend>Service Details</legend>
+
+                <div class="panel panel-default col-md-6">
+                    <div class="panel-body" style="height:400px;">
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Package :</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.Services, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.Services })
+                            </div>
+                            <label class="col-sm-offset-2 col-sm-3 control-label"></label>
+                            <div class="col-sm-3">
+                            </div>
+                            <div class="col-sm-2">
+                            </div>
+                        </div>
+                        <br />
+
+                        <div class="form-group BasedOnService">
+                            <label class="col-sm-3 control-label">Types Of Charge :</label>
+
+                            <div class=" col-sm-3" style="display: -webkit-inline-box;margin-left: -30px;border-style: ridge;padding: 1px 0px 2px 14px;width: 120px;">
+
+                                <input type="radio" id="Type_Of_Charges_WT" value="Type_Of_Charges_WT" name="Type_Of_Charges" style="height:17px;width:18px;margin-left: -5px; " /><div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span style="color:black;">KG</span></div>
+                                <input type="radio" id="Type_Of_Charges_Slab" value="Type_Of_Charges_Slab" name="Type_Of_Charges" style="height:17px;width:18px;margin-left: -5px; " /><div style="margin-top: 4px;font-weight: bold;margin-right: 5px;"><span style="color:black;">Slab</span></div>
+
+                                @*@Html.RadioButton("Type_Of_Charges_WT", "Type_Of_Charges_WT",  new { @class = "form-control", @style = "height:17px;width:18px;margin-left: -5px; " }) <div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span style="color:black;">KG</span></div>*@
+                                @*@Html.RadioButton("Type_Of_Charges_Slab", "Type_Of_Charges_Slab", new { @class = "form-control", @style = "height:17px;width:18px; " }) <div style="margin-top: 4px;font-weight: bold;margin-right: 5px;"><span style="color:black;">Slab</span></div>*@
+                                @*@Html.RadioButton("Radiobtn", "KG", new { @class = "form-control", @style = "height:17px;width:18px;margin-left: -5px; " }) <div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span>KG</span></div>
+                                    @Html.RadioButton("Radiobtn", "Slab", new { @class = "form-control", @style = "height:17px;width:18px; " }) <div style="margin-top: 4px;font-weight: bold;margin-right: 5px;"><span>Slab</span></div>*@
+                            </div>
+                        </div>
+                        <br />
+                        <div class="form-group BasedOnService">
+                            <label class="col-sm-2 control-label">Range From :</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.Start_Range, new { @class = "form-control" })
+                            </div>
+                            <label class="col-sm-offset-1 col-sm-2 control-label">Range To :</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.End_Range, new { @class = "form-control" })
+
+                            </div>
+                            <div class="col-sm-2">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">Rate :</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.Rate, new { @class = "form-control" })
+                            </div>
+                            <label class="col-sm-offset-1 col-sm-2 control-label"></label>
+                            <div class="col-sm-3">
+
+                            </div>
+                            <div class="col-sm-2">
+                            </div>
+                        </div>
+                        <br />
+                        <div class="form-group">
+                            <label class="col-sm-0 control-label"></label>
+                            <div class=" col-sm-5" style="display: -webkit-inline-box;margin-left: 0px;padding: 4px 0px 5px 14px;">
+                                @*@Html.RadioButtonFor(x => x.Charge_On_Actual_Weight, "Charge_On_Actual_Weight", new { @class = "form-control", @style = "height:17px;width:18px; " })<div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span style="color:black;">Charge On Actual Weight</span></div>*@
+                                <input type="radio" id="Charge_On_Actual_Weight" value="Charge_On_Actual_Weight" name="Charge_On" style="height:17px;width:18px; " /><div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span style="color:black;">Charge On Actual Weight</span></div>
+
+                                @*@Html.RadioButton("ChargeON", "Charge On Charged Weight", new { @class = "form-control", @style = "height:17px;width:18px;margin-left: -5px; " }) <div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span>Charge On Charged Weight</span></div>*@
+                            </div>
+
+
+                        </div>
+                        <div class="form-group">
+
+                            <label class="col-sm-0 control-label"></label>
+                            <div class=" col-sm-5" style="display: -webkit-inline-box;margin-left: 0px;padding: 4px 0px 5px 14px;">
+                                @*@Html.RadioButtonFor(x => x.Charge_On_Charged_Weight, "Charge_On_Charged_Weight", new { @class = "form-control", @style = "height:17px;width:18px; " })<div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span style="color:black;">Charge On Charged Weight</span></div>*@
+                                <input type="radio" id="Charge_On_Charged_Weight" value="Charge_On_Charged_Weight" name="Charge_On" style="height:17px;width:18px; " checked/><div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span style="color:black;">Charge On Charged Weight</span></div>
+
+                                @*@Html.RadioButton("ChargeON", "Charge On Actual Weight", new { @class = "form-control", @style = "height:17px;width:18px;margin-left: -5px; " }) <div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span>Charge On Actual Weight</span></div>*@
+                            </div>
+
+                        </div>
+
+                        @*<div class="form-group">
+                                <label class="col-sm-2 control-label"></label>
+                                <div class=" col-sm-3" style="display: -webkit-inline-box;margin-left: -30px;border-style: ridge;padding: 4px 0px 5px 14px;width: 250px;">
+                                    @Html.RadioButton("ChargeON", "Charge On Actual Weight", new { @class = "form-control", @style = "height:17px;width:18px;margin-left: -5px; " }) <div style="margin-top: 4px;margin-right: 10px;font-weight: bold;"><span>Charge On Actual Weight</span></div>
+                                </div>
+                                <label class="col-sm-offset-1 col-sm-2 control-label"></label>
+                                <div class="col-sm-3">
+
+                                </div>
+                                <div class="col-sm-2">
+                                </div>
+                            </div>*@
+                    </div>
+                </div>
+
+                <div class="panel panel-default col-md-6">
+                    <div class="panel-body scroll" style="height:400px;overflow:scroll">
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Freight :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Freight, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.FreightC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">LR Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.LR_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.LR_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Hamali Expenses :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Hamali_Expenses, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Hamali_ExpensesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Collection Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Collection_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Collection_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Door Delivery :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Door_Delivery, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Door_DeliveryC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Varai Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Varai_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Varai_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Loading Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Loading_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Loading_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">UnLoading Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.UnLoading_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.UnLoading_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Detention Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Detention_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Detention_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Octroi Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Octroi_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Octroi_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Octroi Cleaning :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Octroi_Cleaning, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Octroi_CleaningC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Union Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Union_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Union_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Overload Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.OverLoad_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.OverLoad_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Warehousing :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.WareHousing_Charges, new { @class = "form-control" })
+                            </div>
+
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.WareHousing_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Other Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Other_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Other_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Service Tax :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Service_Tax, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Service_TaxC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Handling Charges :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Handling_Charges, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Handling_ChargesC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Tds Deduction :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.TDs_Deduction, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.TDs_DeductionC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Swachh Bharat Cess :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Swachh_Bharat_Cess, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Swachh_Bharat_CessC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">Krishi Kalyan cess :</label>
+                            <div class="col-md-offset-4 col-sm-3">
+                                @Html.TextBoxFor(x => x.Krishi_Kalyan_Cess, new { @class = "form-control" })
+                            </div>
+                            <div class="col-sm-2">
+                                @Html.EnumDropDownListFor(x => x.Krishi_Kalyan_CessC, new { @class = "form-control" })
+
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Accounts/ContractMaster/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="hdnAreaID" />
+<input type="hidden" id="hdnType_Of_Charge" />
+<input type="hidden" id="hdnChargeOn" />
+@Html.HiddenFor(x => x.Document)
+
+
+<!-- Modal -->
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" style="margin-top: 60px;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="text-align: center;">
+                <h5 class="modal-title" id="exampleModalLabel">Select Area</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="margin-top: 9px;">
+                <div id="treeviewcontrol">
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" style="float: left;font-size: 13px;padding:3px 12px;" id="expandall">Expand All / Collapse All</button>
+                <button type="button" id="Close" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="GetArea">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>

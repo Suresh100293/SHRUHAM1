@@ -1,0 +1,361 @@
+﻿
+@model ALT_ERP3.Areas.Logistics.Models.UserRightsVM
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Content/js/dynamic_table_init.js"></script>
+<script>
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        loadParty();
+        loadModule();
+        $("#EnumModuleName").change(function () {
+
+            $('#AllAccess').prop('checked', false);
+            $('#AllxCess').prop('checked', false);
+            $('#AllxAdd').prop('checked', false);
+            $('#AllxEdit').prop('checked', false);
+            $('#AllxDelete').prop('checked', false);
+            $('#AllxPrint').prop('checked', false);
+            $('#AllxBackDated').prop('checked', false);
+
+            var ModuleName = $("#EnumModuleName").val();
+            $('#tabledatapick2 tbody tr').each(function ()
+            {
+                var tds = $(this).find('td');
+                tds.find("input[id='VerticalCheck']").prop("checked", false);
+                var Modulename= tds.find("input[id='Modulename']").val();
+                if (Modulename.toUpperCase().trim() == ModuleName.toUpperCase().trim() || ModuleName.toUpperCase().trim()=="ALL")
+                {
+                    $(this).removeClass("hidden");
+                }
+                else
+                {
+                    $(this).addClass("hidden");
+                }
+
+
+            })
+        });
+
+        $("#dynamic-table").on('click', 'tbody tr', function (event) {
+            event.preventDefault();
+            debugger;
+            var PSerial = [];
+            var row = $(this);
+            var $tds = $(this).find('td');
+            psrl = $tds.eq(0).text();
+            PSerial.push(psrl);
+            var ModelData = {};
+            ModelData["TfatPass_Code"] = PSerial.toString();
+            ModelData["EnumModuleName"] = $("#EnumModuleName").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("ClickLeftGrid")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    debugger;
+                    $('.spinner').hide();
+                    $('#errormessage').hide();
+                    $('#UserRightsdiv').html(data.Html);
+                    $('#UserRights_Code').val(data.UserRights_Code);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while Fetching Data.");
+                }
+            });
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            var myTableArray = [];
+            $('#tabledatapick2 tbody tr').each(function () {
+                var tds = $(this).find('td');
+                if (tds.find("input[id='UserRights_xCess']").is(':checked') == true || tds.find("input[id='UserRights_xAdd']").is(':checked') == true || tds.find("input[id='UserRights_xEdit']").is(':checked') == true || tds.find("input[id='UserRights_xDelete']").is(':checked') == true || tds.find("input[id='UserRights_xPrint']").is(':checked') == true)
+                {
+                    var myDets = {
+                        UserRights_MenuID: tds.find("input[id='UserRights_MenuID']").val(),
+                        TfatMenu_Menu: tds.find("input[id='TfatMenu_Menu']").val(),
+                        UserRights_xCess: tds.find("input[id='UserRights_xCess']").is(':checked'),
+                        UserRights_xAdd: tds.find("input[id='UserRights_xAdd']").is(':checked'),
+                        UserRights_xEdit: tds.find("input[id='UserRights_xEdit']").is(':checked'),
+                        UserRights_xDelete: tds.find("input[id='UserRights_xDelete']").is(':checked'),
+                        UserRights_xPrint: tds.find("input[id='UserRights_xPrint']").is(':checked'),
+                        UserRights_xBackDated: tds.find("input[id='UserRights_xBackDated']").is(':checked'),
+                        UserRights_xLimit: tds.find("input[id='UserRights_xLimit']").val(),
+                        Modulename: tds.find("input[id='Modulename']").val(),
+                        ParentName: tds.find("input[id='ParentName']").val(),
+                        ZoomUrl: tds.find("input[id='ZoomUrl']").val()
+                    }
+                    myTableArray.push(myDets);
+                }
+
+            })
+            $('.spinner').show();
+            var ModelData = {};
+            ModelData["mRightList"] = myTableArray;
+            ModelData["UserRights_Code"] = $("#UserRights_Code").val();
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveData")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    alert("Data Saved..");
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while Saving Data.");
+                }
+            });
+        });
+
+
+        $('#CopyRights').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["UserRights_Code"] = $("#UserRights_Code").val();
+            ModelData["Account"] = $("#Account").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveCopyRights")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    alert("Data Saved..");
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while Saving Data.");
+                }
+            });
+        });
+    });
+
+    function loadParty() {
+        var url = '@Url.Action("GetPartyList")?BaseGr=' + $("#hdnMType").val();
+        $('#Account').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength: 2,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Account', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function loadModule() {
+        var url = '@Url.Action("GetModuleList")';
+        $('#EnumModuleName').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength: 2,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.EnumModuleName', text: '@Model.EnumModuleName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <form class="form-horizontal " id="UserRightsFrm" role="form" style="margin-top:1%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="panel-body" style="min-height:400px;max-height:400px;padding-top:0px;">
+                <div class="col-lg-3" style="border-right:solid;">
+                    <div class="form-group">
+                    </div>
+                    <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                        Users:
+                    </b>
+                    <table class="zui-table" id="dynamic-table" style="min-height:300px;">
+                        <thead>
+                            <tr role="row">
+                                <th style="width: 36%;vertical-align:inherit;">User ID</th>
+                                <th style="width: 63%;vertical-align:inherit;">Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.mLeftList != null)
+                            {
+                                foreach (var item in @Model.mLeftList)
+                                {
+                                    <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                        <td style="width: 36%;vertical-align:inherit;">@item.TfatPass_Code</td>
+                                        <td style="width: 63%;vertical-align:inherit;">@item.TfatPass_Name</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-lg-9">
+                    <div class="form-group">
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-3">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                User Rights:
+                            </b>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">User:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.UserRights_Code, new { @id = "UserRights_Code", @Name = "UserRights_Code", @style = "font-size:14px;font-weight:bolder;", @class = "form-control", @disabled = "disabled" })
+                        </div>
+                        <label class="col-sm-2 control-label">Copy From User:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Account, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "Account", @name = "Account" })
+                        </div>
+                        <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" id="CopyRights">Copy</button>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">Module:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.EnumModuleName, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "EnumModuleName", @name = "EnumModuleName", @value = Model.EnumModuleName })
+                        </div>
+                    </div>
+                    <br>
+                    @*<br>*@
+                    <div id="UserRightsdiv" style="min-height:350px;max-height:350px;overflow:scroll">
+                        @Html.Partial("UserRightsPartial")
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5"></div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+@*
+    Code Auto Generated on Tue 05-Mar-2019 05:37 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 12
+    by Team Suchan, T.FAT *@
+
+

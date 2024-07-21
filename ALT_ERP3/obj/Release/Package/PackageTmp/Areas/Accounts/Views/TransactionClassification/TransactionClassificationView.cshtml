@@ -1,0 +1,2725 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.TransactionClassificationVM
+@using Common;
+@{
+    ViewBag.Title = "Transaction Classification";
+    Layout = null;
+}
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadRefType()
+        LoadMainType()
+        LoadPDFFormat()
+        LoadSubType()
+        LoadConstant()
+       // LoadAppBranch()
+
+        var values = $('#hdnAppBranch').val();
+        $("#hdnBranchCodeArray").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $(".listbox option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+        $(".listbox").change(function () {
+            $('#hdnBranchCodeArray').val('');
+            var selected = [];
+            $(".listbox :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnBranchCodeArray').val(selected)
+            return false;
+        });
+
+        $('.listbox').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Branch',
+        })
+
+        LoadStore()
+        //LoadLocationCode()
+        LoadProcessCode();
+        LoadReasonCategory();
+        LoadDCCode();
+        LoadCashAcc();
+        LoadChequeAcc();
+        LoadCreditCardAcc();
+        LoadFromStore();
+        LoadCurrName();
+        LoadToStore();
+        LoadFromBin();
+        LoadToBin();
+        LoadRejStore();
+        LoadGoodStore();
+        LoadQCGTRType();
+        LoadCategory();
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_WOFetchStyle').val('@Model.DocTypes_WOFetchStyle').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_SkipStock').val('@Model.DocTypes_SkipStock').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_NegWarn').val('@Model.DocTypes_NegWarn').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_vAuto').val('@Model.DocTypes_vAuto').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_WOInterface').val('@Model.DocTypes_WOInterface').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_CurrConv').val('@Model.DocTypes_CurrConv').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_Circulars').val('@Model.DocTypes_Circulars').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_GSTType').val('@Model.DocTypes_GSTType').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_BasedType').val('@Model.DocTypes_BasedType').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#DocTypes_SourceDoc').val('@Model.DocTypes_SourceDoc').attr("selected", "selected");
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#TransactionClassification').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                DocTypes_Code: {required: true,},
+                DocTypes_Name: {required: true,},
+                DocTypes_MainType: {required: true,},
+                DocTypes_SubType: {required: true,},
+                DocTypes_LocationCode: {required: true,},
+                DocTypes_DocWidth: {required: true,},
+                DocTypes_CurrName: {required: true,},
+               },
+            messages: {
+                DocTypes_Code: {required: 'Code is Required',},
+                DocTypes_Name: {required: 'Name is Required',},
+                DocTypes_MainType: {required: 'MainType is Required',},
+                DocTypes_SubType: {required: 'SubType is Required',},
+                DocTypes_LocationCode: {required: 'LocationCode is Required',},
+                DocTypes_DocWidth: {required: 'DocWidth is Required',},
+                DocTypes_CurrName: {required: 'CurrName is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#DocTypes_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#DocTypes_MaxPrints").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_DefaultNet").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#DocTypes_MainType").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#DocTypes_SubType").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#DocTypes_RoundTo").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_Store").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_LocationCode").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_ShowStores").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_DocWidth").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_ProcessCode").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_ReasonCategory").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_DCCode").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_FromStore").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_ToStore").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_CurrName").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_ConstantMode").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_FromBin").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_Circulars").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_GSTType").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_ToBin").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_RejStore").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_GoodStore").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_BackDays").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#DocTypes_Category").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: The following Change function is used to fill autocomplete details when some other field is dependant on this input i.e. eDepend<>'' *@
+        $('#DocTypes_MainType').change(function () {
+            $('#DocTypes_SubType').val("");
+            LoadSubType();
+        });
+
+        $("#DocTypes_GSTNoCommon").change(function () {
+            if (this.checked) {
+                $("#DocTypes_CommonSeries,#DocTypes_CommonSeriesCentralised").prop("checked", false);
+            }
+            else {
+                $("#DocTypes_CommonSeries,#DocTypes_CommonSeriesCentralised").prop("checked", false);
+            }
+        });
+        $("#DocTypes_CommonSeries").change(function () {
+            if (this.checked) {
+                $("#DocTypes_GSTNoCommon,#DocTypes_CommonSeriesCentralised").prop("checked", false);
+            }
+            else {
+                $("#DocTypes_GSTNoCommon,#DocTypes_CommonSeriesCentralised").prop("checked", false);
+            }
+        });
+        $("#DocTypes_CommonSeriesCentralised").change(function () {
+            if (this.checked) {
+                $("#DocTypes_GSTNoCommon,#DocTypes_CommonSeries").prop("checked", false);
+            }
+            else {
+                $("#DocTypes_GSTNoCommon,#DocTypes_CommonSeries").prop("checked", false);
+            }
+        });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if ($("#DocTypes_Code").val() == null || $("#DocTypes_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Code is Required..');
+                return;
+            }
+            if ($("#DocTypes_Name").val() == null || $("#DocTypes_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ($("#DocTypes_GSTNoCommon").prop("checked") == false && $("#DocTypes_CommonSeries").prop("checked") == false && $("#DocTypes_CommonSeriesCentralised").prop("checked") == false) {
+                alert("Select Check Box Of \n Branch-Wise Series or \n Year-Wise Series or \n Centralised Series  For Document Type...!");
+                return;
+            }
+            if ($("#DocTypes_MainType").val() == null || $("#DocTypes_MainType").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Main Type is Required..');
+                return;
+            }
+            if ($("#DocTypes_SubType").val() == null || $("#DocTypes_SubType").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Sub Type is Required..');
+                return;
+            }
+            //if ($("#DocTypes_LocationCode").val() == null || $("#DocTypes_LocationCode").val() == 0)
+            //{
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Location is Required..');
+            //    return;
+            //}
+            if ($("#DocTypes_DocWidth").val() == null || $("#DocTypes_DocWidth").val() == 0)
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Voucher Width is Required..');
+                return;
+            }
+            if ($("#DocTypes_CurrName").val() == null || $("#DocTypes_CurrName").val() == 0)
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Default Currency is Required..');
+                return;
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["DocTypes_FetchWoNo"] = $("#DocTypes_FetchWoNo").is(':checked');
+            ModelData["DocTypes_PrintControl"] = $("#DocTypes_PrintControl").is(':checked');
+            ModelData["DocTypes_RefType"] = $("#DocTypes_RefType").val();
+            ModelData["DocTypes_PostSave"] = $("#DocTypes_PostSave").val();
+            ModelData["DocTypes_SkipStock"] = $("#DocTypes_SkipStock").val();
+            ModelData["DocTypes_Code"] = $("#DocTypes_Code").val();
+            ModelData["DocTypes_WOFetchStyle"] = $("#DocTypes_WOFetchStyle").val();
+            ModelData["DocTypes_HideAddChg"] = $("#DocTypes_HideAddChg").is(':checked');
+            ModelData["DocTypes_MaxPrints"] = $("#DocTypes_MaxPrints").val();
+            ModelData["DocTypes_PreSave"] = $("#DocTypes_PreSave").val();
+            ModelData["DocTypes_DefaultNet"] = $("#DocTypes_DefaultNet").val();
+            ModelData["DocTypes_FetchWoDet"] = $("#DocTypes_FetchWoDet").is(':checked');
+            ModelData["DocTypes_WONegative"] = $("#DocTypes_WONegative").is(':checked');
+            ModelData["DocTypes_HideAddon"] = $("#DocTypes_HideAddon").is(':checked');
+            ModelData["DocTypes_Name"] = $("#DocTypes_Name").val();
+            ModelData["DocTypes_DiscFlag"] = $("#DocTypes_DiscFlag").is(':checked');
+            ModelData["DocTypes_HideAmt"] = $("#DocTypes_HideAmt").is(':checked');
+            ModelData["DocTypes_AutoGT"] = $("#DocTypes_AutoGT").is(':checked');
+            ModelData["DocTypes_NegStock"] = $("#DocTypes_NegStock").is(':checked');
+            ModelData["DocTypes_PartyDisc"] = $("#DocTypes_PartyDisc").is(':checked');
+            ModelData["DocTypes_MainType"] = $("#DocTypes_MainType").val();
+            ModelData["DocTypes_BulkCond"] = $("#DocTypes_BulkCond").val();
+            ModelData["DocTypes_MakePDF"] = $("#DocTypes_MakePDF").is(':checked');
+            ModelData["DocTypes_HideBatchSrl"] = $("#DocTypes_HideBatchSrl").is(':checked');
+            ModelData["DocTypes_NonStock"] = $("#DocTypes_NonStock").is(':checked');
+            ModelData["DocTypes_NegWarn"] = $("#DocTypes_NegWarn").val();
+            ModelData["DocTypes_PrintCond"] = $("#DocTypes_PrintCond").val();
+            ModelData["DocTypes_SubType"] = $("#DocTypes_SubType").val();
+            ModelData["DocTypes_HideDiscount"] = $("#DocTypes_HideDiscount").is(':checked');
+            ModelData["DocTypes_AutoGTEntry"] = $("#DocTypes_AutoGTEntry").is(':checked');
+            ModelData["DocTypes_ProductPost"] = $("#DocTypes_ProductPost").is(':checked');
+            ModelData["DocTypes_PDFFormat"] = $("#DocTypes_PDFFormat").val();
+            ModelData["DocTypes_DontCalcFactor"] = $("#DocTypes_DontCalcFactor").is(':checked');
+            ModelData["DocTypes_HideNarr"] = $("#DocTypes_HideNarr").is(':checked');
+            ModelData["DocTypes_RevStage"] = $("#DocTypes_RevStage").is(':checked');
+            ModelData["DocTypes_AddCond"] = $("#DocTypes_AddCond").val();
+            ModelData["DocTypes_TypeLock"] = $("#DocTypes_TypeLock").is(':checked');
+            ModelData["DocTypes_RoundOff"] = $("#DocTypes_RoundOff").is(':checked');
+            ModelData["DocTypes_ExpandKIT"] = $("#DocTypes_ExpandKIT").is(':checked');
+            ModelData["DocTypes_Formats"] = $("#DocTypes_Formats").val();
+            ModelData["DocTypes_ForceOrder"] = $("#DocTypes_ForceOrder").is(':checked');
+            ModelData["DocTypes_HideProcess"] = $("#DocTypes_HideProcess").is(':checked');
+            ModelData["DocTypes_RoundTo"] = $("#DocTypes_RoundTo").val();
+            ModelData["DocTypes_GSTNoCommon"] = $("#DocTypes_GSTNoCommon").is(':checked');
+            ModelData["DocTypes_ForceIndents"] = $("#DocTypes_ForceIndents").is(':checked');
+            ModelData["DocTypes_HideProduct"] = $("#DocTypes_HideProduct").is(':checked');
+            ModelData["DocTypes_UseCR"] = $("#DocTypes_UseCR").is(':checked');
+            ModelData["DocTypes_PrevQty"] = $("#DocTypes_PrevQty").is(':checked');
+            ModelData["DocTypes_NoItemEdit"] = $("#DocTypes_NoItemEdit").is(':checked');
+            ModelData["DocTypes_ItemAttach"] = $("#DocTypes_ItemAttach").is(':checked');
+            ModelData["DocTypes_DataSource"] = $("#DocTypes_DataSource").val();
+            ModelData["DocTypes_CommonSeries"] = $("#DocTypes_CommonSeries").is(':checked');
+            ModelData["DocTypes_CommonSeriesCentralised"] = $("#DocTypes_CommonSeriesCentralised").is(':checked');
+            ModelData["DocTypes_Constant"] = $("#DocTypes_Constant").val();
+            ModelData["DocTypes_HideReason"] = $("#DocTypes_HideReason").is(':checked');
+            ModelData["DocTypes_RateOnMRP"] = $("#DocTypes_RateOnMRP").is(':checked');
+            ModelData["DocTypes_SendAlert"] = $("#DocTypes_SendAlert").is(':checked');
+            ModelData["DocTypes_DontGenIndent"] = $("#DocTypes_DontGenIndent").is(':checked');
+            ModelData["DocTypes_Store"] = $("#DocTypes_Store").val();
+            ModelData["DocTypes_PrintOnSave"] = $("#DocTypes_PrintOnSave").is(':checked');
+            ModelData["DocTypes_EditCond"] = $("#DocTypes_EditCond").val();
+            ModelData["DocTypes_InnerBrkp"] = $("#DocTypes_InnerBrkp").is(':checked');
+            //ModelData["DocTypes_AppBranch"] = $("#DocTypes_AppBranch").val();
+            ModelData["DocTypes_AppBranch"] = $("#hdnBranchCodeArray").val();
+            ModelData["DocTypes_HideQty"] = $("#DocTypes_HideQty").is(':checked');
+            ModelData["DocTypes_FIFOOrder"] = $("#DocTypes_FIFOOrder").is(':checked');
+            ModelData["DocTypes_QtyTole"] = $("#DocTypes_QtyTole").is(':checked');
+            ModelData["DocTypes_CheckBillRef"] = $("#DocTypes_CheckBillRef").is(':checked');
+            ModelData["DocTypes_NoPrintWindow"] = $("#DocTypes_NoPrintWindow").is(':checked');
+            ModelData["DocTypes_LocationCode"] = $("#DocTypes_LocationCode").val();
+            ModelData["DocTypes_HideQty2"] = $("#DocTypes_HideQty2").is(':checked');
+            ModelData["DocTypes_ShowStores"] = $("#DocTypes_ShowStores").val();
+            ModelData["DocTypes_DelyWise"] = $("#DocTypes_DelyWise").is(':checked');
+            ModelData["DocTypes_LockPosting"] = $("#DocTypes_LockPosting").is(':checked');
+            ModelData["DocTypes_DontGenWO"] = $("#DocTypes_DontGenWO").is(':checked');
+            ModelData["DocTypes_HideUnits"] = $("#DocTypes_HideUnits").is(':checked');
+            ModelData["DocTypes_BINRequired"] = $("#DocTypes_BINRequired").is(':checked');
+            ModelData["DocTypes_RequireTIN"] = $("#DocTypes_RequireTIN").is(':checked');
+            ModelData["DocTypes_ValueOrder"] = $("#DocTypes_ValueOrder").is(':checked');
+            ModelData["DocTypes_vAuto"] = $("#DocTypes_vAuto").val();
+            ModelData["DocTypes_AllowZero"] = $("#DocTypes_AllowZero").is(':checked');
+            ModelData["DocTypes_DeleteCond"] = $("#DocTypes_DeleteCond").val();
+            ModelData["DocTypes_DontGenReserve"] = $("#DocTypes_DontGenReserve").is(':checked');
+            ModelData["DocTypes_HideRate"] = $("#DocTypes_HideRate").is(':checked');
+            ModelData["DocTypes_DocWidth"] = $("#DocTypes_DocWidth").val();
+            ModelData["DocTypes_ProcessCode"] = $("#DocTypes_ProcessCode").val();
+            ModelData["DocTypes_HideRatePer"] = $("#DocTypes_HideRatePer").is(':checked');
+            ModelData["DocTypes_MoreQty"] = $("#DocTypes_MoreQty").is(':checked');
+            ModelData["DocTypes_AllowNeg"] = $("#DocTypes_AllowNeg").is(':checked');
+            ModelData["DocTypes_QCReqd"] = $("#DocTypes_QCReqd").is(':checked');
+            ModelData["DocTypes_RequireHSN"] = $("#DocTypes_RequireHSN").is(':checked');
+            ModelData["DocTypes_ReturnsType"] = $("#DocTypes_ReturnsType").is(':checked');
+            ModelData["DocTypes_ExclConsWO"] = $("#DocTypes_ExclConsWO").is(':checked');
+            ModelData["DocTypes_ReasonCategory"] = $("#DocTypes_ReasonCategory").val();
+            ModelData["DocTypes_FOC"] = $("#DocTypes_FOC").is(':checked');
+            ModelData["DocTypes_WOBatch"] = $("#DocTypes_WOBatch").is(':checked');
+            ModelData["DocTypes_HideTax"] = $("#DocTypes_HideTax").is(':checked');
+            ModelData["DocTypes_PrefixConst"] = $("#DocTypes_PrefixConst").val();
+            ModelData["DocTypes_DCReqd"] = $("#DocTypes_DCReqd").is(':checked');
+            ModelData["DocTypes_RequireTRNS"] = $("#DocTypes_RequireTRNS").is(':checked');
+            ModelData["DocTypes_AllowStkAdjust"] = $("#DocTypes_AllowStkAdjust").is(':checked');
+            ModelData["DocTypes_DCCode"] = $("#DocTypes_DCCode").val();
+            ModelData["DocTypes_LastSerial"] = $("#DocTypes_LastSerial").val();
+            ModelData["DocTypes_HideStore"] = $("#DocTypes_HideStore").is(':checked');
+            ModelData["DocTypes_WOEditRM"] = $("#DocTypes_WOEditRM").is(':checked');
+            ModelData["DocTypes_SubContCombine"] = $("#DocTypes_SubContCombine").is(':checked');
+            ModelData["DocTypes_RequireAttach"] = $("#DocTypes_RequireAttach").is(':checked');
+            ModelData["DocTypes_WOEditLoss"] = $("#DocTypes_WOEditLoss").is(':checked');
+            ModelData["DocTypes_HideValue"] = $("#DocTypes_HideValue").is(':checked');
+            ModelData["DocTypes_PickChlnRate"] = $("#DocTypes_PickChlnRate").is(':checked');
+            ModelData["DocTypes_CashAcc"] = $("#DocTypes_CashAcc").val();
+            ModelData["DocTypes_OrderEditParty"] = $("#DocTypes_OrderEditParty").is(':checked');
+            ModelData["DocTypes_ExternalApp"] = $("#DocTypes_ExternalApp").val();
+            ModelData["DocTypes_LimitFrom"] = $("#DocTypes_LimitFrom").val();
+            ModelData["DocTypes_PickSOFromMember"] = $("#DocTypes_PickSOFromMember").is(':checked');
+            ModelData["DocTypes_BarCode"] = $("#DocTypes_BarCode").is(':checked');
+            ModelData["DocTypes_RequireCrLimit"] = $("#DocTypes_RequireCrLimit").is(':checked');
+            ModelData["DocTypes_RequireCrPeriod"] = $("#DocTypes_RequireCrPeriod").is(':checked');
+            ModelData["DocTypes_ChequeAcc"] = $("#DocTypes_ChequeAcc").val();
+            ModelData["DocTypes_BarCodeStruct"] = $("#DocTypes_BarCodeStruct").val();
+            ModelData["DocTypes_LimitTo"] = $("#DocTypes_LimitTo").val();
+            ModelData["DocTypes_BrokerReqd"] = $("#DocTypes_BrokerReqd").is(':checked');
+            ModelData["DocTypes_DontDlySchedule"] = $("#DocTypes_DontDlySchedule").is(':checked');
+            ModelData["DocTypes_CreditCardAcc"] = $("#DocTypes_CreditCardAcc").val();
+            ModelData["DocTypes_SalesmanReqd"] = $("#DocTypes_SalesmanReqd").is(':checked');
+            ModelData["DocTypes_Projects"] = $("#DocTypes_Projects").is(':checked');
+            ModelData["DocTypes_LockAddChg"] = $("#DocTypes_LockAddChg").is(':checked');
+            ModelData["DocTypes_BudgetControl"] = $("#DocTypes_BudgetControl").is(':checked');
+            ModelData["DocTypes_FromStore"] = $("#DocTypes_FromStore").val();
+            ModelData["DocTypes_OrdTypes"] = $("#DocTypes_OrdTypes").val();
+            ModelData["DocTypes_CurrConv"] = $("#DocTypes_CurrConv").val();
+            ModelData["DocTypes_SOIndPend"] = $("#DocTypes_SOIndPend").is(':checked');
+            ModelData["DocTypes_WOInterface"] = $("#DocTypes_WOInterface").is(':checked');
+            ModelData["DocTypes_ToStore"] = $("#DocTypes_ToStore").val();
+            ModelData["DocTypes_BrokerCalculate"] = $("#DocTypes_BrokerCalculate").is(':checked');
+            ModelData["DocTypes_CurrName"] = $("#DocTypes_CurrName").val();
+            ModelData["DocTypes_JobworkStyle"] = $("#DocTypes_JobworkStyle").is(':checked');
+            ModelData["DocTypes_LockAddon"] = $("#DocTypes_LockAddon").is(':checked');
+            ModelData["DocTypes_BudgetFlags"] = $("#DocTypes_BudgetFlags").val();
+            ModelData["DocTypes_BlanketOrder"] = $("#DocTypes_BlanketOrder").is(':checked');
+            ModelData["DocTypes_AllowCurr"] = $("#DocTypes_AllowCurr").is(':checked');
+            ModelData["DocTypes_LockAmt"] = $("#DocTypes_LockAmt").is(':checked');
+            ModelData["DocTypes_ConstantMode"] = $("#DocTypes_ConstantMode").val();
+            ModelData["DocTypes_FromBin"] = $("#DocTypes_FromBin").val();
+            ModelData["DocTypes_Circulars"] = $("#DocTypes_Circulars").val();
+            ModelData["DocTypes_LockBatchSrl"] = $("#DocTypes_LockBatchSrl").is(':checked');
+            ModelData["DocTypes_GSTFlag"] = $("#DocTypes_GSTFlag").is(':checked');
+            ModelData["DocTypes_AutoReserve"] = $("#DocTypes_AutoReserve").is(':checked');
+            ModelData["DocTypes_GSTType"] = $("#DocTypes_GSTType").val();
+            ModelData["DocTypes_OverReserve"] = $("#DocTypes_OverReserve").is(':checked');
+            ModelData["DocTypes_LockDiscount"] = $("#DocTypes_LockDiscount").is(':checked');
+            ModelData["DocTypes_ForceCirculars"] = $("#DocTypes_ForceCirculars").is(':checked');
+            ModelData["DocTypes_ConsigneeStock"] = $("#DocTypes_ConsigneeStock").is(':checked');
+            ModelData["DocTypes_ToBin"] = $("#DocTypes_ToBin").val();
+            ModelData["DocTypes_LockNarr"] = $("#DocTypes_LockNarr").is(':checked');
+            ModelData["DocTypes_GSTTypeChange"] = $("#DocTypes_GSTTypeChange").is(':checked');
+            ModelData["DocTypes_DontSchemeAppl"] = $("#DocTypes_DontSchemeAppl").is(':checked');
+            ModelData["DocTypes_InterBranch"] = $("#DocTypes_InterBranch").is(':checked');
+            ModelData["DocTypes_SPAdj"] = $("#DocTypes_SPAdj").is(':checked');
+            ModelData["DocTypes_RejStore"] = $("#DocTypes_RejStore").val();
+            ModelData["DocTypes_DocReview"] = $("#DocTypes_DocReview").is(':checked');
+            ModelData["DocTypes_LockProcess"] = $("#DocTypes_LockProcess").is(':checked');
+            ModelData["DocTypes_ForceReason"] = $("#DocTypes_ForceReason").is(':checked');
+            ModelData["DocTypes_PostSummary"] = $("#DocTypes_PostSummary").is(':checked');
+            ModelData["DocTypes_GoodStore"] = $("#DocTypes_GoodStore").val();
+            ModelData["DocTypes_LockProduct"] = $("#DocTypes_LockProduct").is(':checked');
+            ModelData["DocTypes_BackDays"] = $("#DocTypes_BackDays").val();
+            ModelData["DocTypes_LockReason"] = $("#DocTypes_LockReason").is(':checked');
+            ModelData["DocTypes_PostShow"] = $("#DocTypes_PostShow").is(':checked');
+            ModelData["DocTypes_Terms"] = $("#DocTypes_Terms").val();
+            ModelData["DocTypes_LockQty"] = $("#DocTypes_LockQty").is(':checked');
+            ModelData["DocTypes_BasedType"] = $("#DocTypes_BasedType").val();
+            ModelData["DocTypes_LockQty2"] = $("#DocTypes_LockQty2").is(':checked');
+            ModelData["DocTypes_QCGTRType"] = $("#DocTypes_QCGTRType").val();
+            ModelData["DocTypes_LockUnits"] = $("#DocTypes_LockUnits").is(':checked');
+            ModelData["DocTypes_LockRate"] = $("#DocTypes_LockRate").is(':checked');
+            ModelData["DocTypes_NoDuplItems"] = $("#DocTypes_NoDuplItems").is(':checked');
+            ModelData["DocTypes_CatRates"] = $("#DocTypes_CatRates").is(':checked');
+            ModelData["DocTypes_LockRatePer"] = $("#DocTypes_LockRatePer").is(':checked');
+            ModelData["DocTypes_Category"] = $("#DocTypes_Category").val();
+            ModelData["DocTypes_SourceDoc"] = $("#DocTypes_SourceDoc").val();
+            ModelData["DocTypes_LockTax"] = $("#DocTypes_LockTax").is(':checked');
+            ModelData["DocTypes_DocAttach"] = $("#DocTypes_DocAttach").is(':checked');
+            ModelData["DocTypes_LockStore"] = $("#DocTypes_LockStore").is(':checked');
+            ModelData["DocTypes_LockValue"] = $("#DocTypes_LockValue").is(':checked');
+            ModelData["DocTypes_AllowTerms"] = $("#DocTypes_AllowTerms").is(':checked');
+            ModelData["DocTypes_JobCurrentWork"] = $("#DocTypes_JobCurrentWork").is(':checked');
+            ModelData["DocTypes_AllowDraftSave"] = $("#DocTypes_AllowDraftSave").is(':checked');
+            ModelData["DocTypes_HideFactor"] = $("#DocTypes_HideFactor").is(':checked');
+            ModelData["DocTypes_LockFactor"] = $("#DocTypes_LockFactor").is(':checked');
+            ModelData["DocTypes_LockHSN"] = $("#DocTypes_LockHSN").is(':checked');
+            ModelData["DocTypes_HideHSN"] = $("#DocTypes_HideHSN").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/TransactionClassification/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadRefType() {
+        var url = '@Url.Action("AutoCompleteRefType")'
+        $('#DocTypes_RefType').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_RefType', text: '@Model.RefTypeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadMainType() {
+        var url = '@Url.Action("AutoCompleteMainType")'
+        $('#DocTypes_MainType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_MainType', text: '@Model.MainTypeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadPDFFormat() {
+        var url = '@Url.Action("AutoCompletePDFFormat")'
+        $('#DocTypes_PDFFormat').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_PDFFormat', text: '@Model.PDFFormatName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadSubType() {
+        var url = '@Url.Action("AutoCompleteSubType")'
+        $('#DocTypes_SubType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term + "^" + $('#DocTypes_MainType').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_SubType', text: '@Model.SubTypeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadConstant() {
+        var url = '@Url.Action("AutoCompleteConstant")'
+        $('#DocTypes_Constant').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_Constant', text: '@Model.ConstantName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadAppBranch() {
+        var url = '@Url.Action("AutoCompleteAppBranch")'
+        $('#DocTypes_AppBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_AppBranch', text: '@Model.AppBranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadStore() {
+        var url = '@Url.Action("AutoCompleteStore")'
+        $('#DocTypes_Store').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_Store', text: '@Model.StoreName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadLocationCode() {
+        var url = '@Url.Action("AutoCompleteLocationCode")'
+        $('#DocTypes_LocationCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_LocationCode', text: '@Model.LocationCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadProcessCode() {
+        var url = '@Url.Action("AutoCompleteProcessCode")'
+        $('#DocTypes_ProcessCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_ProcessCode', text: '@Model.ProcessCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadReasonCategory() {
+        var url = '@Url.Action("AutoCompleteReasonCategory")'
+        $('#DocTypes_ReasonCategory').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_ReasonCategory', text: '@Model.ReasonCategoryName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadDCCode() {
+        var url = '@Url.Action("AutoCompleteDCCode")'
+        $('#DocTypes_DCCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_DCCode', text: '@Model.DCCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCashAcc() {
+        var url = '@Url.Action("AutoCompleteCashAcc")'
+        $('#DocTypes_CashAcc').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_CashAcc', text: '@Model.CashAccName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadChequeAcc() {
+        var url = '@Url.Action("AutoCompleteChequeAcc")'
+        $('#DocTypes_ChequeAcc').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_ChequeAcc', text: '@Model.ChequeAccName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCreditCardAcc() {
+        var url = '@Url.Action("AutoCompleteCreditCardAcc")'
+        $('#DocTypes_CreditCardAcc').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_CreditCardAcc', text: '@Model.CreditCardAccName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadFromStore() {
+        var url = '@Url.Action("AutoCompleteFromStore")'
+        $('#DocTypes_FromStore').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_FromStore', text: '@Model.FromStoreName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCurrName() {
+        var url = '@Url.Action("AutoCompleteCurrName")'
+        $('#DocTypes_CurrName').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_CurrName', text: '@Model.CurrNameName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadToStore() {
+        var url = '@Url.Action("AutoCompleteToStore")'
+        $('#DocTypes_ToStore').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_ToStore', text: '@Model.ToStoreName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadFromBin() {
+        var url = '@Url.Action("AutoCompleteFromBin")'
+        $('#DocTypes_FromBin').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_FromBin', text: '@Model.FromBinName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadToBin() {
+        var url = '@Url.Action("AutoCompleteToBin")'
+        $('#DocTypes_ToBin').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_ToBin', text: '@Model.ToBinName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadRejStore() {
+        var url = '@Url.Action("AutoCompleteRejStore")'
+        $('#DocTypes_RejStore').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_RejStore', text: '@Model.RejStoreName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadGoodStore() {
+        var url = '@Url.Action("AutoCompleteGoodStore")'
+        $('#DocTypes_GoodStore').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_GoodStore', text: '@Model.GoodStoreName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadQCGTRType() {
+        var url = '@Url.Action("AutoCompleteQCGTRType")'
+        $('#DocTypes_QCGTRType').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_QCGTRType', text: '@Model.QCGTRTypeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCategory() {
+        var url = '@Url.Action("AutoCompleteCategory")'
+        $('#DocTypes_Category').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocTypes_Category', text: '@Model.CategoryName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+<style>
+    /*.multiselect-container{
+        width: 265px;
+    }
+    .multiselect-search{
+        height:30px;
+    }
+    .dropdown-toggle {
+        width: 265px;
+    }*/
+</style>
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/TransactionClassification/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="TransactionClassification" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Headers *@
+            <div class="tab">
+                <button class="tablinks" onclick="OpenTab(event, 'divMain')" id="FirstTab">Main</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divGeneral')">General</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divDoc.Condition')">Doc.Condition</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divInventory')">Inventory</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divMore')">More</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divFields/Controls')">Fields/Controls</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divFormats')">Formats</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divMore  Info')">More  Info</button>
+            </div>
+            @* iX9: Tab Body Panels *@
+            <div id="divMain" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Code:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.DocTypes_Code, new { @maxlength = "5", @readonly = "readonly", @class = "form-control", @Name = "DocTypes_Code", @Value = Model.DocTypes_Code, @Id = "DocTypes_Code" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.DocTypes_Code, new { @maxlength = "5", @class = "form-control", @Name = "DocTypes_Code", @Value = Model.DocTypes_Code, @Id = "DocTypes_Code" })
+                        }
+                    </div>
+                    <label class="col-sm-1 control-label">Name:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_Name, new { @maxlength = "50", @class = "form-control", @Name = "DocTypes_Name", @Value = Model.DocTypes_Name, @Id = "DocTypes_Name" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Main Type:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.DocTypes_MainType, new { @class = "input-large-query", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @id = "DocTypes_MainType", @Value = Model.DocTypes_MainType, @Name = "DocTypes_MainType" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.DocTypes_MainType, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_MainType", @Value = Model.DocTypes_MainType, @Name = "DocTypes_MainType" })
+                        }
+                    </div>
+                    <label class="col-sm-1 control-label">Sub Type:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.DocTypes_SubType, new { @class = "input-large-query", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @id = "DocTypes_SubType", @Value = Model.DocTypes_SubType, @Name = "DocTypes_SubType" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.DocTypes_SubType, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_SubType", @Value = Model.DocTypes_SubType, @Name = "DocTypes_SubType" })
+                        }
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Lock / Hide:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_TypeLock, new { @value = Model.DocTypes_TypeLock, @id = "DocTypes_TypeLock", @name = "DocTypes_TypeLock", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">@*No Common*@ Branch-Wise Series:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_GSTNoCommon, new { @value = Model.DocTypes_GSTNoCommon, @title = "Generate Series Branch Wise With Accounting Period.", @id = "DocTypes_GSTNoCommon", @name = "DocTypes_GSTNoCommon", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">@*Common*@ Year-Wise Series:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_CommonSeries, new { @value = Model.DocTypes_CommonSeries, @title = "Generate Series Accounting Period Wise.", @id = "DocTypes_CommonSeries", @name = "DocTypes_CommonSeries", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Centralised Series:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_CommonSeriesCentralised, new { @value = Model.DocTypes_CommonSeriesCentralised, @title = "Generate Series Centralised (Duplicate Not Allowed).", @id = "DocTypes_CommonSeriesCentralised", @name = "DocTypes_CommonSeriesCentralised", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Branch:</label>
+                    <div class="col-sm-5">
+                        @Html.ListBoxFor(x => x.DocTypes_AppBranchL, Model.Branches, new { @class = "listbox", @id = "AppBranch" })
+                        @*@Html.TextBoxFor(x => x.DocTypes_AppBranch, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_AppBranch", @Value = Model.DocTypes_AppBranch, @Name = "DocTypes_AppBranch" })*@
+                    </div>
+                    @*<label class="col-sm-1 control-label">Location:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.DocTypes_LocationCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_LocationCode", @Value = Model.DocTypes_LocationCode, @Name = "DocTypes_LocationCode" })
+                        </div>*@
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">document numbering</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Numbering Style:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.DocTypes_vAuto, Model.vAutoList, new { @class = "form-control", @Id = "DocTypes_vAuto", @Name = "DocTypes_vAuto", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Voucher Width:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.DocTypes_DocWidth, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "DocTypes_DocWidth", @Value = Model.DocTypes_DocWidth, @Id = "DocTypes_DocWidth" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Prefix:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_PrefixConst, new { @maxlength = "8", @class = "form-control", @Name = "DocTypes_PrefixConst", @Value = Model.DocTypes_PrefixConst, @Id = "DocTypes_PrefixConst" })
+                    </div>
+                    <label class="col-sm-1 control-label">Last Serial Used:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_LastSerial, new { @maxlength = "15", @class = "form-control", @Name = "DocTypes_LastSerial", @Value = Model.DocTypes_LastSerial, @Id = "DocTypes_LastSerial" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Start Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_LimitFrom, new { @maxlength = "15", @class = "form-control", @Name = "DocTypes_LimitFrom", @Value = Model.DocTypes_LimitFrom, @Id = "DocTypes_LimitFrom" })
+                    </div>
+                    <label class="col-sm-1 control-label">LimitTo:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_LimitTo, new { @maxlength = "15", @class = "form-control", @Name = "DocTypes_LimitTo", @Value = Model.DocTypes_LimitTo, @Id = "DocTypes_LimitTo" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Foreign Trade:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.DocTypes_CurrConv, Model.CurrConvList, new { @class = "form-control", @Id = "DocTypes_CurrConv", @Name = "DocTypes_CurrConv", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Default Currency:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_CurrName, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_CurrName", @Value = Model.DocTypes_CurrName, @Name = "DocTypes_CurrName" })
+                    </div>
+                    <label class="col-sm-1 control-label">Allow to Change?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AllowCurr, new { @value = Model.DocTypes_AllowCurr, @id = "DocTypes_AllowCurr", @name = "DocTypes_AllowCurr", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">GST Applicable?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_GSTFlag, new { @value = Model.DocTypes_GSTFlag, @id = "DocTypes_GSTFlag", @name = "DocTypes_GSTFlag", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">GST Type:</label>
+                    <div class="col-sm-1">
+                        @Html.DropDownListFor(m => m.DocTypes_GSTType, Model.GSTTypeList, new { @class = "form-control", @Id = "DocTypes_GSTType", @Name = "DocTypes_GSTType", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-1 control-label">Allow to Change once Item Entered?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_GSTTypeChange, new { @value = Model.DocTypes_GSTTypeChange, @id = "DocTypes_GSTTypeChange", @name = "DocTypes_GSTTypeChange", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            <div id="divGeneral" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Associated Type:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_RefType, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_RefType", @Value = Model.DocTypes_RefType, @Name = "DocTypes_RefType" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Generate Separate Goods Transfer Inward:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AutoGT, new { @value = Model.DocTypes_AutoGT, @id = "DocTypes_AutoGT", @name = "DocTypes_AutoGT", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Generate GIN Automatically:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AutoGTEntry, new { @value = Model.DocTypes_AutoGTEntry, @id = "DocTypes_AutoGTEntry", @name = "DocTypes_AutoGTEntry", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">RoundOff Doc. Amount:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RoundOff, new { @value = Model.DocTypes_RoundOff, @id = "DocTypes_RoundOff", @name = "DocTypes_RoundOff", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Round off to Decimals:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.DocTypes_RoundTo, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "DocTypes_RoundTo", @Value = Model.DocTypes_RoundTo, @Id = "DocTypes_RoundTo" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-1 control-label">Constant:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_Constant, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_Constant", @Value = Model.DocTypes_Constant, @Name = "DocTypes_Constant" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">InnerBrkp:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_InnerBrkp, new { @value = Model.DocTypes_InnerBrkp, @id = "DocTypes_InnerBrkp", @name = "DocTypes_InnerBrkp", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Check Bill Reference in Expenses:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_CheckBillRef, new { @value = Model.DocTypes_CheckBillRef, @id = "DocTypes_CheckBillRef", @name = "DocTypes_CheckBillRef", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Lock Posting after Bank Reco:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockPosting, new { @value = Model.DocTypes_LockPosting, @id = "DocTypes_LockPosting", @name = "DocTypes_LockPosting", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Allow Zero Trx.:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AllowZero, new { @value = Model.DocTypes_AllowZero, @id = "DocTypes_AllowZero", @name = "DocTypes_AllowZero", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Allow Negative Trx:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AllowNeg, new { @value = Model.DocTypes_AllowNeg, @id = "DocTypes_AllowNeg", @name = "DocTypes_AllowNeg", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Is it Free Of Cost Trx?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_FOC, new { @value = Model.DocTypes_FOC, @id = "DocTypes_FOC", @name = "DocTypes_FOC", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">cash sales posting setup</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Cash Posted to:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_CashAcc, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_CashAcc", @Value = Model.DocTypes_CashAcc, @Name = "DocTypes_CashAcc" })
+                    </div>
+                    <label class="col-sm-1 control-label">Chqs. Posted to:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_ChequeAcc, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_ChequeAcc", @Value = Model.DocTypes_ChequeAcc, @Name = "DocTypes_ChequeAcc" })
+                    </div>
+                    <label class="col-sm-1 control-label">Credit Card Posted to:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_CreditCardAcc, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_CreditCardAcc", @Value = Model.DocTypes_CreditCardAcc, @Name = "DocTypes_CreditCardAcc" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Project Details Compulsory:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_Projects, new { @value = Model.DocTypes_Projects, @id = "DocTypes_Projects", @name = "DocTypes_Projects", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Broker Calc. Applicable?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_BrokerCalculate, new { @value = Model.DocTypes_BrokerCalculate, @id = "DocTypes_BrokerCalculate", @name = "DocTypes_BrokerCalculate", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">BrokerCalculate:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_ConstantMode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_ConstantMode", @Value = Model.DocTypes_ConstantMode, @Name = "DocTypes_ConstantMode" })
+                    </div>
+                    <label class="col-sm-1 control-label">Stock on Consignee basis:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ConsigneeStock, new { @value = Model.DocTypes_ConsigneeStock, @id = "DocTypes_ConsigneeStock", @name = "DocTypes_ConsigneeStock", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Auto Generate Inter Branch transactions:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_InterBranch, new { @value = Model.DocTypes_InterBranch, @id = "DocTypes_InterBranch", @name = "DocTypes_InterBranch", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Summarise Posting of Accounts:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PostSummary, new { @value = Model.DocTypes_PostSummary, @id = "DocTypes_PostSummary", @name = "DocTypes_PostSummary", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Show Posting Details on Save:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PostShow, new { @value = Model.DocTypes_PostShow, @id = "DocTypes_PostShow", @name = "DocTypes_PostShow", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            <div id="divDoc.Condition" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Post Save:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_PostSave, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_PostSave", @Value = Model.DocTypes_PostSave, @rows = 5, @Id = "DocTypes_PostSave" })
+                    </div>
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">Triggers</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Pre Save:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_PreSave, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_PreSave", @Value = Model.DocTypes_PreSave, @rows = 5, @Id = "DocTypes_PreSave" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">On Party Selection:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_BulkCond, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_BulkCond", @Value = Model.DocTypes_BulkCond, @rows = 5, @Id = "DocTypes_BulkCond" })
+                    </div>
+                    <label class="col-sm-1 control-label">Before Print:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_PrintCond, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_PrintCond", @Value = Model.DocTypes_PrintCond, @rows = 5, @Id = "DocTypes_PrintCond" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Before Adding New Entry:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_AddCond, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_AddCond", @Value = Model.DocTypes_AddCond, @rows = 5, @Id = "DocTypes_AddCond" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Before Editing Entry:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_EditCond, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_EditCond", @Value = Model.DocTypes_EditCond, @rows = 5, @Id = "DocTypes_EditCond" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Before Deleting Entry:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_DeleteCond, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_DeleteCond", @Value = Model.DocTypes_DeleteCond, @rows = 5, @Id = "DocTypes_DeleteCond" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Execute Exeternal App:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_ExternalApp, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_ExternalApp", @Value = Model.DocTypes_ExternalApp, @Id = "DocTypes_ExternalApp" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Link Document Types for Source Link:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_OrdTypes, new { @maxlength = "120", @class = "form-control", @Name = "DocTypes_OrdTypes", @Value = Model.DocTypes_OrdTypes, @Id = "DocTypes_OrdTypes" })
+                    </div>
+                </div>
+            </div>
+            <div id="divInventory" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Skip Stock?:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.DocTypes_SkipStock, Model.SkipStockList, new { @class = "form-control", @Id = "DocTypes_SkipStock", @Name = "DocTypes_SkipStock", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Default Net Amount:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.DocTypes_DefaultNet, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "DocTypes_DefaultNet", @Value = Model.DocTypes_DefaultNet, @Id = "DocTypes_DefaultNet" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-1 control-label">Calc. disc on Quantity:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DiscFlag, new { @value = Model.DocTypes_DiscFlag, @id = "DocTypes_DiscFlag", @name = "DocTypes_DiscFlag", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Non Accounted Stock Details:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_NonStock, new { @value = Model.DocTypes_NonStock, @id = "DocTypes_NonStock", @name = "DocTypes_NonStock", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Product wise Account  Posting:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ProductPost, new { @value = Model.DocTypes_ProductPost, @id = "DocTypes_ProductPost", @name = "DocTypes_ProductPost", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Store:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DontCalcFactor, new { @value = Model.DocTypes_DontCalcFactor, @id = "DocTypes_DontCalcFactor", @name = "DocTypes_DontCalcFactor", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Always Expand KIT:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ExpandKIT, new { @value = Model.DocTypes_ExpandKIT, @id = "DocTypes_ExpandKIT", @name = "DocTypes_ExpandKIT", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Dont allow to Change Item:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_NoItemEdit, new { @value = Model.DocTypes_NoItemEdit, @id = "DocTypes_NoItemEdit", @name = "DocTypes_NoItemEdit", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Store:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ItemAttach, new { @value = Model.DocTypes_ItemAttach, @id = "DocTypes_ItemAttach", @name = "DocTypes_ItemAttach", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Store:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_Store, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_Store", @Value = Model.DocTypes_Store, @Name = "DocTypes_Store" })
+                    </div>
+                    <label class="col-sm-1 control-label">ShowStores:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.DocTypes_ShowStores, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "DocTypes_ShowStores", @Value = Model.DocTypes_ShowStores, @Id = "DocTypes_ShowStores" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">BIN Required for Stores:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_BINRequired, new { @value = Model.DocTypes_BINRequired, @id = "DocTypes_BINRequired", @name = "DocTypes_BINRequired", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">ProcessCode:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_ProcessCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_ProcessCode", @Value = Model.DocTypes_ProcessCode, @Name = "DocTypes_ProcessCode" })
+                    </div>
+                    <label class="col-sm-1 control-label">ReasonCategory:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_ReasonCategory, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_ReasonCategory", @Value = Model.DocTypes_ReasonCategory, @Name = "DocTypes_ReasonCategory" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Item Category Required:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DCReqd, new { @value = Model.DocTypes_DCReqd, @id = "DocTypes_DCReqd", @name = "DocTypes_DCReqd", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">DCCode:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_DCCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_DCCode", @Value = Model.DocTypes_DCCode, @Name = "DocTypes_DCCode" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Enable Barcode:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_BarCode, new { @value = Model.DocTypes_BarCode, @id = "DocTypes_BarCode", @name = "DocTypes_BarCode", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">BarCodeStruct:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_BarCodeStruct, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_BarCodeStruct", @Value = Model.DocTypes_BarCodeStruct, @Name = "DocTypes_BarCodeStruct" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Work Order Style:</label>
+                    <div class="col-sm-1">
+                        @Html.DropDownListFor(m => m.DocTypes_WOInterface, Model.WOInterfaceList, new { @class = "form-control", @Id = "DocTypes_WOInterface", @Name = "DocTypes_WOInterface", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Jobwork Style:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_JobworkStyle, new { @value = Model.DocTypes_JobworkStyle, @id = "DocTypes_JobworkStyle", @name = "DocTypes_JobworkStyle", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            <div id="divMore" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Compulsory link to WO:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_FetchWoNo, new { @value = Model.DocTypes_FetchWoNo, @id = "DocTypes_FetchWoNo", @name = "DocTypes_FetchWoNo", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Auto fill Items from WO:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_FetchWoDet, new { @value = Model.DocTypes_FetchWoDet, @id = "DocTypes_FetchWoDet", @name = "DocTypes_FetchWoDet", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Party wise Disc Reqd:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PartyDisc, new { @value = Model.DocTypes_PartyDisc, @id = "DocTypes_PartyDisc", @name = "DocTypes_PartyDisc", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Order is Compulsory:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ForceOrder, new { @value = Model.DocTypes_ForceOrder, @id = "DocTypes_ForceOrder", @name = "DocTypes_ForceOrder", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Indent is Compulsory:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ForceIndents, new { @value = Model.DocTypes_ForceIndents, @id = "DocTypes_ForceIndents", @name = "DocTypes_ForceIndents", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Send Alerts to Party:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_SendAlert, new { @value = Model.DocTypes_SendAlert, @id = "DocTypes_SendAlert", @name = "DocTypes_SendAlert", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Auto Adjust Order on FIFO basis:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_FIFOOrder, new { @value = Model.DocTypes_FIFOOrder, @id = "DocTypes_FIFOOrder", @name = "DocTypes_FIFOOrder", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">DelyWise:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DelyWise, new { @value = Model.DocTypes_DelyWise, @id = "DocTypes_DelyWise", @name = "DocTypes_DelyWise", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Value based Orders:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ValueOrder, new { @value = Model.DocTypes_ValueOrder, @id = "DocTypes_ValueOrder", @name = "DocTypes_ValueOrder", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">QC is Required:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_QCReqd, new { @value = Model.DocTypes_QCReqd, @id = "DocTypes_QCReqd", @name = "DocTypes_QCReqd", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Exclude Consumption from WO:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ExclConsWO, new { @value = Model.DocTypes_ExclConsWO, @id = "DocTypes_ExclConsWO", @name = "DocTypes_ExclConsWO", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Allow Stock Adjustment:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AllowStkAdjust, new { @value = Model.DocTypes_AllowStkAdjust, @id = "DocTypes_AllowStkAdjust", @name = "DocTypes_AllowStkAdjust", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Combine Waste & Loss as Consumption:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_SubContCombine, new { @value = Model.DocTypes_SubContCombine, @id = "DocTypes_SubContCombine", @name = "DocTypes_SubContCombine", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Pick Challan Rates:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PickChlnRate, new { @value = Model.DocTypes_PickChlnRate, @id = "DocTypes_PickChlnRate", @name = "DocTypes_PickChlnRate", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Pick Sales Order from Members of Group:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PickSOFromMember, new { @value = Model.DocTypes_PickSOFromMember, @id = "DocTypes_PickSOFromMember", @name = "DocTypes_PickSOFromMember", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Dely. Schedule is Optional:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DontDlySchedule, new { @value = Model.DocTypes_DontDlySchedule, @id = "DocTypes_DontDlySchedule", @name = "DocTypes_DontDlySchedule", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Maintain Indent Pending on SO:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_SOIndPend, new { @value = Model.DocTypes_SOIndPend, @id = "DocTypes_SOIndPend", @name = "DocTypes_SOIndPend", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Is it a Blanket Order transaction?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_BlanketOrder, new { @value = Model.DocTypes_BlanketOrder, @id = "DocTypes_BlanketOrder", @name = "DocTypes_BlanketOrder", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Auto Reserve Stock on Save:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AutoReserve, new { @value = Model.DocTypes_AutoReserve, @id = "DocTypes_AutoReserve", @name = "DocTypes_AutoReserve", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Allow Over Reservation:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_OverReserve, new { @value = Model.DocTypes_OverReserve, @id = "DocTypes_OverReserve", @name = "DocTypes_OverReserve", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Sales Adjusted against Purchase:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_SPAdj, new { @value = Model.DocTypes_SPAdj, @id = "DocTypes_SPAdj", @name = "DocTypes_SPAdj", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            <div id="divFields/Controls" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">hide fields from users</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Add.Charges:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideAddChg, new { @value = Model.DocTypes_HideAddChg, @id = "DocTypes_HideAddChg", @name = "DocTypes_HideAddChg", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Addons:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideAddon, new { @value = Model.DocTypes_HideAddon, @id = "DocTypes_HideAddon", @name = "DocTypes_HideAddon", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Amt:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideAmt, new { @value = Model.DocTypes_HideAmt, @id = "DocTypes_HideAmt", @name = "DocTypes_HideAmt", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Batch/Serial:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideBatchSrl, new { @value = Model.DocTypes_HideBatchSrl, @id = "DocTypes_HideBatchSrl", @name = "DocTypes_HideBatchSrl", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Discount:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideDiscount, new { @value = Model.DocTypes_HideDiscount, @id = "DocTypes_HideDiscount", @name = "DocTypes_HideDiscount", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Narr:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideNarr, new { @value = Model.DocTypes_HideNarr, @id = "DocTypes_HideNarr", @name = "DocTypes_HideNarr", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Process:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideProcess, new { @value = Model.DocTypes_HideProcess, @id = "DocTypes_HideProcess", @name = "DocTypes_HideProcess", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Item:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideProduct, new { @value = Model.DocTypes_HideProduct, @id = "DocTypes_HideProduct", @name = "DocTypes_HideProduct", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Reason:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideReason, new { @value = Model.DocTypes_HideReason, @id = "DocTypes_HideReason", @name = "DocTypes_HideReason", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Qty:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideQty, new { @value = Model.DocTypes_HideQty, @id = "DocTypes_HideQty", @name = "DocTypes_HideQty", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Qty2:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideQty2, new { @value = Model.DocTypes_HideQty2, @id = "DocTypes_HideQty2", @name = "DocTypes_HideQty2", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Units:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideUnits, new { @value = Model.DocTypes_HideUnits, @id = "DocTypes_HideUnits", @name = "DocTypes_HideUnits", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Rate:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideRate, new { @value = Model.DocTypes_HideRate, @id = "DocTypes_HideRate", @name = "DocTypes_HideRate", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Rate Per:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideRatePer, new { @value = Model.DocTypes_HideRatePer, @id = "DocTypes_HideRatePer", @name = "DocTypes_HideRatePer", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Factor:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideFactor, new { @value = Model.DocTypes_HideFactor, @id = "DocTypes_HideFactor", @name = "DocTypes_HideFactor", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Tax:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideTax, new { @value = Model.DocTypes_HideTax, @id = "DocTypes_HideTax", @name = "DocTypes_HideTax", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Store:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideStore, new { @value = Model.DocTypes_HideStore, @id = "DocTypes_HideStore", @name = "DocTypes_HideStore", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Value:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideValue, new { @value = Model.DocTypes_HideValue, @id = "DocTypes_HideValue", @name = "DocTypes_HideValue", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">HSN:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_HideHSN, new { @value = Model.DocTypes_HideHSN, @id = "DocTypes_HideHSN", @name = "DocTypes_HideHSN", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">lock the controls</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Add. Chgs:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockAddChg, new { @value = Model.DocTypes_LockAddChg, @id = "DocTypes_LockAddChg", @name = "DocTypes_LockAddChg", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Addons:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockAddon, new { @value = Model.DocTypes_LockAddon, @id = "DocTypes_LockAddon", @name = "DocTypes_LockAddon", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Amt:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockAmt, new { @value = Model.DocTypes_LockAmt, @id = "DocTypes_LockAmt", @name = "DocTypes_LockAmt", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Batch / Serials:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockBatchSrl, new { @value = Model.DocTypes_LockBatchSrl, @id = "DocTypes_LockBatchSrl", @name = "DocTypes_LockBatchSrl", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Discount:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockDiscount, new { @value = Model.DocTypes_LockDiscount, @id = "DocTypes_LockDiscount", @name = "DocTypes_LockDiscount", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Narr:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockNarr, new { @value = Model.DocTypes_LockNarr, @id = "DocTypes_LockNarr", @name = "DocTypes_LockNarr", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Process:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockProcess, new { @value = Model.DocTypes_LockProcess, @id = "DocTypes_LockProcess", @name = "DocTypes_LockProcess", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Item:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockProduct, new { @value = Model.DocTypes_LockProduct, @id = "DocTypes_LockProduct", @name = "DocTypes_LockProduct", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Reason:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockReason, new { @value = Model.DocTypes_LockReason, @id = "DocTypes_LockReason", @name = "DocTypes_LockReason", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Qty:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockQty, new { @value = Model.DocTypes_LockQty, @id = "DocTypes_LockQty", @name = "DocTypes_LockQty", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Qty2:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockQty2, new { @value = Model.DocTypes_LockQty2, @id = "DocTypes_LockQty2", @name = "DocTypes_LockQty2", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Units:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockUnits, new { @value = Model.DocTypes_LockUnits, @id = "DocTypes_LockUnits", @name = "DocTypes_LockUnits", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Rate:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockRate, new { @value = Model.DocTypes_LockRate, @id = "DocTypes_LockRate", @name = "DocTypes_LockRate", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Rate Per:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockRatePer, new { @value = Model.DocTypes_LockRatePer, @id = "DocTypes_LockRatePer", @name = "DocTypes_LockRatePer", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Factor:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockFactor, new { @value = Model.DocTypes_LockFactor, @id = "DocTypes_LockFactor", @name = "DocTypes_LockFactor", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Tax:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockTax, new { @value = Model.DocTypes_LockTax, @id = "DocTypes_LockTax", @name = "DocTypes_LockTax", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Store:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockStore, new { @value = Model.DocTypes_LockStore, @id = "DocTypes_LockStore", @name = "DocTypes_LockStore", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Value:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockValue, new { @value = Model.DocTypes_LockValue, @id = "DocTypes_LockValue", @name = "DocTypes_LockValue", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">HSN:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_LockHSN, new { @value = Model.DocTypes_LockHSN, @id = "DocTypes_LockHSN", @name = "DocTypes_LockHSN", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            <div id="divFormats" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Enable Print Control:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PrintControl, new { @value = Model.DocTypes_PrintControl, @id = "DocTypes_PrintControl", @name = "DocTypes_PrintControl", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Max. Prints Allowed:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.DocTypes_MaxPrints, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "DocTypes_MaxPrints", @Value = Model.DocTypes_MaxPrints, @Id = "DocTypes_MaxPrints" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Generate PDF and Save:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_MakePDF, new { @value = Model.DocTypes_MakePDF, @id = "DocTypes_MakePDF", @name = "DocTypes_MakePDF", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">PDF Format:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_PDFFormat, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_PDFFormat", @Value = Model.DocTypes_PDFFormat, @Name = "DocTypes_PDFFormat" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Default Print Formats:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_Formats, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_Formats", @Value = Model.DocTypes_Formats, @rows = 5, @Id = "DocTypes_Formats" })
+                    </div>
+                    <label class="col-sm-1 control-label">Use Crystal Report:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_UseCR, new { @value = Model.DocTypes_UseCR, @id = "DocTypes_UseCR", @name = "DocTypes_UseCR", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Stored Proc:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_DataSource, new { @maxlength = "50", @class = "form-control", @Name = "DocTypes_DataSource", @Value = Model.DocTypes_DataSource, @Id = "DocTypes_DataSource" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">PrintOnSave:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PrintOnSave, new { @value = Model.DocTypes_PrintOnSave, @id = "DocTypes_PrintOnSave", @name = "DocTypes_PrintOnSave", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">NoPrintWindow:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_NoPrintWindow, new { @value = Model.DocTypes_NoPrintWindow, @id = "DocTypes_NoPrintWindow", @name = "DocTypes_NoPrintWindow", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">transaction validation rules</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">GST Number is Required?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RequireTIN, new { @value = Model.DocTypes_RequireTIN, @id = "DocTypes_RequireTIN", @name = "DocTypes_RequireTIN", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Item HSN is Required:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RequireHSN, new { @value = Model.DocTypes_RequireHSN, @id = "DocTypes_RequireHSN", @name = "DocTypes_RequireHSN", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Transporter is Required?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RequireTRNS, new { @value = Model.DocTypes_RequireTRNS, @id = "DocTypes_RequireTRNS", @name = "DocTypes_RequireTRNS", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Attachment Reqd:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RequireAttach, new { @value = Model.DocTypes_RequireAttach, @id = "DocTypes_RequireAttach", @name = "DocTypes_RequireAttach", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">RequireTRNS:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RequireCrLimit, new { @value = Model.DocTypes_RequireCrLimit, @id = "DocTypes_RequireCrLimit", @name = "DocTypes_RequireCrLimit", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Credit Period is Required for Party:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RequireCrPeriod, new { @value = Model.DocTypes_RequireCrPeriod, @id = "DocTypes_RequireCrPeriod", @name = "DocTypes_RequireCrPeriod", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">goods transfer defaults</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ToBin:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_FromStore, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_FromStore", @Value = Model.DocTypes_FromStore, @Name = "DocTypes_FromStore" })
+                    </div>
+                    <label class="col-sm-1 control-label">ToStore:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_ToStore, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_ToStore", @Value = Model.DocTypes_ToStore, @Name = "DocTypes_ToStore" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ToBin:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_FromBin, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_FromBin", @Value = Model.DocTypes_FromBin, @Name = "DocTypes_FromBin" })
+                    </div>
+                    <label class="col-sm-1 control-label">ToBin:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_ToBin, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_ToBin", @Value = Model.DocTypes_ToBin, @Name = "DocTypes_ToBin" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">qc postings</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Rejection Store:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_RejStore, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_RejStore", @Value = Model.DocTypes_RejStore, @Name = "DocTypes_RejStore" })
+                    </div>
+                    <label class="col-sm-1 control-label">Good Store:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_GoodStore, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_GoodStore", @Value = Model.DocTypes_GoodStore, @Name = "DocTypes_GoodStore" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Cost Rate Calculation Method:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.DocTypes_BasedType, Model.BasedTypeList, new { @class = "form-control", @Id = "DocTypes_BasedType", @Name = "DocTypes_BasedType", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Posting GTR Type:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_QCGTRType, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_QCGTRType", @Value = Model.DocTypes_QCGTRType, @Name = "DocTypes_QCGTRType" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Duplicate Items Not Allowed:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_NoDuplItems, new { @value = Model.DocTypes_NoDuplItems, @id = "DocTypes_NoDuplItems", @name = "DocTypes_NoDuplItems", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Party wise Category Rate:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_CatRates, new { @value = Model.DocTypes_CatRates, @id = "DocTypes_CatRates", @name = "DocTypes_CatRates", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Category:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_Category, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "DocTypes_Category", @Value = Model.DocTypes_Category, @Name = "DocTypes_Category" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Default Source Doc:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.DocTypes_SourceDoc, Model.SourceDocList, new { @class = "form-control", @Id = "DocTypes_SourceDoc", @Name = "DocTypes_SourceDoc", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Enable Doc. Attach:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DocAttach, new { @value = Model.DocTypes_DocAttach, @id = "DocTypes_DocAttach", @name = "DocTypes_DocAttach", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Enable Terms / Cond.:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AllowTerms, new { @value = Model.DocTypes_AllowTerms, @id = "DocTypes_AllowTerms", @name = "DocTypes_AllowTerms", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Project Exec. on Current Work:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_JobCurrentWork, new { @value = Model.DocTypes_JobCurrentWork, @id = "DocTypes_JobCurrentWork", @name = "DocTypes_JobCurrentWork", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            <div id="divMore  Info" style="overflow:scroll;height:430px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">WO Link Style:</label>
+                    <div class="col-sm-1">
+                        @Html.DropDownListFor(m => m.DocTypes_WOFetchStyle, Model.WOFetchStyleList, new { @class = "form-control", @Id = "DocTypes_WOFetchStyle", @Name = "DocTypes_WOFetchStyle", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-1 control-label">WO Negative Stock Watch:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_WONegative, new { @value = Model.DocTypes_WONegative, @id = "DocTypes_WONegative", @name = "DocTypes_WONegative", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Negative Stock Watch:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_NegStock, new { @value = Model.DocTypes_NegStock, @id = "DocTypes_NegStock", @name = "DocTypes_NegStock", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Warning Method:</label>
+                    <div class="col-sm-1">
+                        @Html.DropDownListFor(m => m.DocTypes_NegWarn, Model.NegWarnList, new { @class = "form-control", @Id = "DocTypes_NegWarn", @Name = "DocTypes_NegWarn", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Reverse Material from Prev. Stage:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RevStage, new { @value = Model.DocTypes_RevStage, @id = "DocTypes_RevStage", @name = "DocTypes_RevStage", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Prev. Stage based Qty Control:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_PrevQty, new { @value = Model.DocTypes_PrevQty, @id = "DocTypes_PrevQty", @name = "DocTypes_PrevQty", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">MRP based Rate Calc. (inclusive Tax/Disc):</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_RateOnMRP, new { @value = Model.DocTypes_RateOnMRP, @id = "DocTypes_RateOnMRP", @name = "DocTypes_RateOnMRP", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Dont Generate Indent:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DontGenIndent, new { @value = Model.DocTypes_DontGenIndent, @id = "DocTypes_DontGenIndent", @name = "DocTypes_DontGenIndent", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Allow Qty Tolerance as specified in Items:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_QtyTole, new { @value = Model.DocTypes_QtyTole, @id = "DocTypes_QtyTole", @name = "DocTypes_QtyTole", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Dont Generate WO:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DontGenWO, new { @value = Model.DocTypes_DontGenWO, @id = "DocTypes_DontGenWO", @name = "DocTypes_DontGenWO", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Dont Generate Reservation:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DontGenReserve, new { @value = Model.DocTypes_DontGenReserve, @id = "DocTypes_DontGenReserve", @name = "DocTypes_DontGenReserve", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">UnRestrict Qty when Linked Docs:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_MoreQty, new { @value = Model.DocTypes_MoreQty, @id = "DocTypes_MoreQty", @name = "DocTypes_MoreQty", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Treat this Trx. as Return Goods:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ReturnsType, new { @value = Model.DocTypes_ReturnsType, @id = "DocTypes_ReturnsType", @name = "DocTypes_ReturnsType", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Generate Batch WO stage:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_WOBatch, new { @value = Model.DocTypes_WOBatch, @id = "DocTypes_WOBatch", @name = "DocTypes_WOBatch", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Allow to Edit Consumption in WO:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_WOEditRM, new { @value = Model.DocTypes_WOEditRM, @id = "DocTypes_WOEditRM", @name = "DocTypes_WOEditRM", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Allow to Edit Waste/Loss Details:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_WOEditLoss, new { @value = Model.DocTypes_WOEditLoss, @id = "DocTypes_WOEditLoss", @name = "DocTypes_WOEditLoss", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Allow to Edit Vendor for Orders:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_OrderEditParty, new { @value = Model.DocTypes_OrderEditParty, @id = "DocTypes_OrderEditParty", @name = "DocTypes_OrderEditParty", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Broker is Required:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_BrokerReqd, new { @value = Model.DocTypes_BrokerReqd, @id = "DocTypes_BrokerReqd", @name = "DocTypes_BrokerReqd", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Salesman is Required:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_SalesmanReqd, new { @value = Model.DocTypes_SalesmanReqd, @id = "DocTypes_SalesmanReqd", @name = "DocTypes_SalesmanReqd", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">budget control</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Budget/Target Control is applicable:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_BudgetControl, new { @value = Model.DocTypes_BudgetControl, @id = "DocTypes_BudgetControl", @name = "DocTypes_BudgetControl", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">BudgetFlags:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.DocTypes_BudgetFlags, new { @maxlength = "10", @class = "form-control", @Name = "DocTypes_BudgetFlags", @Value = Model.DocTypes_BudgetFlags, @Id = "DocTypes_BudgetFlags" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Circulars:</label>
+                    <div class="col-sm-1">
+                        @Html.DropDownListFor(m => m.DocTypes_Circulars, Model.CircularsList, new { @class = "form-control", @Id = "DocTypes_Circulars", @Name = "DocTypes_Circulars", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-1 control-label">Always follow Circulars (ignore rates from link):</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ForceCirculars, new { @value = Model.DocTypes_ForceCirculars, @id = "DocTypes_ForceCirculars", @name = "DocTypes_ForceCirculars", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Dont Apply Schemes:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DontSchemeAppl, new { @value = Model.DocTypes_DontSchemeAppl, @id = "DocTypes_DontSchemeAppl", @name = "DocTypes_DontSchemeAppl", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Document Review is Compulsory:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_DocReview, new { @value = Model.DocTypes_DocReview, @id = "DocTypes_DocReview", @name = "DocTypes_DocReview", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Reason is Must for Edit/Delete Trx.:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_ForceReason, new { @value = Model.DocTypes_ForceReason, @id = "DocTypes_ForceReason", @name = "DocTypes_ForceReason", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Max. Back Dated days allowed:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.DocTypes_BackDays, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "DocTypes_BackDays", @Value = Model.DocTypes_BackDays, @Id = "DocTypes_BackDays" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Standard Terms for Printing:</label>
+                    <div class="col-sm-3">
+                        @Html.TextAreaFor(x => x.DocTypes_Terms, new { @maxlength = "100", @class = "form-control", @Name = "DocTypes_Terms", @Value = Model.DocTypes_Terms, @rows = 5, @Id = "DocTypes_Terms" })
+                    </div>
+                    <label class="col-sm-2 control-label">Allow Draft Save:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.DocTypes_AllowDraftSave, new { @value = Model.DocTypes_AllowDraftSave, @id = "DocTypes_AllowDraftSave", @name = "DocTypes_AllowDraftSave", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            <script>
+                function OpenTab(evt, tabName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(tabName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                }
+                document.getElementById("FirstTab").click();
+            </script>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Accounts/TransactionClassification/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@Html.HiddenFor(x => x.DocTypes_AppBranch, new { @id = "hdnAppBranch" })
+<input type="hidden" id="hdnBranchCodeArray" />
+
+@*
+    Code Auto Generated on Tue 03-Sep-2019 11:55 AM
+    Engine: iX9Generator, ver: 3.7 Revision: 51
+    by Team Shruham Software *@
+

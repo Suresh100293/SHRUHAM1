@@ -1,0 +1,198 @@
+﻿
+@model ALT_ERP3.Areas.Logistics.Models.ServiceTypeMasterVM
+@using Common;
+@{
+    ViewBag.Title = "Service Type Master";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+      GetMyFavorites('@Model.ViewDataId');    
+
+        $('#ServiceType').blur(function () {
+            CheckName();
+        });
+
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        //$("#ServiceType").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+        //$("#ShortName").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+
+        //$("#TfatState_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatState_Code").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#TfatState_Country").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#StateMaster").validate().form() == false)
+            //    return;
+
+            if ($("#ServiceType").val() == null || $("#ServiceType").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('ServiceType is Required..');
+                return;
+            }
+            
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            ModelData["ServiceType"] = $("#ServiceType").val();
+            
+            if (($("#Acitve").is(":checked") == true)) {
+                ModelData["Acitve"] = true;
+            } else {
+                ModelData["Acitve"] = false;
+            }
+
+            ModelData["Document"] = $("#Document").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+
+    function CheckName() {
+        
+            NameFlag = "False";
+        var currValue = $('#ServiceType').val()
+        var url = '@Url.Action("CheckExist")';
+        if (currValue != null || currValue != "") {
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                //url: "/Base/CheckExist",
+                url: url,
+                data: { TableName: "ServiceTypeMaster", Colfield: "[ServiceType]", Value: $('#ServiceType').val(), SkipColumnName: "RecordKey", PKValue: '@Model.Document' },
+                success: function (result) {
+                    if (result.Message == "F") {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Service Type is Exist Please Change The Service Type Name..');
+                        $('#Submit').prop('disabled', true);
+                        return;
+                    } else {
+                        $("#ErrorMessage").hide();
+                        $('#Submit').prop('disabled', false);
+                    }
+                }
+            });
+        }
+    }
+
+
+
+</script>
+
+
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">System Code:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Code, new { @readonly = "Readonly", @class = "form-control", @style = "width:100px;text-align:right;", @Value = Model.Code })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Service Type:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ServiceType, new { @maxlength = "35", @class = "form-control", @Value = Model.ServiceType })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Status:</label>
+                <div class="col-sm-1">
+                    @*@Html.EditorFor(model => model.Acitve, new { htmlAttributes = new { @class = "checkbox", @style = "width:18px;height:18px;margin-top:8px;" } })*@
+                    @Html.CheckBoxFor(x => x.Acitve, new { @class = "checkbox", @style = "width:20px;", @Value = Model.Acitve })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@*<input type="hidden" id="controllername" />*@
+@Html.HiddenFor(x => x.Document)

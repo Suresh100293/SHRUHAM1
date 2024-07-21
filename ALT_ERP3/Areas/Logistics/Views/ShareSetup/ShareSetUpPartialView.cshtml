@@ -1,0 +1,386 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.ShareSetupVM
+@using Common;
+@{
+    ViewBag.Title = "LRSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+
+        $("#LRFormat").val("");
+        var CommonValue = "";
+        if ('@Model.LRFormat' != "") {
+            $.each('@Model.LRFormat'.split(','), function (idx, val) {
+                $(".LRFormatL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#LRFormat').val(CommonValue);
+        }
+
+        $("#FMFormat").val("");
+        CommonValue = "";
+        if ('@Model.FMFormat' != "") {
+            $.each('@Model.FMFormat'.split(','), function (idx, val) {
+                $(".FMFormatL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#FMFormat').val(CommonValue);
+        }
+
+        $("#BillFormat").val("");
+        CommonValue = "";
+        if ('@Model.BillFormat' != "") {
+            $.each('@Model.BillFormat'.split(','), function (idx, val) {
+                $(".BillFormatL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#BillFormat').val(CommonValue);
+        }
+
+        $("#PaymentFormat").val("");
+        CommonValue = "";
+        if ('@Model.PaymentFormat' != "") {
+            $.each('@Model.PaymentFormat'.split(','), function (idx, val) {
+                $(".PaymentFormatL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#PaymentFormat').val(CommonValue);
+        }
+
+        $(".LRFormatL").change(function () {
+            $('#LRFormat').val('');
+            var selected = "";
+            $(".LRFormatL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#LRFormat').val(selected)
+            return false;
+        });
+        $(".FMFormatL").change(function () {
+            $('#FMFormat').val('');
+            var selected = "";
+            $(".FMFormatL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#FMFormat').val(selected)
+            return false;
+        });
+        $(".BillFormatL").change(function () {
+            $('#BillFormat').val('');
+            var selected = "";
+            $(".BillFormatL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#BillFormat').val(selected)
+            return false;
+        });
+        $(".PaymentFormatL").change(function () {
+            $('#PaymentFormat').val('');
+            var selected = "";
+            $(".PaymentFormatL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#PaymentFormat').val(selected)
+            return false;
+        });
+
+        $('.LRFormatL,.FMFormatL,.BillFormatL,.PaymentFormatL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Item',
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            ModelData["LRExtra"] = $("#LRExtra").is(":checked");
+            ModelData["LRAttachReq"] = $("#LRAttachReq").is(":checked");
+            ModelData["FmExtra"] = $("#FmExtra").is(":checked");
+            ModelData["FMAttachReq"] = $("#FMAttachReq").is(":checked");
+            ModelData["BillExtra"] = $("#BillExtra").is(":checked");
+            ModelData["BillAttachReq"] = $("#BillAttachReq").is(":checked");
+            ModelData["Payment"] = $("#Payment").is(":checked");
+            ModelData["PaymentAttachReq"] = $("#PaymentAttachReq").is(":checked");
+            ModelData["LRFormat"] = $("#LRFormat").val();
+            ModelData["FMFormat"] = $("#FMFormat").val();
+            ModelData["BillFormat"] = $("#BillFormat").val();
+            ModelData["PaymentFormat"] = $("#PaymentFormat").val();
+            ModelData["CCEmail"] = $("#CCEmail").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/DashBoard/SetUP";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+</script>
+
+<style>
+
+    hr {
+        margin-top:0%;
+        margin-bottom: 15px;
+        border: 0;
+        border-top: 2px solid #e0cbcb !important;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+</style>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">Share Setup</b>
+
+        <span class="tools pull-right">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">Setup Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <span class="tools pull-right" style="    margin-right: 15px;">
+
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LCSetupMaster" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+            <fieldset class=" col-md-12" style="margin-top:0%;">
+                <legend>Share Setup</legend>
+
+                <div class="panel panel-default" style="height:450px;overflow:auto;">
+                    <div class="panel-body">
+                        <hr />
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Lorry Receipt  :</label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.LRExtra, new { @class = "", @Value = Model.LRExtra, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Extra Input :</label>
+                            </div>
+                            <label class=" control-label" style="font-size: 14px;font-weight: bold;color:red;"> ( Allow To Enter Any Other Mobile NO And Email Id To Share...) </label>
+                        </div>
+
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;"></label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.LRAttachReq, new { @class = "", @Value = Model.LRAttachReq, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Allow Attachment :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Print-Formats :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                @Html.ListBoxFor(x => x.LRFormatL, Model.LRPrintFormats, new { @class = "LRFormatL", @id = "LRFormatL" })
+                            </div>
+
+                        </div>
+                        <hr />
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Freight Memo  :</label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.FmExtra, new { @class = "", @Value = Model.FmExtra, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Extra Input :</label>
+                            </div>
+                            <label class=" control-label" style="font-size: 14px;font-weight: bold;color:red;"> ( Allow To Enter Any Other Mobile NO And Email Id To Share...) </label>
+                        </div>
+
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;"></label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.FMAttachReq, new { @class = "", @Value = Model.FMAttachReq, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Allow Attachment :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Print-Formats :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                @Html.ListBoxFor(x => x.FMFormatL, Model.FMPrintFormats, new { @class = "FMFormatL", @id = "FMFormatL" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Invoice (Bill)  :</label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.BillExtra, new { @class = "", @Value = Model.BillExtra, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Extra Input :</label>
+                            </div>
+                            <label class=" control-label" style="font-size: 14px;font-weight: bold;color:red;"> ( Allow To Enter Any Other Mobile NO And Email Id To Share...) </label>
+                        </div>
+
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;"></label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.BillAttachReq, new { @class = "", @Value = Model.BillAttachReq, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Allow Attachment :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Print-Formats :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                @Html.ListBoxFor(x => x.BillFormatL, Model.BillPrintFormats, new { @class = "BillFormatL", @id = "BillFormatL" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Payment (Creditor)  :</label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.Payment, new { @class = "", @Value = Model.Payment, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Extra Input :</label>
+                            </div>
+                            <label class=" control-label" style="font-size: 14px;font-weight: bold;color:red;"> ( Allow To Enter Any Other Mobile NO And Email Id To Share...) </label>
+                        </div>
+
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;"></label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.PaymentAttachReq, new { @class = "", @Value = Model.PaymentAttachReq, style = "height: 20px;width: 35px;" })
+                                <label class=" col-sm-1 control-label" style="font-weight:100;width: auto;">Allow Attachment :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Print-Formats :</label>
+                            </div>
+                            <div class="col-sm-2" style="">
+                                @Html.ListBoxFor(x => x.PaymentFormatL, Model.PaymentPrintFormats, new { @class = "PaymentFormatL", @id = "PaymentFormatL" })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Email-ID(CC)</label>
+                            </div>
+                            <div class="col-sm-8" style="padding-right:0px;padding-left:15px;">
+                                @Html.TextBoxFor(x => x.CCEmail, new { @maxlength = "250", @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.CCEmail })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.LRFormat)
+@Html.HiddenFor(x => x.FMFormat)
+@Html.HiddenFor(x => x.BillFormat)
+@Html.HiddenFor(x => x.PaymentFormat)

@@ -1,0 +1,537 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.AccountOpeningVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<style>
+    .red {
+        color: red;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+        loadbranch()
+        loadaccount()
+        loadlocationonfirst()
+        //loadlocation()
+        loadcurrency2()
+        $('#btnDelete').hide()
+        if ($('#hdnMode').val() == "Edit" || $('#hdnMode').val() == "View") {
+            if ($("#hdnBaseGR").val() == "D" || $("#hdnBaseGR").val() == "S" || $("#hdnBaseGR").val() == "U") {
+                $('#tabccenter').hide();
+                $('#Sales').show();
+                $('#divLedgerTable2').hide();
+                $('#divLedgerTable').show();
+            }
+            else {
+                $('#Sales').hide();
+                $('#tabccenter').show();
+                $('#divLedgerTable').hide();
+                $('#divLedgerTable2').show();
+            }
+        }
+
+        $('#Branch').change(function () {
+            loadlocation()
+        })
+
+        $('#Account').change(function () {
+
+            var url = '@Url.Action("GetAccountDetails")?Account=' + $("#Account").val() + '&Branch=' + $("#Branch").val();
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                },
+                success: function (result) {
+                    $('#hdnBaseGR').val(result.BaseGr);
+                    if ($("#hdnBaseGR").val() == "D" || $("#hdnBaseGR").val() == "S" || $("#hdnBaseGR").val() == "U") {
+                        $('#tabccenter').hide();
+                        $('#Sales').show();
+                        $('#divLedgerTable2').hide();
+                        $('#divLedgerTable').show();
+                        $('#SelectedledgerTable').html(result.Html);
+                        $('#Amount').val(result.Amount);
+
+                        if (result.CurrCode != null && result.CurrCode != "0") {
+                            $('#hdnCurrCode').val(result.CurrCode);
+                            loadcurrency2()
+                        }
+                        if (result.LocationCode != null && result.LocationCode != "0") {
+                            $('#hdnLocationCode').val(result.LocationCode);
+                            loadlocation()
+                        }
+                        if (result.Branch != null && result.Branch != "") {
+                            $('#hdnBranch').val(result.Branch);
+                            loadbranch()
+                        }
+
+                        if (result.AmtType == "Debit") {
+                            $('input:radio[name="AmtType"]').filter('[value="Debit"]').attr('checked', true);
+                        }
+                        if (result.AmtType == "Credit") {
+                            $('input:radio[name="AmtType"]').filter('[value="Credit"]').attr('checked', true);
+                        }
+                        if (result.HasRecord == true) {
+                            $('#btnDelete').show()
+                        }
+
+                    }
+                    else {
+                        $('#Sales').hide();
+                        $('#tabccenter').show();
+                        $('#divLedgerTable').hide();
+                        $('#divLedgerTable2').show();
+                        $('#divLedgerTable2').html(result.Html);
+                        $('#Amount').val(result.Amount);
+
+
+                        if (result.CurrCode != null && result.CurrCode != "0") {
+                            $('#hdnCurrCode').val(result.CurrCode);
+                            loadcurrency2()
+                        }
+                        if (result.LocationCode != null && result.LocationCode != "0") {
+                            $('#hdnLocationCode').val(result.LocationCode);
+                            loadlocation()
+                        }
+                        if (result.Branch != null && result.Branch != "") {
+                            $('#hdnBranch').val(result.Branch);
+                            loadbranch()
+                        }
+                        if (result.AmtType == "Debit") {
+                            $('input:radio[name="AmtType"]').filter('[value="Debit"]').attr('checked', true);
+                        }
+                        if (result.AmtType == "Credit") {
+                            $('input:radio[name="AmtType"]').filter('[value="Credit"]').attr('checked', true);
+                        }
+                        if (result.HasRecord == true) {
+                            $('#btnDelete').show()
+                        }
+                    }
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("1-An error occurred while processing the request.");
+                }
+            });
+        });
+
+        $('#btnSaveData').click(function (event) {
+            event.preventDefault();
+
+
+            if ($('#Account').val() == '' || $('#Account').val() == null) {
+                alert('Select Account')
+                return;
+            }
+            if ($('#LocationCode').val() == '' || $('#LocationCode').val() == null) {
+                alert('Select LocationCode')
+                return;
+            }
+            if ($('#Amount').val() == '0') {
+                alert('Enter Amount')
+                return;
+            }
+            if ($('#Branch').val() == '' || $('#Branch').val() == null) {
+                alert('Select Branch')
+                return;
+            }
+            if ($('#CurrCode').val() == '' || $('#CurrCode').val() == null) {
+                alert('Select Currency')
+                return;
+            }
+            if ($("input[name=AmtType]:checked").val() == '' || $("input[name=AmtType]:checked").val() == null) {
+                alert('Select Debit Or Credit')
+                return;
+            }
+            if ($("#hdnBaseGR").val() != "D" && $("#hdnBaseGR").val() != "S" && $("#hdnBaseGR").val() != "U") {
+                var tabccsize = $('#CCCentre tbody tr').length;
+                if (tabccsize < 1) {
+                    alert('Add Cost Centre BreakUp')
+                    return;
+                }
+
+            }
+            else {
+                var tabbreaksize = $('#tabledata tbody tr').length;
+                if (tabbreaksize < 1) {
+                    alert('Add Ledger Break Up')
+                    return;
+                }
+
+            }
+
+
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+
+            ModelData["Account"] = $("#Account").val();
+            ModelData["LocationCode"] = $("#LocationCode").val();
+            ModelData["AUTHORISE"] = $("#hdnAUTHORISE").val();
+            ModelData["AuthAgain"] = $("#hdnAuthAgain").val();
+            ModelData["AuthLock"] = $("#hdnAuthLock").val();
+            ModelData["AuthNoPrint"] = $("#hdnAuthNoPrint").val();
+            ModelData["AuthReq"] = $("#hdnAuthReq").val();
+            ModelData["CurrName"] = $("#CurrName").val();
+            ModelData["AmtType"] = $("#AmtType").val();
+            ModelData["Mode"] = $("#hdnMode").val();
+            ModelData["BaseGr"] = $("#hdnBaseGR").val();
+            ModelData["Amount"] = $("#Amount").val();
+            ModelData["Branch"] = $("#Branch").val();
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        location.reload()
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+
+
+        $('#btnDelete').click(function (event) {
+           $("#ErrorMessage").hide();
+           if ($('#Account').val() == '' || $('#Account').val() == null) {
+               alert('Select Account')
+               return;
+           }
+           if ($('#Branch').val() == '' || $('#Branch').val() == null) {
+               alert('Select Branch')
+               return;
+           }
+            var ModelData = {};
+            ModelData["Account"] = $("#Account").val();
+            ModelData["Branch"] = $("#Branch").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteData")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == 'Success') {
+                        location.reload()
+                    }
+                    else {
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+
+    });
+
+
+
+
+    function loadaccount() {
+        var url = '@Url.Action("GetAccount")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Account', text: '@Model.Account' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+    function loadbranch() {
+        var url = '@Url.Action("GetBranch")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+            },
+            success: function (result) {
+                $("#Branch").empty();
+                $.each(result, function (i, item) {
+                    $("#Branch").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Branch').val($('#hdnBranch').val()).attr("selected", "selected");
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("3-An error occurred while processing the request.");
+            }
+        });
+    };
+
+
+    function loadlocationonfirst() {
+        var url = '@Url.Action("GetLocation")?Branch=' + '@Model.Branch';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+            },
+            success: function (result) {
+                $("#LocationCode").empty();
+                $.each(result, function (i, item) {
+                    $("#LocationCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#LocationCode').val($('#hdnLocationCode').val()).attr("selected", "selected");
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("3-An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadlocation() {
+        var url = '@Url.Action("GetLocation")?Branch=' + $('#Branch').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+            },
+            success: function (result) {
+                $("#LocationCode").empty();
+                $.each(result, function (i, item) {
+                    $("#LocationCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#LocationCode').val($('#hdnLocationCode').val()).attr("selected", "selected");
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("3-An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadcurrency2() {
+        var url = '@Url.Action("GetCurrency2")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+            },
+            success: function (result) {
+                $("#CurrCode").empty();
+                $.each(result, function (i, item) {
+                    $("#CurrCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#CurrCode').val($('#hdnCurrCode').val()).attr("selected", "selected");
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("3-An error occurred while processing the request.");
+            }
+        });
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid?ViewDataId=@Model.ViewDataId&MainType=@Model.MainType&Module=@Model.Module&TableName=@Model.TableName&optiontype=M&optioncode=@Model.ViewDataId&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+
+</header>
+<div class="form-horizontal" style="padding:3px;">
+    <br /><br /><br />
+    <div class="form-group">
+        <label class="col-sm-1 control-label">Branch:<span class="red">*</span></label>
+        <div class="col-sm-3">
+            @Html.DropDownListFor(x => x.Branch, DropdownHelper.EmptyList(), new { @class = "form-control", @style = "width:99%;margin-top:2px;height:25px;", @Name = "Branch", @Id = "Branch" })
+        </div>
+        <label class="col-sm-1 control-label">Location:<span class="red">*</span></label>
+        <div class="col-sm-3">
+            @Html.DropDownListFor(x => x.LocationCode, DropdownHelper.EmptyList(), new { @class = "form-control", @style = "width:99%;margin-top:2px;height:25px;", @Name = "LocationCode", @Id = "LocationCode" })
+        </div>
+        <label class="col-sm-1 control-label">Currency:<span class="red">*</span></label>
+        <div class="col-sm-2">
+            @Html.DropDownListFor(x => x.CurrCode, DropdownHelper.EmptyList(), new { @class = "form-control", @style = "width:99%;margin-top:2px;height:25px;", @Name = "CurrCode", @Id = "CurrCode" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-1 control-label">Account:<span class="red">*</span></label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.Account, new { @class = "input-large-query", @style = "width:99%;margin-top:2px;height:25px;", @Name = "Account", @Id = "Account" })
+        </div>
+        <label class="col-sm-1 control-label">Opening:<span class="red">*</span></label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.Amount, new { @class = "form-control", @Name = "Amount", @Id = "Amount", @style = "text-align:right", @disabled = "disabled" })
+        </div>
+        <div class="form-group" id="actyperadio">
+
+            <div class="col-sm-1 control-label" style="padding-top:0px;">
+                Debit:  @Html.RadioButtonFor(x => x.AmtType, "Debit", new { @style = "padding-left:0px;width:20px;height:20px;" })
+            </div>
+
+            <div class="col-sm-1 control-label" style="padding-top:0px;">
+                Credit: @Html.RadioButtonFor(x => x.AmtType, "Credit", new { @style = "padding-left:0px;width:20px;height:20px;" })
+            </div>
+        </div>
+    </div>
+
+    <div class="tab">
+        <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="Sales" style="width:200px;">Opening Breakup</button>
+        <button class="tablinks" onclick="openCity(event, 'divLedgerTable2')" id="tabccenter">Cost Centre</button>
+
+    </div>
+    <div id="divLedgerTable" class="tabcontent">
+        @Html.Partial("BreakUpList", Model)
+    </div>
+    <div id="divLedgerTable2" class="tabcontent">
+        @Html.Partial("CostCentre", Model)
+    </div>
+</div>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        @if (Model.Mode == "Edit" || Model.Mode == "View" || Model.Mode == "Delete")
+        {
+            <div class="col-sm-5">
+
+            </div>
+            <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                T.FAT ERP-iX9 by Suchan Software Private Limited
+            </div>
+            <div class="col-sm-4">
+                <div class="pull-right">
+                    @if (Model.Mode == "Edit")
+                    {
+                        <button class="btn btn-success" id="btnDelete">Delete </button>
+                        <button class="btn btn-success" id="btnSaveData">Save </button>
+                    }
+                    @if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" id="deleteid">Delete </button>
+                    }
+                    <a href="~/Accounts/MasterGrid?ViewDataId=@Model.ViewDataId&MainType=@Model.MainType&Module=@Model.Module&TableName=Master&optiontype=M&optioncode=@Model.ViewDataId&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger">Cancel</a>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="col-sm-5">
+
+            </div>
+            <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                T.FAT ERP-iX9 by Suchan Software Private Limited
+            </div>
+            <div class="col-sm-4">
+                <div class="pull-right">
+                    <button class="btn btn-success" id="btnDelete">Delete </button>
+                    <button class="btn btn-success" id="btnSaveData">Save</button>
+                    <a href="~/Accounts/MasterGrid?ViewDataId=@Model.ViewDataId&MainType=@Model.MainType&Module=@Model.Module&TableName=Master&optiontype=M&optioncode=@Model.ViewDataId&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger">Cancel</a>
+                </div>
+            </div>
+        }
+    </div>
+</footer>
+
+<script>
+    function openCity(evt, cityName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(cityName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+    document.getElementById("Sales").click();
+</script>
+@Html.HiddenFor(x => x.Mode, new { @id = "hdnMode" })
+@Html.HiddenFor(x => x.AUTHORISE, new { @Id = "hdnAUTHORISE" })
+@Html.HiddenFor(x => x.AuthAgain, new { @Id = "hdnAuthAgain" })
+@Html.HiddenFor(x => x.AuthLock, new { @Id = "hdnAuthLock" })
+@Html.HiddenFor(x => x.AuthNoPrint, new { @Id = "hdnAuthNoPrint" })
+@Html.HiddenFor(x => x.AuthReq, new { @Id = "hdnAuthReq" })
+@Html.HiddenFor(x => x.BaseGr, new { @Id = "hdnBaseGR" })
+
+@Html.HiddenFor(x => x.Branch, new { @Id = "hdnBranch" })
+@Html.HiddenFor(x => x.LocationCode, new { @Id = "hdnLocationCode" })
+@Html.HiddenFor(x => x.CurrCode, new { @Id = "hdnCurrCode" })

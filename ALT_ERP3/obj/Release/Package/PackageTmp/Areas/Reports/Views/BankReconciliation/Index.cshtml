@@ -1,0 +1,562 @@
+﻿@model GridOption
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        var mheight = $(window).innerHeight() - 150;
+        $('#tabrec').height(mheight);
+        $('#tabpay').height(mheight);
+        LoadAccount();
+        $('select').select2();
+
+        $('#btnExcel').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&Code=' + $('#Account').val(), '_blank');
+        });
+
+        $('#btnPrint').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPrint")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&Code=' + $('#Account').val(), '_blank');
+        });
+
+        $('#btnPDF').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&Code=' + $('#Account').val()+'&mWhat='+'PDF', '_blank');
+        });
+
+        $('#btnPDL').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&Code=' + $('#Account').val()+'&mWhat=PDL', '_blank');
+        });
+
+        $('#recfilter').change(function () {
+            var filter;
+            filter = $('#recfilter').val();
+            for (x = 1; x <= 2; x++) {
+                var mytrxgrid = x == 1 ? $('#receipts') : $('#payments');
+                var trxrows = x == 1 ? $('#receipts').getDataIDs() : $('#payments').getDataIDs();
+                for (var mrow = 0; mrow <= trxrows.length; mrow++) {
+                    var rowid = trxrows[mrow];
+                    if (filter != "A") {
+                        if ($(mytrxgrid).getCell(rowid, "Flag") != filter) {
+                            $("#" + rowid, mytrxgrid).hide();
+                        } else {
+                            $("#" + rowid, mytrxgrid).show();
+                        }
+                    } else {
+                        $("#" + rowid, mytrxgrid).show();
+                    }
+                }
+            }
+        });
+
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+            $('#receipts').jqGrid('clearGridData');
+            $("#receipts").jqGrid("GridUnload");
+            $('#receipts').trigger('reloadGrid');
+            GridReloadRec();
+            $('#payments').jqGrid('clearGridData');
+            $("#payments").jqGrid("GridUnload");
+            $('#payments').trigger('reloadGrid');
+            GridReloadPay();
+        });
+    });
+
+    function LoadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Text, id: item.Value }
+                        })
+                    };
+                }
+            },
+            //initSelection: function (element, callback) {
+            //    var elementText = $(element).attr('data-init-text');
+            //    xcallback({ "term": elementText });
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Document', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function GridReloadRec() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mPage=@Model.page;
+        var mRows=@Model.rows;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'BankRecoRec' + '&Code=' + $('#Account').val() + '&mVar1=' + $('#recfilter').val();
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'BankRecoRec' + '&Code=' + $('#Account').val() + '&page=' + $('.ui-pg-input').val() + '&rows=' + mRows + '&mVar1=' + $('#recfilter').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                //if (data.Status = "Error")
+                //{
+                //    alert(data.Message);
+                //} else {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                var minfo = obj[4].split("|");
+                $('#openb').text(minfo[0]);
+                $('#closeb').text(minfo[1]);
+                $('#tdebit').text(minfo[2]);
+                $('#tcredit').text(minfo[3]);
+                $('#bopenb').text(minfo[4]);
+                $('#bcloseb').text(minfo[5]);
+                $('#btdebit').text(minfo[6]);
+                $('#btcredit').text(minfo[7]);
+                CreateGridRec();
+                $('.spinner').hide();
+                //}
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridRec() {
+            $('#receipts').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height()-255,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#receipts');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    //location.href = "Ledgers/Index?Document=" + cellVal + "&ViewDataId=receiptsScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    window.location.href = "/Transactions/CashBank/Index?Document=" & cellVal + "&Mode=Edit&ChangeLog=Edit&ViewDataId=ViewData-Ledger&Header=Bank%20Payments&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankPayments&Controller2=CashBank";
+                    //http://localhost:52070/Transactions/CashBank/Index?Document=HO0000BRC0018000003&Mode=View&ChangeLog=View&ViewDataId=ViewData-Ledger&Header=Bank%20Receipts&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankReceipts&Controller2=CashBank
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#receipts").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var rowData = jQuery('#receipts').jqGrid('getRowData', rowId);
+                        var ed = "<button id='btnEditrec" + rowId + "' value='" + rowId + "' style='padding-left:3px;padding-right:3px;' Class='edit' tooltip='Edit' , title='Edit' , attr='" + rowId + "' />";
+                        jQuery("#receipts").jqGrid('setRowData', rowId, { Reco: ed });
+                    }
+                    $('.edit').html('<img src="/Content/Images/Edit.ico" />');
+                    if ($('#hdnxEdit').val() == 'False' || $('#hdnxEdit').val() == 'false') {
+                        $('.edit').prop("disabled", true);
+                    }
+                    $("button").click(function (event) {
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var celValue = jQuery("#receipts").jqGrid('getCell', 'Document');
+                        var btncode = btnname.replace(/\D/g, '');
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#receipts');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        var recoflag = myGrid.jqGrid('getCell', curRowId, 'Flag');
+                        var cleardate = myGrid.jqGrid('getCell', curRowId, 'ClearDate');
+                        var btnmode = "";
+                        var mDate = $('#Fromdate').val() + ':' + $('#ToDate').val();
+                        if (btntype == "btnEditrec")
+                        {
+                            @*var url = '@Url.Action("UpdateRecoStatus")?Date=' + mDate + '&Document=' + cellVal + '&BaseGr=' + recoflag + '&ClearDate=' + cleardate;
+                            $.ajax({
+                                type: "GET",
+                                dataType: "json",
+                                cache: false,
+                                url: url,
+                                contentType: "application/json;charset=utf-8",
+                                beforeSend: function () {
+                                    $('.spinner').show();
+                                },
+                                success: function (data) {
+                                    $('.spinner').hide();
+                                    //$('#receipts').jqGrid('clearGridData');
+                                    //$("#receipts").jqGrid("GridUnload");
+                                    $('#receipts').trigger('reloadGrid');
+                                    GridReloadRec();
+                                },
+                                error: function () {
+                                    alert("Error occured while processing your request.");
+                                }
+                            });*@
+
+                            var ModelData = {};
+                            ModelData["Document"] =cellVal;
+                            ModelData["BaseGr"] = recoflag;
+                            ModelData["ClearDate"] = cleardate;
+                            ModelData["MenuName"] = "Receipt";
+                            var DTO = { Model: ModelData };
+                            var url = '@Url.Action("GetUpdatePopUp")';
+                            $.ajax({
+                                type: "POST",
+                                dataType: "json",
+                                data: JSON.stringify(DTO),
+                                cache: false,
+                                url: url,
+                                contentType: "application/json;charset=utf-8",
+                                beforeSend: function () {
+                                    $('.spinner').show();
+                                },
+                                success: function (data) {
+                                    $('.spinner').hide();
+                                    $('#dateupdatediv').modal('show');
+                                    $('#DateUpdateDiv').html(data.Html);
+                                },
+                                error: function () {
+                                    alert("Error occured while processing your request.");
+                                }
+                            });
+                        }
+                    });
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    //$('#pager1').height = 5;
+                },
+            });
+            jQuery("#receipts").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "Search"});
+            jQuery("#receipts").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function GridReloadPay() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = $('#Fromdate').val() + ':' + $('#ToDate').val();
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'BankRecoPay' + '&Code=' + $('#Account').val() + '&mVar1=' + $('#recfilter').val();
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'BankRecoPay' + '&Code=' + $('#Account').val() + '&mVar1=' + $('#recfilter').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                //if (data.Status = "Error")
+                //{
+                //    alert(data.Message);
+                //} else {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridPay();
+                $('.spinner').hide();
+                //}
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridPay() {
+            $('#payments').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager2'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height()-255,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#payments');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    window.location.href = "/Transactions/CashBank/Index?Document=" & cellVal + "&Mode=Edit&ChangeLog=Edit&ViewDataId=ViewData-Ledger&Header=Bank%20Payments&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankPayments&Controller2=CashBank";
+                    //http://localhost:52070/Transactions/CashBank/Index?Document=HO0000BRC0018000003&Mode=View&ChangeLog=View&ViewDataId=ViewData-Ledger&Header=Bank%20Receipts&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankReceipts&Controller2=CashBank
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#payments").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var rowData = jQuery('#payments').jqGrid('getRowData', rowId);
+                        var ed = "<button id='btnEditPay" + rowId + "' value='" + rowId + "' style='padding-left:3px;padding-right:3px;' Class='edit' tooltip='Edit' , title='Edit' , attr='" + rowId + "' />";
+                        jQuery("#payments").jqGrid('setRowData', rowId, { Reco: ed });
+                    }
+                    $('.edit').html('<img src="/Content/Images/Edit.ico" />');
+                    $("button").click(function (event) {
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var celValue = jQuery("#payments").jqGrid('getCell', 'Document');
+                        var btncode = btnname.replace(/\D/g, '');
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#payments');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        var recoflag = myGrid.jqGrid('getCell', curRowId, 'Flag');
+                        var cleardate = myGrid.jqGrid('getCell', curRowId, 'ClearDate');
+                        var btnmode = "";
+                        var mDate = $('#Fromdate').val() + ':' + $('#ToDate').val();
+                        if (btntype == "btnEditPay")
+                        {
+                            var ModelData = {};
+                            ModelData["Document"] =cellVal;
+                            ModelData["BaseGr"] = recoflag;
+                            ModelData["ClearDate"] = cleardate;
+                            ModelData["MenuName"] = "Payment";
+                            var DTO = { Model: ModelData };
+                            var url = '@Url.Action("GetUpdatePopUp")';
+                            $.ajax({
+                                type: "POST",
+                                dataType: "json",
+                                data: JSON.stringify(DTO),
+                                cache: false,
+                                url: url,
+                                contentType: "application/json;charset=utf-8",
+                                beforeSend: function () {
+                                    $('.spinner').show();
+                                },
+                                success: function (data) {
+                                    $('.spinner').hide();
+                                    $('#dateupdatediv').modal('show');
+                                    $('#DateUpdateDiv').html(data.Html);
+
+                                },
+                                error: function () {
+                                    alert("Error occured while processing your request.");
+                                }
+                            });
+                        }
+                    });
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    //$('#pager2').height = 5;
+                },
+            });
+            jQuery("#payments").jqGrid('navGrid', "#pager2",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "Search"});
+            jQuery("#payments").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    @*<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:3px;">*@
+    <div class="fixhead">
+        <div class="col-sm-2" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <div class="col-sm-2 pull-right" style="padding-right:0px; padding-top:-3px;float:right;align-items:flex-end;">
+            <button class="btn btn-info" style="font-size:11pt;padding:3px 3px;width:27px;height:27px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i></button>
+            <button class="btn btn-warning" style="font-size:10pt;padding:3px 3px;" id="btnPDF" title='Export to PDF in Portrait format'>PDF</button>
+            <button class="btn btn-warning" style="font-size:10pt;padding:3px 3px;" id="btnPDL" title='Export to PDF in Landscape format'>PDFL</button>
+        </div>
+        <div class="col-sm-1 pull-right">
+            @*<div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;color:black;">
+                Filter:
+            </div>*@
+            <select id="recfilter" style="font-weight:bolder;height:28px;">
+                <option value="A" selected>Show All</option>
+                <option value="C">Cleared</option>
+                <option value="N">Un-Cleared</option>
+            </select>
+        </div>
+        <div class="col-sm-3 pull-right" style="padding-right:unset;">
+            @*<div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;color:black;">
+                Period:
+            </div>*@
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                <span class="input-group-addon">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+            </div>
+        </div>
+        <div class="col-sm-3 pull-right">
+            @Html.TextBoxFor(x => x.Document, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "Account", @name = "Account" })
+        </div>
+        <div class="col-sm-1 pull-right" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:9pt;color:black; width:unset;">
+            Account:
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:33px;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="tab">
+            <button class="tablinks" style="width:150px;" onclick="openTab(event, 'tabrec')" id="Ledger">Receipts</button>
+            <button class="tablinks" style="width:150px;" onclick="openTab(event, 'tabpay')">Payments</button>
+        </div>
+        <div id="tabrec" class="tabcontent" style="height:100%;padding:0px 0px 0px 0px;overflow:scroll; ">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="receipts" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;overflow:scroll;"></table>
+                <div id="pager1" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabpay" class="tabcontent" style="height:100%;padding:0px 0px 0px 0px;overflow:scroll;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="payments" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;overflow:scroll;"></table>
+                <div id="pager2" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+            document.getElementById("Ledger").click();
+        </script>
+    </div>
+</section>
+
+<div class="footer-section" style="position:fixed;background-color:whitesmoke;padding:0px;color:unset;height:70px;border:solid 1px black;">
+    <div class="row" style="padding:0px;">
+        <label class="col-sm-2 control-label" style="padding-top:0px;padding-left:20px;margin-bottom:0px;">Book: Opening:</label>
+        <label class="col-sm-1 control-label" id="openb" style="padding-top:0px;padding-left:10px;margin-bottom:0px;"></label>
+        <label class="col-sm-1 control-label" style="padding-top:0px;margin-bottom:0px;">Receipts:</label>
+        <label class="col-sm-2 control-label" id="tdebit" style="padding-top:0px;margin-bottom:0px;"></label>
+        <label class="col-sm-1 control-label" style="padding-top:0px;margin-bottom:0px;">Payments:</label>
+        <label class="col-sm-2 control-label" id="tcredit" style="padding-top:0px;margin-bottom:0px;"></label>
+        <label class="col-sm-1 control-label" style="padding-top:0px;margin-bottom:0px;">Closing:</label>
+        <label class="col-sm-2 control-label" id="closeb" style="padding-top:0px;margin-bottom:0px;"></label>
+    </div>
+    <div class="row" style="padding:0px;">
+        <label class="col-sm-2 control-label" style="padding-top:0px;padding-left:20px;margin-bottom:0px;">Bank: Opening:</label>
+        <label class="col-sm-1 control-label" id="bopenb" style="padding-top:0px;padding-left:10px;margin-bottom:0px;"></label>
+        <label class="col-sm-1 control-label" style="padding-top:0px;margin-bottom:0px;">Receipts:</label>
+        <label class="col-sm-2 control-label" id="btdebit" style="padding-top:0px;margin-bottom:0px;"></label>
+        <label class="col-sm-1 control-label" style="padding-top:0px;margin-bottom:0px;">Payments:</label>
+        <label class="col-sm-2 control-label" id="btcredit" style="padding-top:0px;margin-bottom:0px;"></label>
+        <label class="col-sm-1 control-label" style="padding-top:0px;margin-bottom:0px;">Closing:</label>
+        <label class="col-sm-2 control-label" id="bcloseb" style="padding-top:0px;margin-bottom:0px;"></label>
+    </div>
+</div>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>
+<div class="example-modal">
+    <div id="dateupdatediv" class="modal modal-default" style="z-index:2100;">
+        <div class="modal-dialog modal-lg" style="width:440px;overflow:unset">
+            <div id="DateUpdateDiv">
+                @Html.Partial("UpdateDatePartial")
+            </div>
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x=>x.xEdit ,new {@id = "hdnxEdit" })

@@ -1,0 +1,96 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common
+
+<script>
+    $(document).ready(function () {
+        $('.delete-btn-bal').click(function () {
+            debugger;
+            var currentRow = $(this).closest('tr');
+            var ledger =
+            {
+                TableKey: currentRow.find('td:eq(8)').text(),
+                Branch: currentRow.find('td:eq(9)').text(),
+            }
+            $(this).closest('tr').remove();
+
+            var ModelData = {};
+            ModelData["ledger"] = ledger;
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("DeleteBal")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function ()
+                {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    $('.spinner').hide();
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+</script>
+
+<div class="fixTableHead" id="LedgerSelectedledgerTable" style="max-height:290px;min-height:290px; width: auto; overflow: auto;">
+    <table id="BalLedgertabledata" class="zui-table" style="border-color:gray;width:100%;">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                <th colspan="1" style="width: 1%;vertical-align:inherit;">Delete</th>
+                <th style="width: 7%;">Voucher</th>
+                <th style="width: 7%;">DocDate</th>
+                <th style="width: 10%;">Branch</th>
+                <th style="width: 7%;">Amount</th>
+                <th style="width: 20%;">Paid From Ac</th>
+                <th style="width: 15%;">Other Ac</th>
+                <th style="width: 50%;">Narr</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                if (Model.Balledgers != null)
+                {
+                    foreach (var item in @Model.Balledgers.OrderBy(x => x.DocDate).ToList())
+                    {
+                        var Amount = item.Debit + item.Credit;
+                        <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;" id="@item.Branch@item.TableKey">
+
+                            <td>
+                                <center><button class="delete-btn-bal btn btn-danger" style="padding: 3px 8px;"><i class="fa fa-trash-o"></i></button></center>
+                            </td>
+                            <td style="">@item.Srl</td>
+                            <td style="">@item.DocDate.ToShortDateString()</td>
+                            <td style="">@item.Party</td>
+                            <td style="">@Amount.Value.ToString("F2") </td>
+                            <td style="">@item.AltCode</td>
+                            <td style="">@item.Code</td>
+                            <td style="">@item.Narr</td>
+                            <td class="hidden" style="">@item.TableKey</td>
+                            <td class="hidden" style="">@item.Branch</td>
+
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+        <tfoot>
+            @{
+                var Amount1 = Model.Balledgers == null ? 0 : Model.Balledgers.Sum(x => x.Debit.Value + x.Credit.Value);
+                <tr>
+                    <td colspan="3">Total :-</td>
+                    <td>@Amount1.ToString("F2")</td>
+                    <td colspan="5"></td>
+                </tr>
+            }
+        </tfoot>
+    </table>
+</div>

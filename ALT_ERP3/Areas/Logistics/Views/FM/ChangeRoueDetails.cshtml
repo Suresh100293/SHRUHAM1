@@ -1,0 +1,273 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.FMVM
+@using Common;
+@{
+    ViewBag.Title = "FM Master";
+    Layout = null;
+}
+<script type="text/javascript">
+    $(document).ready(function () {
+        LoadRouteBranch();
+
+        $("#btnAddtoTable").click(function (event) {
+            event.preventDefault();
+
+            if ($('#TfatUserAudit_UserID').val() == "" || $('#TfatUserAudit_UserID').val() == null) {
+                alert("Please Select Branch...!");
+                return;
+            }
+
+            var ModelData = {};
+            ModelData["Tempid"] = $('#tEmpID').val();
+            ModelData["Branch"] = $('#TfatUserAudit_UserID').val();
+            var UserIDname = $('#TfatUserAudit_UserID').select2('data').text;
+            ModelData["BranchN"] = UserIDname;
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddToTable")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message);
+                    }
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+        $("#btnSaveEdit").click(function (event) {
+            event.preventDefault();
+
+            if ($('#TfatUserAudit_UserID').val() == "" || $('#TfatUserAudit_UserID').val() == null) {
+                alert("Please Select Branch...!");
+                return;
+            }
+
+            var ModelData = {};
+            ModelData["FMNO"] = $("#FMNO").val();
+            ModelData["Tempid"] = $('#tEmpID').val();
+            ModelData["Branch"] = $('#TfatUserAudit_UserID').val();
+            var UserIDname = $('#TfatUserAudit_UserID').select2('data').text;
+            ModelData["BranchN"] = UserIDname;
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddToTableEdit")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('button[action|="editgriddatarow"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["Tempid"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("PickFromTable")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('button[action|="deletegriddatarow"]').click(function (event) {
+            event.preventDefault(event);
+            debugger
+            var url = '@Url.Action("DeleteTableRow")';
+
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { tEmpID: $(this).val(), FMNO: $("#Document").val()},
+                success: function (data)
+                {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+
+
+            @*var url = '@Url.Action("DeleteTableRow")?Tempid=' + $(this).val() + '&FMNO='$("#FMNO").val();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#griddatatable').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+        });
+    });
+    function LoadRouteBranch() {
+        var url = '@Url.Action("AutoCompleteRouteBranch")'
+        $('#TfatUserAudit_UserID,#SearchBranch').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Branch:""
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.RouteBranch', text: '@Model.BranchN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+</script>
+<div class="grid" id="griddatatable" style=" min-height: 300px; max-height: 300px; width: 100%;overflow:auto; ">
+    <table id="gridtable" class="zui-table">
+        <thead>
+            <tr role="row" style="font-family:Verdana;font-size:10pt;">
+                <th style="width: 7%;vertical-align:inherit;">Sr.</th>
+                <th style="width: 50%;vertical-align:inherit;">Branch Name</th>
+                <th style="width: 7%;"></th>
+                @*<th style="width: 7%;"></th>*@
+            </tr>
+            <tr style="background-color:gainsboro">
+                <td>
+                    @Html.TextBoxFor(x => x.Tempid, new { @class = "form-control", @readonly = "readonly", @style = "text-align:right;", @Name = "tEmpID", @Id = "tEmpID",@value=Model.Tempid })
+                </td>
+                <td style="text-align:left;">
+                    @Html.TextBoxFor(x => x.RouteBranch, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatUserAudit_UserID", @Name = "TfatUserAudit_UserID", @value = Model.RouteBranch })
+                </td>
+                <td style="vertical-align:inherit;" colspan="1">
+                    @if (String.IsNullOrEmpty(Model.RouteBranch))
+                    {
+                        <button type="button" id="btnAddtoTable" class="btn btn-primary btn-sm" title="Add" style="margin-left:7px;width:25px;height:25px;border:1px solid black;"><i class="fa fa-plus" style="color:black;"></i></button>
+                    }
+                    else
+                    {
+                        <button type="button" id="btnAddtoTable" class="btn btn-primary btn-sm" title="Add" style="margin-left:7px;width:25px;height:25px;border:1px solid black;" disabled><i class="fa fa-plus" style="color:black;"></i></button>
+                    }
+                </td>
+                @*<td>
+                    <button type="button" id="btnSaveEdit" class="btn btn-primary btn-sm" title="Save" style="margin-left:7px;width:25px;height:25px;border:1px solid black;"><i class="fa fa-save" style="color:black;"></i></button>
+                </td>*@
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.AllroutelistChange != null)
+            {
+                foreach (var item in @Model.AllroutelistChange.OrderBy(x => x.Tempid).ToList())
+                {
+                    <tr style="font-family:Verdana;font-size:10pt;">
+                        <td style="vertical-align:inherit;">@item.Tempid</td>
+                        <td style="text-align:center;vertical-align:inherit;">
+                            @item.BranchN
+                        </td>
+                        @if (item.AllowToChange == "T")
+                        {
+                            @*<td>
+                                <button type="button" action="editgriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-warning btn-sm" value="@item.Tempid" title="Edit"><i class="fa fa-edit"></i></button>
+                            </td>*@
+                            <td>
+                                <button type="button" action="deletegriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-danger btn-sm" value="@item.Tempid" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            </td>
+                        }
+                        else
+                        {
+                            @*<td>
+                                <button type="button" action="editgriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-warning btn-sm" value="@item.Tempid" title="Edit" disabled><i class="fa fa-edit"></i></button>
+                            </td>*@
+                            <td>
+                                <button type="button" action="deletegriddatarow" style="margin-left:7px;width:80%;height:23px;border:1px solid black;" class="btn btn-danger btn-sm" value="@item.Tempid" title="Delete" disabled><i class="fa fa-trash-o"></i></button>
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

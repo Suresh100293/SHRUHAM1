@@ -1,0 +1,276 @@
+﻿@model Complogin
+@using Common
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="ThemeBucket">
+    <link rel='shortcut icon' href='~/Content/images/favicon.ico' type='image/x-icon' />
+    <title>Login</title>
+    <!--Core CSS -->
+    <link href="~/Content/bs3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="~/Content/css/bootstrap-reset.css" rel="stylesheet">
+    <link href="~/Content/font-awesome/css/font-awesome.css" rel="stylesheet" />
+    <!-- Custom styles for this template -->
+    <link href="~/Content/css/style.css" rel="stylesheet">
+    <link href="~/Content/css/style-responsive.css" rel="stylesheet" />
+    <!-- Just for debugging purposes. Don't actually copy this line! -->
+
+    <style>
+        .form-signin .form-control {
+            font-size: 9pt;
+            font-family: Tahoma;
+            color: unset;
+            height: 36px;
+        }
+
+        label {
+            margin-bottom: unset;
+        }
+    </style>
+
+    <style>
+        .form-signin h2.form-signin-heading {
+            text-align: left;
+        }
+
+        .form-signin input[type="text"],
+        .form-signin input[type="password"] {
+            font-size: medium;
+            color: black;
+        }
+
+        .background_img {
+            background-image: url('../../Content/images/Book-Spring.jpg');
+        }
+    </style>
+</head>
+
+<body class="login-body background_img" style="background-color:#12506F;background-image: url('../../Content/images/background-1.jpg');">
+    @*<body class="login-body background_img" style="background-color:#12506F">*@
+    <div class="container">
+        @using (Html.BeginForm("CompanyLogin", "Account", FormMethod.Post, new
+        {
+            @class = "form-signin",
+            @role = "FormPost",
+            @Style = "height:500px;max-width:400px;opacity:0.86;margin-top:60px;box-shadow: 1px 1px 50px 15px rgba(0,0,0,0.75);"
+        }))
+        {
+            <div class="login-wrap" style="height:460px;">
+                <div class="form-signin-heading" style="background-color:white;">
+                    <center><img src="~/Content/images/SuchanTFATlogo.png" style="margin-top:0px;" /></center>
+                </div>
+                <br /><br />
+                <div class="user-login-info" style="background-color:white; height:110px;">
+                    @Html.ValidationSummary(true, "", new
+               {
+                   @style = "color:red"
+               })
+                    <div class="form-group has-feedback">
+                        @*<label class="col-sm-12 control-label">Select a Company / Group</label>*@
+                        @*, new { @style = "font-weight:normal;" }*@
+                        @Html.Label("Select a Company / Group")
+                        @Html.DropDownListFor(m => m.CompCode, DropdownHelper.EmptyList(), new
+                   {
+                       @class = "form-control",
+                       @style = "font-weight:bolder;height:37px;"
+                   })
+                    </div>
+                    <div class="form-group has-feedback">
+                        @Html.Label("Select Accounting Period")
+                        @Html.DropDownListFor(m => m.perd, DropdownHelper.EmptyList(), new
+                   {
+                       @class = "form-control",
+                       @style = "font-weight:bolder;height:37px;"
+                   })
+                    </div>
+                    <div class="form-group has-feedback">
+                        @Html.Label("Select a Plant / Business Unit")
+                        @Html.DropDownListFor(m => m.BranchCode, DropdownHelper.EmptyList(), new
+                   {
+                       @class = "form-control",
+                       @style = "font-weight:bolder;height:37px;"
+                   })
+                    </div>
+                    @*@Html.HiddenFor(m => m.UserId)*@
+                    @Html.HiddenFor(x => x.UserId, new
+               {
+                   Id = "hdnUserId"
+               })
+                    @Html.HiddenFor(m => m.CompCode, new
+               {
+                   Id = "hdnCompCode"
+               })
+                    <div class="row" style="margin-top:60px;">
+                        <div class="col-xs-4">
+                            <button type="submit" class="btn btn-info btn-block btn-flat">
+                                <i class="icon-key"></i>
+                                Submit
+                            </button>
+                        </div>
+                    </div>
+                    <div style="color:gray;margin-top:60px;font-size:9px;">
+                        Copyright © 2019 Suchan Software Pvt.Ltd. All Rights Reserved.
+                        @*<a class="pull-right" href="#" style="color:gray;">Support/Privacy </a>*@
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</body>
+</html>
+
+<!--[if lt IE 9]>
+<script src="js/ie8-responsive-file-warning.js"></script><![endif]-->
+<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+<!--[if lt IE 9]>
+<script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+<script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+<![endif]-->
+<script src="~/Content/js/jquery.js"></script>
+<script src="~/Content/bs3/js/bootstrap.min.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        loadCompany()
+
+        if ($('#hdnCompCode').val() != null) {
+            loadb()
+            loadp()
+        }
+        $('#CompCode').change(function () {
+            
+            $("#BranchCode").empty();
+            //event.preventDefault();
+            var url = '@Url.Action("GetBranchList")?CompCode=' + $('#CompCode').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $.each(result, function (i, item) {
+                        $("#BranchCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        });
+
+        $('#CompCode').change(function () {
+            $("#perd").empty();
+            //event.preventDefault();
+            var url = '@Url.Action("GetPerdList")?CompCode=' + $('#CompCode').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $.each(result, function (i, item) {
+                        $("#perd").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        });
+    });
+
+    function loadCompany() {
+        //event.preventDefault();
+        var url = '@Url.Action("GetCompanyList")?UserId=' + $('#hdnUserId').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#CompCode").append("<option value='" + item.Value + "'>" + "[" + item.Value + "] " + item.Text + "</option>");
+                });
+                $('#CompCode').val($('#hdnCompCode').val()).attr("selected", "selected");
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadb() {
+        $("#BranchCode").empty();
+        //event.preventDefault();
+        var url = '@Url.Action("GetBranchList")?CompCode=' + $('#hdnCompCode').val() + '&UserId=' + $('#hdnUserId').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#BranchCode").append("<option value='" + item.Value + "'>" + "[" + item.Value + "] " + item.Text + "</option>");
+                });
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function loadp() {
+        $("#perd").empty();
+        //event.preventDefault();
+        var url = '@Url.Action("GetPerdList")?CompCode=' + $('#hdnCompCode').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#perd").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+</script>

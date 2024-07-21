@@ -1,0 +1,593 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.OtherTransactModel
+@using Common
+
+<div class="form-horizontal" id="ledgerFMupdate" style="margin-left:30px;">
+    <div class="col-sm-6" id="SelectedFMTable" @*style="max-height:300px;min-height:300px; width:50%;overflow-y:scroll;"*@>
+        <table id="FMtabledata" class="zui-table" style="width:100%;word-wrap:break-word">
+            <thead>
+                <tr>
+                    <td style="width:2%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;"></td>
+                    <td style="width:1%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">
+                        Sr.
+                    </td>
+                    <td style="width:49%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">
+                        FM Number
+                    </td>
+                    <td style="width:49%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">
+                        Amount (<label id="lblFMAmt"></label>)
+                    </td>
+                    <td style="width:1%"></td>
+                </tr>
+                <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%;">
+                    <td style="width:2%">
+                        <button type="button" class="btn btn-success" id="btnactivateFMDetails">Add</button>
+                    </td>
+                    <td>
+                        @Html.TextBoxFor(x => x.tempId, new { @class = "form-control", @id = "hdnFMtempid", @Name = "hdnFMtempid", @Value = Model.tempId, @style = "text-align:right;display:none" })
+
+                    </td>
+                    <td style="width: 49%">
+
+                        @Html.TextBoxFor(x => x.FMNumber, new { @class = "form-control", @id = "txtFMNumber", @Name = "txtFMNumber", @Value = Model.FMNumber, @disabled = "disabled" })
+                    </td>
+                    <td style="width:49%">
+                        @Html.TextBoxFor(x => x.FMAmt, new { @class = "form-control", @id = "txtFMAmt", @Name = "txtFMAmt", @Value = Model.FMAmt, @style = "text-align:right;", @disabled = "disabled" })
+                    </td>
+                    <td style="width:1%">
+                        <button type="button" class="btn btn-success" id="btnaddFMDetails" style="display:none"><i class="fa fa-save"></i></button>
+                        <button type="button" id="EditSaveFMLedger" class="btn btn-warning" title="EditSave" style="display:none"><i class="fa fa-save"></i></button>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.FMDetailList != null)
+                {
+                    foreach (var item in @Model.FMDetailList.OrderByDescending(x => x.tempId).ToList())
+                    {
+                        <tr style="font-family:Tahoma;font-size:9pt;">
+                            <td style="vertical-align:inherit;">
+                                <button type="button" action="EditFMLedger" class="btn btn-warning btn-sm" value="@item.tempId" title="Edit"><i class="fa fa-edit"></i></button>
+                                <button type="button" action="DeleteFMLedger" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            </td>
+                            <td style="vertical-align:inherit;">@item.tempId</td>
+
+                            <td style="vertical-align:inherit;">@item.FMNumber</td>
+                            <td style="vertical-align:inherit;">@item.FMAmt</td>
+                            <td></td>
+                            <td class="hidden" style="width:1%">@item.FreightMemoKey</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+
+        </table>
+    </div>
+    <div class="col-sm-6" id="SelectedFMDetailsTable" hidden="hidden">
+        @Html.Partial("FMMasterDetails", Model)
+
+    </div>
+
+</div>
+
+
+
+<script>
+  $(document).ready(function () {
+      $("#btnactivateFMDetails").click(function (event) {
+          $("#txtFMNumber").prop('disabled', false);
+          $("#btnaddFMDetails").prop('disabled', true);
+          $("#txtFMAmt").prop('disabled', false);
+          $("#txtFMNumber").focus();
+          $("#btnaddFMDetails").show();
+          $('#EditSaveFMLedger').hide();
+      });
+
+      $("#btnactivateFMDetails").focusout(function (event) {
+          $("#txtFMNumber").prop('disabled', false);
+          $("#txtFMAmt").prop('disabled', false);
+          $("#txtFMNumber").focus();
+          $("#btnaddFMDetails").show();
+          $('#EditSaveFMLedger').hide();
+      });
+
+      $('button[action|="DeleteFMLedger"]').click(function (event) {
+          event.preventDefault(event);
+          var myBatchArray = [];
+          $('#FMtabledata tbody tr').each(function () {
+              var tds = $(this).find('td');
+              var myDets = {
+                  tempId: tds.eq(1).text(),
+                  FMNumber: tds.eq(2).text(),
+                  FMAmt: tds.eq(3).text(),
+                  FreightMemoKey: tds.eq(5).text(),
+              }
+              myBatchArray.push(myDets);
+          });
+          var ModelData = {};
+          ModelData["FMDetailList"] = myBatchArray;
+          ModelData["tempId"] = $(this).val();
+          var DTO = { Model: ModelData };
+          var url = '@Url.Action("DeleteFMDetails")';
+          $.ajax({
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify(DTO),
+              cache: false,
+              url: url,
+              contentType: "application/json;charset=utf-8",
+              beforeSend: function () {
+                  $('.spinner').show();
+              },
+              success: function (data) {
+                  $('.spinner').hide();
+                  $('#FMDetailsDialog').html(data.Html);
+                  $('#lblFMAmt').html(data.Amt);
+                  $('#txtFMNumber').focus();
+                  AutoCalculateTaxableAmt();
+              },
+              error: function () {
+                  alert("Error occured while processing your request.");
+              }
+          });
+      });
+
+      $('button[action|="EditFMLedger"]').click(function (event) {
+          event.preventDefault(event);
+          var myBatchArray = [];
+          $('#FMtabledata tbody tr').each(function () {
+              var tds = $(this).find('td');
+              var myDets = {
+                  tempId: tds.eq(1).text(),
+                  FMNumber: tds.eq(2).text(),
+                  FMAmt: tds.eq(3).text(),
+                  FreightMemoKey: tds.eq(5).text(),
+              }
+              myBatchArray.push(myDets);
+          });
+          var ModelData = {};
+          ModelData["tempId"] = $(this).val();
+          ModelData["FMDetailList"] = myBatchArray;
+          ModelData["SessionFlag"] = "Edit";
+          var DTO = { Model: ModelData };
+          var url = '@Url.Action("GetFMDetails")';
+          $.ajax({
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify(DTO),
+              cache: false,
+              url: url,
+              contentType: "application/json;charset=utf-8",
+              beforeSend: function () {
+                  $('.spinner').show();
+              },
+              success: function (data) {
+                  $('.spinner').hide();
+                  $('#FMDetailsDialog').html(data.Html);
+                  $('#txtFMNumber').focus();
+                  $('#EditSaveFMLedger').show();
+                  $('#btnaddFMDetails').hide();
+                  $("#txtFMNumber").prop('disabled', false);
+                  $("#txtFMAmt").prop('disabled', false);
+                  GetFreightMemoDetails(data.FreightMemoKey);
+              },
+              error: function (err) {
+                  alert(JSON.stringify(err))
+                  alert("Error occured while processing your request.");
+              }
+          });
+      });
+
+      $("#btnaddFMDetails").click(function (event) {
+          event.preventDefault();
+          var myBatchArray = [];
+          $('#FMtabledata tbody tr').each(function () {
+              var tds = $(this).find('td');
+              var myDets = {
+                  tempId: tds.eq(1).text(),
+                  FMNumber: tds.eq(2).text(),
+                  FMAmt: tds.eq(3).text(),
+                  FreightMemoKey: tds.eq(5).text(),
+              }
+              myBatchArray.push(myDets);
+          });
+          var ModelData = {};
+          ModelData["FMDetailList"] = myBatchArray;
+          ModelData["SessionFlag"] ="Add";
+          ModelData["FMNumber"] = $("#txtFMNumber").val();
+          ModelData["FreightMemoKey"] = $("#FreightMemoKey").val();
+          ModelData["FMAmt"] = $("#txtFMAmt").val();
+          ModelData["Code"] = $("#txtAccount").val();
+          ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+          ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+          var DTO = { Model: ModelData };
+          var url = '@Url.Action("ConfirmFMSave")';
+          $.ajax({
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify(DTO),
+              cache: false,
+              url: url,
+              contentType: "application/json;charset=utf-8",
+              beforeSend: function () {
+                  $('.spinner').show();
+              },
+              success: function (data)
+              {
+                  if (data.Status == "ConfirmError")
+                  {
+                      var confrm = confirm(data.Message);
+                      if (confrm == false)
+                      {
+                          return;
+                      }
+                      else
+                      {
+                          var myBatchArray = [];
+                          $('#FMtabledata tbody tr').each(function () {
+                              var tds = $(this).find('td');
+                              var myDets = {
+                                  tempId: tds.eq(1).text(),
+                                  FMNumber: tds.eq(2).text(),
+                                  FMAmt: tds.eq(3).text(),
+                                  FreightMemoKey: tds.eq(5).text(),
+                              }
+                              myBatchArray.push(myDets);
+                          });
+                          var ModelData = {};
+                          ModelData["FMDetailList"] = myBatchArray;
+                          ModelData["SessionFlag"] = "Add";
+                          ModelData["FreightMemoKey"] = $("#FreightMemoKey").val();
+                          ModelData["FMNumber"] = $("#txtFMNumber").val();
+                          ModelData["FMAmt"] = $("#txtFMAmt").val();
+                          ModelData["Code"] = $("#txtAccount").val();
+                          ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                          ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+                          var DTO = { Model: ModelData };
+                          var url = '@Url.Action("AddFMDetails")';
+                          $.ajax({
+                              type: "POST",
+                              dataType: "json",
+                              data: JSON.stringify(DTO),
+                              cache: false,
+                              url: url,
+                              contentType: "application/json;charset=utf-8",
+                              beforeSend: function () {
+                                  $('.spinner').show();
+                              },
+                              success: function (data)
+                              {
+                                  debugger;
+                                  if (data.Status == "ValidError")
+                                  {
+                                      $('.spinner').hide();
+                                      alert(data.Message)
+                                      return;
+                                  }
+                                  else
+                                  {
+                                      $('#FMDetailsDialog').html(data.Html);
+                                      $('#lblFMAmt').html(data.Amt);
+                                      AutoCalculateTaxableAmt();
+                                      $('.spinner').hide();
+                                  }
+                                  $('#txtFMNumber').focus();
+                              },
+                              error: function () {
+                                  alert("Error occured while processing your request.");
+                              }
+                          });
+                      }
+                  } 
+                  else
+                  {
+                      var myBatchArray = [];
+                      $('#FMtabledata tbody tr').each(function () {
+                          var tds = $(this).find('td');
+                          var myDets = {
+                              tempId: tds.eq(1).text(),
+                              FMNumber: tds.eq(2).text(),
+                              FMAmt: tds.eq(3).text(),
+                              FreightMemoKey: tds.eq(5).text(),
+
+                          }
+                          myBatchArray.push(myDets);
+                      });
+                      var ModelData = {};
+                      ModelData["FMDetailList"] = myBatchArray;
+                      ModelData["SessionFlag"] = "Add";
+                      ModelData["FMNumber"] = $("#txtFMNumber").val();
+                      ModelData["FreightMemoKey"] = $("#FreightMemoKey").val();
+                      ModelData["FMAmt"] = $("#txtFMAmt").val();
+                      ModelData["Code"] = $("#txtAccount").val();
+                      ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                      ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+                      var DTO = { Model: ModelData };
+                      var url = '@Url.Action("AddFMDetails")';
+                      $.ajax({
+                          type: "POST",
+                          dataType: "json",
+                          data: JSON.stringify(DTO),
+                          cache: false,
+                          url: url,
+                          contentType: "application/json;charset=utf-8",
+                          beforeSend: function () {
+                              $('.spinner').show();
+                          },
+                          success: function (data)
+                          {
+                              debugger;
+                              if (data.Status == "ValidError")
+                              {
+                                  $('.spinner').hide();
+                                  alert(data.Message)
+                                  return;
+                              }
+                              else
+                              {
+                                  $('#FMDetailsDialog').html(data.Html);
+                                  $('#lblFMAmt').html(data.Amt);
+                                  AutoCalculateTaxableAmt();
+                                  $('.spinner').hide();
+                              }
+                              $('#txtFMNumber').focus();
+                          },
+                          error: function () {
+                              alert("Error occured while processing your request.");
+                          }
+                      });
+                  }
+              },
+              error: function () {
+                  alert("Error occured while processing your request.");
+              }
+          });
+      });
+      $("#EditSaveFMLedger").click(function (event) {
+          event.preventDefault();
+          var myBatchArray = [];
+          $('#FMtabledata tbody tr').each(function () {
+              var tds = $(this).find('td');
+              var myDets = {
+                  tempId: tds.eq(1).text(),
+                  FMNumber: tds.eq(2).text(),
+                  FMAmt: tds.eq(3).text(),
+              }
+              myBatchArray.push(myDets);
+          });
+          var ModelData = {};
+          ModelData["FMDetailList"] = myBatchArray;
+          ModelData["SessionFlag"] = "Edit";
+          ModelData["FMNumber"] = $("#txtFMNumber").val();
+          ModelData["FMAmt"] = $("#txtFMAmt").val();
+          ModelData["tempId"] = $("#hdnFMtempid").val();
+          ModelData["Code"] = $("#txtAccount").val();
+          ModelData["ParentKey"] = $("#hdnParentKey").val();
+          ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+          ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+          var DTO = { Model: ModelData };
+          var url = '@Url.Action("ConfirmFMSave")';
+          $.ajax({
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify(DTO),
+              cache: false,
+              url: url,
+              contentType: "application/json;charset=utf-8",
+              beforeSend: function () {
+                  $('.spinner').show();
+              },
+              success: function (data)
+              {
+                  debugger;
+                  if (data.Status == "ConfirmError")
+                  {
+                      var confrm = confirm(data.Message);
+                      if (confrm == false)
+                      {
+                          return;
+                      }
+                      else
+                      {
+                          var myBatchArray = [];
+                          $('#FMtabledata tbody tr').each(function () {
+                              var tds = $(this).find('td');
+                              var myDets = {
+                                  tempId: tds.eq(1).text(),
+                                  FMNumber: tds.eq(2).text(),
+                                  FMAmt: tds.eq(3).text(),
+                              }
+                              myBatchArray.push(myDets);
+                          });
+                          var ModelData = {};
+                          ModelData["FMDetailList"] = myBatchArray;
+                          ModelData["SessionFlag"] = "Edit";
+                          ModelData["FMNumber"] = $("#txtFMNumber").val();
+                          ModelData["FMAmt"] = $("#txtFMAmt").val();
+                          ModelData["tempId"] = $("#hdnFMtempid").val();
+                          ModelData["Code"] = $("#txtAccount").val();
+                          ModelData["ParentKey"] = $("#hdnParentKey").val();
+                          ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                          ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+                          var DTO = { Model: ModelData };
+                          var url = '@Url.Action("AddFMDetails")';
+                          $.ajax({
+                              type: "POST",
+                              dataType: "json",
+                              data: JSON.stringify(DTO),
+                              cache: false,
+                              url: url,
+                              contentType: "application/json;charset=utf-8",
+                              beforeSend: function () {
+                                  $('.spinner').show();
+                              },
+                              success: function (data) {
+                                  debugger;
+                                  if (data.Status == "ValidError") {
+                                      $('.spinner').hide();
+                                      alert(data.Message)
+                                      return;
+                                  }
+                                  else {
+                                      $('#FMmodel').modal('show');
+                                      $('#FMDetailsDialog').html(data.Html);
+                                      $('#lblFMAmt').html(data.Amt);
+                                      $('.spinner').hide();
+                                      $('#EditSaveFMLedger').hide();
+                                      //AutoCalculateTaxableAmt();
+                                  }
+                                  $('#txtLRNumber').focus();
+                              },
+                              error: function () {
+                                  alert("Error occured while processing your request.");
+                              }
+                          });
+                      }
+                  } 
+                  else
+                  {
+                      var myBatchArray = [];
+                      $('#FMtabledata tbody tr').each(function () {
+                          var tds = $(this).find('td');
+                          var myDets = {
+                              tempId: tds.eq(1).text(),
+                              FMNumber: tds.eq(2).text(),
+                              FMAmt: tds.eq(3).text(),
+                          }
+                          myBatchArray.push(myDets);
+                      });
+                      var ModelData = {};
+                      ModelData["FMDetailList"] = myBatchArray;
+                      ModelData["SessionFlag"] = "Edit";
+                      ModelData["FMNumber"] = $("#txtFMNumber").val();
+                      ModelData["FMAmt"] = $("#txtFMAmt").val();
+                      ModelData["tempId"] = $("#hdnFMtempid").val();
+                      ModelData["Code"] = $("#txtAccount").val();
+                      ModelData["ParentKey"] = $("#hdnParentKey").val();
+                      ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                      ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+                      var DTO = { Model: ModelData };
+                      var url = '@Url.Action("AddFMDetails")';
+                      $.ajax({
+                          type: "POST",
+                          dataType: "json",
+                          data: JSON.stringify(DTO),
+                          cache: false,
+                          url: url,
+                          contentType: "application/json;charset=utf-8",
+                          beforeSend: function () {
+                              $('.spinner').show();
+                          },
+                          success: function (data)
+                          {
+                              debugger;
+                              if (data.Status == "ValidError")
+                              {
+                                  $('.spinner').hide();
+                                  alert(data.Message)
+                                  return;
+                              }
+                              else
+                              {
+                                  $('#FMmodel').modal('show');
+                                  $('#FMDetailsDialog').html(data.Html);
+                                  $('#lblFMAmt').html(data.Amt);
+                                  $('.spinner').hide();
+                                  $('#EditSaveFMLedger').hide();
+                                  //();
+                              }
+                              $('#txtLRNumber').focus();
+                          },
+                          error: function () {
+                              alert("Error occured while processing your request.");
+                          }
+                      });
+                  }
+              },
+              error: function () {
+                  alert("Error occured while processing your request.");
+              }
+          });
+      });
+      $("#txtFMNumber").focusout(function (event) {
+          var ModelData = {};
+          if ($("#txtFMNumber").val() != null && $("#txtFMNumber").val() != "")
+          {
+              ModelData["FMNumber"] = $("#txtFMNumber").val();
+              var DTO = { Model: ModelData };
+              var url = '@Url.Action("FetchFreightMemoDocumentList")';
+              $.ajax({
+                  type: "POST",
+                  dataType: "json",
+                  data: JSON.stringify(DTO),
+                  cache: false,
+                  url: url,
+                  contentType: "application/json;charset=utf-8",
+                  beforeSend: function () {
+                      $('.spinner').show();
+                  },
+                  success: function (data)
+                  {
+                      if (data.Status == "ValidError")
+                      {
+                          alert(data.Message);
+                          return;
+                      }
+                      else if (data.Status == "Processed")
+                      {
+                          GetFreightMemoDetails(data.Message);
+                      }
+                      else
+                      {
+                          var AttachDoc = $("#freightmemomodels");
+                          AttachDoc.html('');
+                          AttachDoc.html(data.Html);
+                          $('#FreightMemoModels').modal('show');
+                      }
+                  },
+                  error: function () {
+                      alert("Error occured while processing your request.");
+                  }
+              });
+          }
+      });
+  });
+
+    function GetFreightMemoDetails(value)
+    {
+        $("#FreightMemoKey").val(value);
+        $("#btnaddFMDetails").prop('disabled', false);
+        $('#FreightMemoModels').modal('hide');
+        var ModelData = {};
+        ModelData["FMNumber"] = value;
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("GetFMMasterDetails")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data)
+            {
+                if (data.Status == "ValidError")
+                {
+                    alert(data.Message);
+                    $('#SelectedFMDetailsTable').hide();
+                    return;
+                }
+                else
+                {
+                    $('#SelectedFMDetailsTable').show();
+                    $('#SelectedFMDetailsTable').html(data.Html)
+                }
+            },
+            error: function () {
+                alert("Error occured while processing your request.");
+            }
+        });
+    }
+</script>

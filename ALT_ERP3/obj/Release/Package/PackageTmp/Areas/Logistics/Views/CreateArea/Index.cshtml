@@ -1,0 +1,673 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.BranchVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+
+<style>
+
+
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+        text-align: center;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .btncolor {
+        background-color: slategray;
+        color: white;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+        text-align: center;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+</style>
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+
+<script>
+    var isTreeOpen = false;
+    $(document).ready(function () {
+
+        GetMyFavorites('@Model.ViewDataId');
+
+        FillTreeView();
+        FillTreeViewOff();
+
+
+
+        //ExpandOrCollapse();
+         $('#Treeview').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var divId = [];
+            $("#Treeview").jstree("get_selected").each(function (key, value) {
+                divId.push(this.id);
+            });
+            if (divId == '') { return; }
+             var url = '@Url.Action("TreeNodeClick")?Code=' + divId.toString();
+             $('#hdnID').val(divId);
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ChildDetails').html(data.Html);
+                },
+            });
+        });
+        $('#TreeviewOff').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var divId = [];
+            $("#TreeviewOff").jstree("get_selected").each(function (key, value) {
+                divId.push(this.id);
+            });
+            if (divId == '') { return; }
+            var url = '@Url.Action("TreeNodeClick")?Code=' + divId.toString() + "&Inactive=true";
+            // $('#hdnID').val(divId); Inactive
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ChildDetails').html(data.Html);
+                },
+            });
+        });
+
+        $('#addchild').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var divId = [];
+            $("#Treeview").jstree("get_selected").each(function (key, value) {
+                divId.push(this.id);
+            });
+            var url = '@Url.Action("AddChild")?Code=' + divId.toString();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                },
+                success: function (data) {
+                    $('#ChildDetails').html(data.Html);
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                    }
+                    else if (data.Status == 'failure') {
+                        $('.spinner').hide();
+                        alert('No Item is Selected.');
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+
+        $('#deletegroup').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var divId = [];
+            var NewID = "";
+            $("#Treeview").jstree("get_selected").each(function (key, value) {
+                debugger;
+                divId.push(this.id);
+                NewID = this.id;
+            });
+            var result = confirm("Are you sure you want to delete?");
+            if (result) {
+                var url = '@Url.Action("DeleteAccountGroups")?Code=' + $("#TfatBranch_Code").val() + '&Mode=Delete' +'&Header=@Model.Header';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        $('#ChildDetails').html(data.Html);
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                            $("#ErrorMessage").hide();
+                            $('#ChildDetails').empty();
+                            location.reload();
+                        }
+                        else if (data.Status == 'Error') {
+                            alert(data.Message);
+                            $('#ChildDetails').empty();
+                            FillTreeView();
+                            FillTreeViewOff();
+                        }
+                        else {
+                            $("#ErrorMessage").show();
+                            $("#ErrorMessage").html(data.html);
+                            $('#ChildDetails').empty();
+                            FillTreeView();
+                            FillTreeViewOff();
+                        }
+                    },
+                });
+            }
+        });
+
+
+
+        $('#expandall').click(function () {
+
+
+            ExpandOrCollapse();
+
+        });
+
+        $('#SubmitData').click(function (event) {
+            event.preventDefault();
+            //if ($("#ChangePlantBUDetails").validate().form() == false)
+            //    return;
+
+            //if ($("#VehicleActivityF").val() == "F") {
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('VehicleActivity Time (HH:mm) Format Required');
+            //    return;
+            //}
+            if ($("#TfatBranch_Code").val() == null || $("#TfatBranch_Code").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Plant/BU Code is Required..');
+                return;
+            }
+            if ($("#TfatBranch_Name").val() == null || $("#TfatBranch_Name").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ($("#TfatBranch_Grp").val() == null || $("#TfatBranch_Grp").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Grp is Required..');
+                return;
+            }
+            if ($("#TfatBranch_CompCode").val() == null || $("#TfatBranch_CompCode").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Comp Code is Required..');
+                return;
+            }
+            if ($("#TfatBranch_Country").val() == null || $("#TfatBranch_Country").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Country is Required..');
+                return;
+            }
+            if ($("#TfatBranch_State").val() == null || $("#TfatBranch_State").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('State is Required..');
+                return;
+            }
+            if ($("#TfatBranch_City").val() == null || $("#TfatBranch_City").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('City is Required..');
+                return;
+            }
+            if ($("#TfatBranch_gp_RoundVAT").val() == null || $("#TfatBranch_gp_RoundVAT").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Round Tax is Required..');
+                return;
+            }
+            if ($("#TfatBranch_gp_AutoAccStyle").val() == null || $("#TfatBranch_gp_AutoAccStyle").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Style is Required..');
+                return;
+            }
+            if ($("#TfatBranch_gp_AutoAccLength").val() == null || $("#TfatBranch_gp_AutoAccLength").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Code Length is Required..');
+                return;
+            }
+
+            if ($("#Category").is(":disabled") == false) {
+                if ($("#Category").val()=="0") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Category is Required..');
+                    return;
+                }
+            }
+            if ($("#Type").is(":disabled") == false) {
+                if ($("#Type").val()=="0") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Type is Required..');
+                    return;
+                }
+            }
+
+            if ($("#VehicleActivity").is(":disabled") == false) {
+                if ($("#VehicleActivity").val() == null || $("#VehicleActivity").val() == '' || $("#VehicleActivity").val() == '0') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('VehicleActivity is Required..');
+                    return;
+                }
+                var Value = $("#VehicleActivity").val();
+                var ssnRE = new RegExp('([01]?[0-9]|2[0-3]):[0-5][0-9]');
+                if (!ssnRE.test(Value)) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('VehicleActivity set Proper Format HH:MM..');
+                    return;
+                }
+
+
+
+            }
+            if ($("#AllTime").is(":disabled") == false) {
+                if ($("#AllTime").prop("checked") == false && ($("#WorkingHoursFrom").val() == "" || $("#WorkingHoursTo").val() == "")) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Working Hours is Required..');
+                    return;
+                }
+            }
+
+
+            //if ($("#TfatBranch_Grp").val() != "HO0000") {
+            //    if ( $("#TfatBranch_LocationCode").val() == '0') {
+            //        $("#ErrorMessage").show();
+            //        $("#ErrorMessage").text('Location is Required..');
+            //        return;
+            //    }
+
+            //}
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            ModelData["Type"] = $("#Type").val();
+            ModelData["Category"] = $("#Category").val();
+            if ($("#Status").prop("checked") == true) {
+                ModelData["Status"] = true;
+            } else {
+                ModelData["Status"] = false;
+            }
+
+            ModelData["TfatBranch_Addrl1"] = $("#TfatBranch_Addrl1").val();
+            ModelData["TfatBranch_Code"] = $("#TfatBranch_Code").val();
+            ModelData["TfatBranch_gp_DiscAP"] = $("#TfatBranch_gp_DiscAP").is(':checked');
+            ModelData["TfatBranch_Business"] = $("#TfatBranch_Business").val();
+            ModelData["TfatBranch_SMSURL"] = $("#TfatBranch_SMSURL").val();
+            ModelData["TfatBranch_Name"] = $("#TfatBranch_Name").val();
+            ModelData["TfatBranch_Addrl3"] = $("#TfatBranch_Addrl3").val();
+            ModelData["TfatBranch_gp_AllowDiscAP"] = $("#TfatBranch_gp_AllowDiscAP").is(':checked');
+            ModelData["TfatBranch_SMSUserId"] = $("#TfatBranch_SMSUserId").val();
+            ModelData["TfatBranch_Addrl2"] = $("#TfatBranch_Addrl2").val();
+            ModelData["TfatBranch_aAuthno"] = $("#TfatBranch_aAuthno").val();
+            ModelData["TfatBranch_Grp"] = $("#TfatBranch_Grp").val();
+            ModelData["TfatBranch_gp_DiscAS"] = $("#TfatBranch_gp_DiscAS").is(':checked');
+            ModelData["TfatBranch_gp_AllowDiscAS"] = $("#TfatBranch_gp_AllowDiscAS").is(':checked');
+            ModelData["TfatBranch_Licence2"] = $("#TfatBranch_Licence2").val();
+            ModelData["TfatBranch_CompCode"] = $("#TfatBranch_CompCode").val();
+            ModelData["TfatBranch_Addrl4"] = $("#TfatBranch_Addrl4").val();
+            ModelData["TfatBranch_gp_DiscPP"] = $("#TfatBranch_gp_DiscPP").is(':checked');
+            ModelData["TfatBranch_aLstno"] = $("#TfatBranch_aLstno").val();
+            ModelData["TfatBranch_LocationCode"] = $("#TfatBranch_LocationCode").val();
+            ModelData["TfatBranch_SMSPass"] = $("#TfatBranch_SMSPass").val();
+            ModelData["TfatBranch_Country"] = $("#TfatBranch_Country").val();
+            ModelData["TfatBranch_gp_AllowDiscPP"] = $("#TfatBranch_gp_AllowDiscPP").is(':checked');
+            ModelData["TfatBranch_State"] = $("#TfatBranch_State").val();
+            //ModelData["TfatBranch_Users"] = $("#hdnUsersArray").val();
+            ModelData["TfatBranch_aCstNo"] = $("#TfatBranch_aCstNo").val();
+            ModelData["TfatBranch_SMSCaption"] = $("#TfatBranch_SMSCaption").val();
+            ModelData["TfatBranch_City"] = $("#TfatBranch_City").val();
+            ModelData["TfatBranch_gp_DiscPS"] = $("#TfatBranch_gp_DiscPS").is(':checked');
+            ModelData["TfatBranch_GSTNo"] = $("#TfatBranch_GSTNo").val();
+            ModelData["TfatBranch_LogIn"] = $("#TfatBranch_LogIn").is(':checked');
+            ModelData["TfatBranch_aPin"] = $("#TfatBranch_aPin").val();
+            ModelData["TfatBranch_PanNo"] = $("#TfatBranch_PanNo").val();
+            ModelData["TfatBranch_CurrName"] = $("#TfatBranch_CurrName").val();
+            ModelData["TfatBranch_gp_AllowDiscPS"] = $("#TfatBranch_gp_AllowDiscPS").is(':checked');
+            ModelData["TfatBranch_gp_AllowRateP"] = $("#TfatBranch_gp_AllowRateP").is(':checked');
+            ModelData["TfatBranch_CINNo"] = $("#TfatBranch_CINNo").val();
+            ModelData["TfatBranch_SMSPrefix"] = $("#TfatBranch_SMSPrefix").is(':checked');
+            ModelData["TfatBranch_aFax"] = $("#TfatBranch_aFax").val();
+            ModelData["TfatBranch_TimeDiff"] = $("#TfatBranch_TimeDiff").val();
+            ModelData["TfatBranch_VATReg"] = $("#TfatBranch_VATReg").val();
+            ModelData["TfatBranch_CurrDec"] = $("#TfatBranch_CurrDec").val();
+            ModelData["TfatBranch_gp_AllowRateS"] = $("#TfatBranch_gp_AllowRateS").is(':checked');
+            ModelData["TfatBranch_Account"] = $("#TfatBranch_Account").val();
+            ModelData["TfatBranch_Tel1"] = $("#TfatBranch_Tel1").val();
+            ModelData["TfatBranch_gp_BIN"] = $("#TfatBranch_gp_BIN").is(':checked');
+            ModelData["TfatBranch_gp_VATGST"] = $("#TfatBranch_gp_VATGST").val();
+            ModelData["gp_CLStockAddOrder"] = $("#gp_CLStockAddOrder").is(':checked');
+            ModelData["TfatBranch_Tel2"] = $("#TfatBranch_Tel2").val();
+            ModelData["TfatBranch_Tel3"] = $("#TfatBranch_Tel3").val();
+            ModelData["TfatBranch_gp_CashLimit"] = $("#TfatBranch_gp_CashLimit").is(':checked');
+            ModelData["TfatBranch_TINNumber"] = $("#TfatBranch_TINNumber").val();
+            ModelData["TfatBranch_Tel4"] = $("#TfatBranch_Tel4").val();
+            ModelData["TfatBranch_gp_CashLimitAmt"] = $("#TfatBranch_gp_CashLimitAmt").val();
+            ModelData["TfatBranch_Sun"] = $("#TfatBranch_Sun").is(':checked');
+            ModelData["TfatBranch_gp_CashLimitWarn"] = $("#TfatBranch_gp_CashLimitWarn").is(':checked');
+            ModelData["TfatBranch_TDSReg"] = $("#TfatBranch_TDSReg").val();
+
+            ModelData["TfatBranch_www"] = $("#TfatBranch_www").val();
+            ModelData["TfatBranch_TDSOffice"] = $("#TfatBranch_TDSOffice").val();
+            ModelData["TfatBranch_Mon"] = $("#TfatBranch_Mon").is(':checked');
+            ModelData["TfatBranch_TDSAuthorise"] = $("#TfatBranch_TDSAuthorise").val();
+            ModelData["TfatBranch_gp_EnableParty"] = $("#TfatBranch_gp_EnableParty").is(':checked');
+            ModelData["TfatBranch_PrintInfo"] = $("#TfatBranch_PrintInfo").val();
+            ModelData["TfatBranch_TDSCir"] = $("#TfatBranch_TDSCir").val();
+            ModelData["TfatBranch_gp_GINQty"] = $("#TfatBranch_gp_GINQty").is(':checked');
+            ModelData["TfatBranch_gp_GSTStyle"] = $("#TfatBranch_gp_GSTStyle").val();
+            ModelData["TfatBranch_Tue"] = $("#TfatBranch_Tue").is(':checked');
+            ModelData["TfatBranch_gp_GSTSupply"] = $("#TfatBranch_gp_GSTSupply").is(':checked');
+            ModelData["TfatBranch_Wed"] = $("#TfatBranch_Wed").is(':checked');
+            ModelData["TfatBranch_gp_Holiday1"] = $("#TfatBranch_gp_Holiday1").val();
+            ModelData["TfatBranch_Thu"] = $("#TfatBranch_Thu").is(':checked');
+            ModelData["TfatBranch_gp_Holiday2"] = $("#TfatBranch_gp_Holiday2").val();
+            ModelData["TfatBranch_gp_MultiUnit"] = $("#TfatBranch_gp_MultiUnit").is(':checked');
+            ModelData["TfatBranch_Fri"] = $("#TfatBranch_Fri").is(':checked');
+            ModelData["TfatBranch_Sat"] = $("#TfatBranch_Sat").is(':checked');
+            ModelData["TfatBranch_gp_NegStock"] = $("#TfatBranch_gp_NegStock").is(':checked');
+            ModelData["TfatBranch_gp_NegStockAsOn"] = $("#TfatBranch_gp_NegStockAsOn").is(':checked');
+            ModelData["TfatBranch_gp_NegWarn"] = $("#TfatBranch_gp_NegWarn").is(':checked');
+            ModelData["TfatBranch_gp_PostP"] = $("#TfatBranch_gp_PostP").is(':checked');
+            ModelData["TfatBranch_gp_PurchPostTDS"] = $("#TfatBranch_gp_PurchPostTDS").is(':checked');
+            ModelData["TfatBranch_gp_PSP"] = $("#TfatBranch_gp_PSP").is(':checked');
+            ModelData["TfatBranch_gp_RCMDateVM"] = $("#TfatBranch_gp_RCMDate").val();
+            ModelData["TfatBranch_gp_SEZChargeParty"] = $("#TfatBranch_gp_SEZChargeParty").is(':checked');
+            ModelData["TfatBranch_gp_VatDecP"] = $("#TfatBranch_gp_VatDecP").val();
+            ModelData["TfatBranch_gp_RoundVAT"] = $("#TfatBranch_gp_RoundVAT").val();
+            ModelData["TfatBranch_gp_VatDecS"] = $("#TfatBranch_gp_VatDecS").val();
+            ModelData["TfatBranch_gp_SPAdjForce"] = $("#TfatBranch_gp_SPAdjForce").is(':checked');
+            ModelData["TfatBranch_gp_Serial"] = $("#TfatBranch_gp_Serial").is(':checked');
+            ModelData["TfatBranch_gp_Batch"] = $("#TfatBranch_gp_Batch").is(':checked');
+            ModelData["TfatBranch_gp_AutoAccCode"] = $("#TfatBranch_gp_AutoAccCode").is(':checked');
+            ModelData["TfatBranch_gp_AutoAccStyle"] = $("#TfatBranch_gp_AutoAccStyle").val();
+            ModelData["TfatBranch_gp_AutoAccLength"] = $("#TfatBranch_gp_AutoAccLength").val();
+            ModelData["TfatBranch_gp_SONoDupl"] = $("#TfatBranch_gp_SONoDupl").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.ViewDataId';
+            ModelData["TfatBranch_DuplicateItemName"] = $("#TfatBranch_DuplicateItemName").is(':checked');
+            ModelData["gp_AddonBased"] = $("#gp_AddonBased").is(':checked');
+            ModelData["gp_ItemAutoCode"] = $("#gp_ItemAutoCode").is(':checked');
+            ModelData["gp_ItemCodeStyle"] = $("#gp_ItemCodeStyle").is(':checked');
+            ModelData["gp_Length"] = $("#gp_Length").val();
+            ModelData["gp_OrdIncludeRet"] = $("#gp_OrdIncludeRet").is(':checked');
+            ModelData["VehicleActivity"] = $("#VehicleActivity").val();
+
+            ModelData["BranchMail"] = $("#BranchMail").is(':checked');
+            ModelData["LocalMail"] = $("#LocalMail").is(':checked');
+            ModelData["TfatBranch_Email"] = $("#TfatBranch_Email").val();
+            ModelData["BCCTo"] = $("#BCCTo").val();
+            ModelData["CCTo"] = $("#CCTo").val();
+            ModelData["SMTPServer"] = $("#SMTPServer").val();
+            ModelData["SMTPUser"] = $("#SMTPUser").val();
+            ModelData["SMTPPassword"] = $("#SMTPPassword").val();
+            ModelData["SMTPPort"] = $("#SMTPPort").val();
+
+            if ($("#AllTime").prop("checked") == true) {
+                ModelData["WorkingHoursFrom"] = null;
+                ModelData["WorkingHoursTo"] = null;
+            } else {
+                ModelData["WorkingHoursFrom"] = $("#WorkingHoursFrom").val();
+                ModelData["WorkingHoursTo"] = $("#WorkingHoursTo").val();
+            }
+
+
+            var KMList = "", BranchList="",TimeList="";
+            $('#example > tbody  > tr').each(function () {
+                var Row = $(this).closest('tr');
+                var CheckBox = Row.find('.SingleChk').prop("checked");
+                if (CheckBox) {
+                var KM = $(this).closest("tr").find(".DistanceKM").text();
+                var BranchCode = $(this).closest("tr").find(".BranchCode").text();
+                var Time = $(this).closest("tr").find(".DistanceTime").text();
+                KMList = KMList + KM + ",";
+                BranchList = BranchList + BranchCode + ",";
+                    TimeList = TimeList + Time + ",";
+                }
+            });
+            ModelData["KMList"] = KMList.substring(0, KMList.length-1);
+            ModelData["BranchList"] = BranchList.substring(0, BranchList.length-1);
+            ModelData["TimeList"] = TimeList.substring(0, TimeList.length-1);
+            ModelData["Header"] = '@Model.Header';
+            ModelData["Mode"] = $("#hdnMode").val();;
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").hide();
+                        location.reload();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+
+    function ExpandOrCollapse() {
+        if ($("#Treeview>ul>li").hasClass("jstree-open")) {
+            $("#Treeview").jstree("close_all", "#0");
+        }
+        else {
+            $("#Treeview").jstree("open_all", "#0");
+        }
+    }
+
+    function FillTreeView() {
+        //$("#Treeview").jstree({
+        //    json_data: {
+        //        "ajax": {
+        //            "url": "/CreateArea/TreeView",
+        //            "type": "POST",
+        //            "dataType": "json",
+        //            "contentType": "application/json charset=utf-8"
+        //        }
+        //    },
+        //    checkbox: {
+        //        real_checkboxes: false,
+        //        checked_parent_open: false
+        //    },
+        //    plugins: ["themes", "json_data", "ui", ""]
+        //});
+
+        var tree = $("#Treeview");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/CreateArea/TreeView",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: false,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", ""]
+        }).bind("loaded.jstree", function (event, data) {
+            //
+            $(this).jstree("open_all");
+        });
+    };
+
+    function FillTreeViewOff() {
+        //$("#Treeview").jstree({
+        //    json_data: {
+        //        "ajax": {
+        //            "url": "/CreateArea/TreeView",
+        //            "type": "POST",
+        //            "dataType": "json",
+        //            "contentType": "application/json charset=utf-8"
+        //        }
+        //    },
+        //    checkbox: {
+        //        real_checkboxes: false,
+        //        checked_parent_open: false
+        //    },
+        //    plugins: ["themes", "json_data", "ui", ""]
+        //});
+
+        var tree = $("#TreeviewOff");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/CreateArea/TreeViewOff",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: false,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", ""]
+        }).bind("loaded.jstree", function (event, data) {
+            //
+            $(this).jstree("open_all");
+        });
+    };
+
+</script>
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">Tree Group</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/MasterDashBoard" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-top: 2%;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="view" role="form" style="margin-top:0px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <div class="form-group" style="margin-top:0px;">
+                <div class="col-sm-3" style="    border-right:double;height: 555px;">
+                    <h1 style="font-size: 15px;text-align: center;color: green;">Active Areas</h1>
+                    <div id="Treeview" style="font-family:Tahoma;font-size:12px;padding-left:5px;padding-top:10px;padding-bottom:5px;"></div>
+                    <hr />
+                    <h1 style="font-size: 15px;text-align: center;color: red;">In Active Areas</h1>
+                    <div id="TreeviewOff" style="font-family:Tahoma;font-size:12px;padding-left:5px;padding-top:10px;padding-bottom:5px;"></div>
+                </div>
+                <div id="ChildDetails">
+                    @*@Html.Partial("_ShowNodeDetails")*@
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="addchild">Add Child</button>
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="expandall">Expand All / Collapse All</button>
+                <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="deletegroup">Delete Item</button>
+            </div>
+        </div>
+        <div class="col-sm-3" style="margin-top:6px;color:white;font-family:Tahoma;font-size:8pt;">
+            T.LAT ERP-3.0, Shruham Software
+        </div>
+
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SubmitData">Save</button>
+                }
+                <a href="~/DashBoard/MasterDashBoard" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+<input type="hidden" id="VehicleActivityF" />

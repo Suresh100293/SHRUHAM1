@@ -1,0 +1,290 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.EwayBillVM
+@using Common;
+@{
+    ViewBag.Title = "LRSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<style>
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+        /*Suresh*/
+        text-align: center;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .btncolor {
+        background-color: slategray;
+        color: white;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        //misgridreload();
+        $('#btnSetMisMatch').click(function (event)
+        {
+            event.preventDefault();
+            var ModelData = {};
+            var myTableArray = [];
+            $("#mislist > tbody  > tr").each(function ()
+            {
+                var CheckBox = $(this).find('.EwayBillChk').prop("checked");
+                if (CheckBox)
+                {
+                    var myDets =
+                    {
+                        EWBNO: $(this).find('td:eq(4)').text(),
+                        Consignment: $(this).find('.txtConsignment').val(),
+                    }
+                    myTableArray.push(myDets);
+                }
+            });
+            ModelData["ExtendEwayBillList"] = myTableArray;
+
+            var url = '@Url.Action("SetEayBillToConsignmnet")';
+            var check = $('#mislist').find('input[type=checkbox]:checked').length;
+            if (check > 0)
+            {
+                var DTO = { mModel: ModelData };
+                $.ajax({
+
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status =="Sucess") {
+                            location.reload();
+                        }
+                        else
+                        {
+                            alert(data.errormsg);
+                            return;
+                        }
+                    },
+                });
+            }
+            else
+            {
+                alert("Atleast One Item Required...");
+            }
+        });
+    });
+    function misgridreload1() {
+        //event.preventDefault();
+        $('#mislist').jqGrid('clearGridData');
+        $("#mislist").jqGrid("GridUnload");
+        $('#mislist').trigger('reloadGrid');
+        $('#AllEwaylist').jqGrid('clearGridData');
+        $("#AllEwaylist").jqGrid("GridUnload");
+        $('#AllEwaylist').trigger('reloadGrid');
+
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var mDate = ('@Model.FromDate' + ':' + '@Model.ToDate');
+        var Code = "";
+        if ("@Model.GetEaybill" == "" || "@Model.GetEaybill" == null || "@Model.GetEaybill" == "Active") {
+            Code = "s.Clear='false' and s.EWBValid >"+'@Model.SyncDate';
+        }
+        else if ("@Model.GetEaybill" == "Clear")
+        {
+            Code =  "s.Clear='true'";
+        }
+        else if ( "@Model.GetEaybill"== "ALL")
+        {
+            Code =  "1=1";
+        }
+
+
+        var sPathUrl = "/Logistics/MasterGrid/GetGridStructureRecords/?Date=" + mDate + "&id=MisMatchEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Logistics/MasterGrid/GetMasterGridData/?Date=" + mDate + "&ViewDataId=MisMatchEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked') + '&Code=' + Code;
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#mislist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#mispager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:250,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    debugger;
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#mislist');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+
+                    var ids = jQuery("#mislist").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        if (jQuery("#mislist").getCell(rowId, "Clear") == "False")
+                        {
+                            var btn = "<button type='button' id='btnClear" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Clear' , title='clear' , attr='" + rowId + "'>Clear</button>";
+                            jQuery("#mislist").jqGrid('setRowData', rowId, { Actions: btn });
+                        }
+                        else
+                        {
+                            var btn = "<button type='button' id='btnForceActivity" + rowId + "' value='" + rowId + "' style='padding:3px 8px;border-radius:15px;' class='btn btn-danger' tooltip='UnClear' , title='Unclear' , attr='" + rowId + "'>Un-Clear</button>";
+                            jQuery("#mislist").jqGrid('setRowData', rowId, { Actions: btn });
+                        }
+                    }
+                    $("button").click(function (event)
+                    {
+                        debugger;
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#mislist');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'EwayBill No');
+                        var DocNo = myGrid.jqGrid('getCell', curRowId, 'FMNO');
+                        switch (btntype)
+                        {
+                            case "btnForceActivity":
+                                UnclearFunction(cellVal);
+                                break;
+                            case "btnClear":
+                                ClearFunction(cellVal);
+                                break;
+                        }
+                    });
+                },
+            });
+            jQuery("#mislist").jqGrid('navGrid', "#mispager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#mislist").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#mispager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+    function CheckJQGridCheckbox() {
+        $('#mislist tbody tr').each(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            var CheckBox = $(this).find("input[class='EwayBillChk']").is(':checked');
+            if (CheckBox) {
+                Row.find(".txtConsignment").prop("disabled", false);
+            }
+            else {
+                Row.find(".txtConsignment").prop("disabled", true);
+            }
+        });
+    }
+    
+</script>
+<div class="panel-body" style="height:auto;padding-left:5px;padding-right:5px;padding-top:5px;">
+    <div id="page-contentgrid">
+        <div class="jqGrid">
+            <table id="mislist" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+            <div id="mispager" style="height:34px;"></div>
+        </div>
+    </div>
+</div>
+@*<div class="pull-right" style="padding-right: 5px;">
+    <button class="btn btn-warning" style="color:black;" id="btnSetMisMatch">Set MisMatch EwayBill</button>
+</div>*@
+

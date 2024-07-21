@@ -1,0 +1,511 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.MasterVM
+@using Common;
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        LoadTransporter()
+        loadBankName()
+        loadIncoterm()
+        LoadSalesMan()
+        LoadBroker()
+        loadmoreCurrency()
+        loadPartyCrLmtType()
+        loadPartyCrDayLmtType()
+
+
+        var values = $('#hdnAppPriceList').val();
+        $("#hdnPriceListArray").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $(".listbox2 option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+        $(".listbox2").change(function () {
+            $('#hdnPriceListArray').val('');
+            var selected = [];
+            $(".listbox2 :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnPriceListArray').val(selected)
+            return false;
+        });
+
+
+        var values2 = $('#hdnAppPDiscList').val();
+        $("#hdnPDiscListArray").val(values2);
+        if (values2 == "") {
+        }
+        else {
+            $.each(values2.split(","), function (i, e) {
+                $(".listbox3 option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+        $(".listbox3").change(function () {
+            $('#hdnPDiscListArray').val('');
+            var selected2 = [];
+            $(".listbox3 :selected").each(function () {
+                selected2.push($(this).val());
+            });
+            $('#hdnPDiscListArray').val(selected2)
+            return false;
+        });
+
+
+        var values3 = $('#hdnAppSchemeList').val();
+        $("#hdnSchemeListArray").val(values3);
+        if (values3 == "") {
+        }
+        else {
+            $.each(values3.split(","), function (i, e) {
+                $(".listbox4 option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+        $(".listbox4").change(function () {
+            $('#hdnSchemeListArray').val('');
+            var selected3 = [];
+            $(".listbox4 :selected").each(function () {
+                selected3.push($(this).val());
+            });
+            $('#hdnSchemeListArray').val(selected3)
+            return false;
+        });
+
+
+        $('.listbox2').multiselect({
+            includeSelectAllOption: true,
+            buttonWidth: '200px',})
+        $('.listbox3').multiselect({
+            includeSelectAllOption: true,
+            buttonWidth: '200px',})
+        $('.listbox4').multiselect({
+            includeSelectAllOption: true,
+            buttonWidth: '200px',})
+    });
+
+    function LoadTransporter() {
+        var url = '@Url.Action("GetTranspoter")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Transporter").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Transporter').val('@Model.Transporter').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    function loadBankName() {
+        event.preventDefault();
+        var url = '@Url.Action("GetBankname")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Country: $('#BankName').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#DraweeBank").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#DraweeBank').val('@Model.DraweeBank').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    function loadIncoterm() {
+        event.preventDefault();
+        var url = '@Url.Action("GetIncoterm")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#IncoTerms").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#IncoTerms').val('@Model.IncoTerms').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    function LoadSalesMan() {
+        var url = '@Url.Action("AutoCompleteSalesMan")'
+        $('#SalesMan').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.SalesMan', text: '@Model.SalesManName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadBroker() {
+        var url = '@Url.Action("AutoCompleteBroker")'
+        $('#Broker').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Broker', text: '@Model.BrokerName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+
+    function loadmoreCurrency() {
+        var url = '@Url.Action("AutoCompleteCurrency")'
+        $('#CurrCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CurrCode', text: '@Model.CurrName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function loadPartyCrLmtType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetPartyCrLmtType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#CRLimitWarn").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#CRLimitWarn').val('@Model.CRLimitWarn').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+
+    };
+
+    function loadPartyCrDayLmtType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetPartyCrDayLmtType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#CRDaysWarn").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#CRDaysWarn').val($('#hdnCRDaysWarn').val()).attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+
+    };
+
+</script>
+
+<div class="form-horizontal" id="fMore" role="form" style="margin-top:0%; overflow-x:hidden;">
+    <div class="row">
+        <div class="col-sm-12" style="padding-left:6px;">
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Default Currency:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.CurrCode, new { @class = "input-large search-query", @Name = "CurrCode", @Id = "CurrCode", @Style = "width:100%;height:26px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Bank Name:</label>
+                    <div class="col-sm-6">
+                        @Html.DropDownListFor(x => x.DraweeBank, DropdownHelper.EmptyList(), new { @class = "form-control", @Id = "DraweeBank", @Name = "DraweeBank" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Bank Account No:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.AcCode, new { @class = "form-control", @Name = "AcCode", @Id = "AcCode", @Value = Model.AcCode, @MaxLength = "20" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">RTGS:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.RTGS, new { @class = "form-control", @Name = "RTGS", @Id = "RTGS", @Value = Model.RTGS })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Broker:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.Broker, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "Broker", @Value = Model.Broker, @Name = "Broker" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">SalesMan:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.SalesMan, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "SalesMan", @Value = Model.SalesMan, @Name = "SalesMan" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Transporter:</label>
+                    <div class="col-sm-6">
+                        @Html.DropDownListFor(x => x.Transporter, DropdownHelper.EmptyList(), new { @Class = "form-control", @Id = "Transporter", @Name = "Transporter" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Reminder Format:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.ReminderFormat, new { @class = "form-control", @Name = "ReminderFormat", @Id = "ReminderFormat", @Value = Model.ReminderFormat })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Sales Channel:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.SalesChannel, new { @class = "form-control", @Name = "SalesChannel", @Id = "SalesChannel", @Value = Model.SalesChannel })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Inco-Terms:</label>
+                    <div class="col-sm-6">
+                        @Html.DropDownListFor(x => x.IncoTerms, DropdownHelper.EmptyList(), new { @class = "form-control", @Id = "IncoTerms", @Name = "IncoTerms" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Applicable Pricelist:</label>
+                    <div class="col-sm-6">
+                        @*@Html.ListBoxFor(x => x.PriceListL, Model.PriceLists, new { @class = "listbox2", @id = "AppPriceList" })*@
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Applicable DiscPricelist:</label>
+                    <div class="col-sm-6">
+                        @*@Html.ListBoxFor(x => x.DiscListL, Model.DiscLists, new { @class = "listbox3", @id = "AppDiscList" })*@
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-3 control-label">Applicable Schemelist:</label>
+                    <div class="col-sm-6">
+                        @*@Html.ListBoxFor(x => x.SchemeListL, Model.SchemeLists, new { @class = "listbox4", @id = "AppSchemeList" })*@
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label class="col-sm-6 control-label">Credit Limit:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.CrLimit, new { @class = "form-control", @Name = "CrLimit", @Id = "CrLimit", @Value = Model.CrLimit })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-6 control-label">Credit Days:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.CRPeriod, new { @class = "form-control", @Name = "CRPeriod", @Id = "CRPeriod", @Value = Model.CRPeriod })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-6 control-label">Party Credit Limit Check-Amount:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.CheckCRLimit, new { @Name = "CheckCRLimit", @Id = "CheckCRLimit", @Value = Model.CheckCRLimit, @style = "height:16px;width:16px;" })
+                    </div>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(x => x.CRLimitWarn, DropdownHelper.EmptyList(), new { @class = "form-control", @Id = "CRLimitWarn", @Name = "CRLimitWarn" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-6 control-label">%Tolerance:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.CRLimitTole, new { @class = "form-control", @Name = "CRLimitTole", @Id = "CRLimitTole", @Value = Model.CRLimitTole })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-12 control-label"><b>While Calculating Balance for Credit Limit:</b></label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-6 control-label">Consider A/C balance as on Transaction Date:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.CRLimitWithTrx, new { @Name = "CRLimitWithTrx", @Id = "CRLimitWithTrx", @Value = Model.CRLimitWithTrx, @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-6 control-label">Consider Open Purchase Orders:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.CRLimitWithPO, new { @Name = "CRLimitWithPO", @Id = "CRLimitWithPO", @Value = Model.CRLimitWithPO, @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-6 control-label">Party Credit Limit Check-Days:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.CheckCRDays, new { @Name = "CheckCRDays", @Id = "CheckCRDays", @Value = Model.CheckCRDays, @style = "height:16px;width:16px;" })
+                    </div>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(x => x.CRDaysWarn, DropdownHelper.EmptyList(), new { @class = "form-control", @Id = "CRDaysWarn", @Name = "CRDaysWarn" })
+                    </div>
+                </div>
+                <div class="form-group hidden">
+                    <label class="col-sm-3 control-label">Narration:</label>
+                    <div class="col-sm-6">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x => x.CRDaysWarn, new { @Id = "hdnCRDaysWarn" })
+
+
+@Html.HiddenFor(x => x.PriceList, new { @id = "hdnAppPriceList" })
+<input type="hidden" id="hdnPriceListArray" />
+
+@Html.HiddenFor(x => x.PDiscList, new { @id = "hdnAppPDiscList" })
+<input type="hidden" id="hdnPDiscListArray" />
+
+
+@Html.HiddenFor(x => x.SchemeList, new { @id = "hdnAppSchemeList" })
+<input type="hidden" id="hdnSchemeListArray" />

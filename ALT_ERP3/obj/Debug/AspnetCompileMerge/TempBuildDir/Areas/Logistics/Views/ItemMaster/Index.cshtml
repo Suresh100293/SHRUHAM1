@@ -1,0 +1,602 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.ItemMasterVM
+@using Common
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}
+
+
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        if ($("#hdnAutoCode").val() == "true" || $("#hdnAutoCode").val() == "True") {
+            $("#Code").prop('disabled', true);
+        }
+
+        if ('@Model.Mode' == "Add") {
+            $('#Code').focusout(function () {
+                var url = '@Url.Action("ValidateCode")?Code=' + $('#Code').val();
+                $.ajax({
+                    type: "GET",
+                    dataType: "json",
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data == "true") {
+                            alert('Code Already Saved')
+                            $('#hdnAlreadyCodeSave').val('true');
+                        }
+
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            });
+        }
+
+        $('#Delete').click(function () {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            if ($("#Code").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Missing Item Code');
+                return;
+            }
+
+            var ModelData = {};
+            ModelData["Code"] = $("#Code").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("Delete")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == 'Success') {
+                        //$('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Product%20Master&Controller2=ItemMaster";
+                    }
+                    else {
+                        //$('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+
+            });
+        });
+
+        $('#Submit').click(function () {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            if ($("#Name").val() == '') {
+                alert('Enter Name.');
+                return;
+            }
+
+            if ($("#hdnMode").val() == "Add") {
+                if ($('#hdnAlreadyCodeSave').val() == 'true') {
+                    alert('Already Code Saved Cant Save Duplicate.');
+                    return;
+                }
+            }
+            if ($("#hdnAutoCode").val() == "false" || $("#hdnAutoCode").val() == "False") {
+                if ($("#Code").val() == '') {
+                    alert('Enter Code.');
+                    return;
+                }
+            }
+            if ($("#ProductGrp").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Product Grp.');
+                return;
+            }
+
+            if ($("#Unit").val() == '' || $("#Unit").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Unit.');
+                return;
+            }
+
+            if ($("#UnitS").val() == '' || $("#UnitS").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Sales Unit.');
+                return;
+            }
+            if ($("#UnitP").val() == '' || $("#UnitP").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Purchase Unit.');
+                return;
+            }
+            if ($("#UnitM").val() == '' || $("#UnitM").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select MFG Unit.');
+                return;
+            }
+            if ($("#ItemType").val() == '' || $("#ItemType").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Item Type .');
+                return;
+            }
+            if ($("#hdnBranchCodeArray").val() == '') {
+                alert('Select Applicable Branch .');
+                return;
+            }
+            if ($("#ItemType").val() == '' || $("#ItemType").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Item Type .');
+                return;
+            }
+            if ($("#Store").val() == '' || $("#Store").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Default Store .');
+                return;
+            }
+            if ($("#LocationCode").val() == '' || $("#LocationCode").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Dely Location .');
+                return;
+            }
+            if ($("#ACCode").val() == '' || $("#ACCode").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Domestic Purchase Account .');
+                return;
+            }
+            if ($("#ACCodeX").val() == '' || $("#ACCodeX").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Import Purchase A/C.');
+                return;
+            }
+            if ($("#AcCodeS").val() == '' || $("#AcCodeS").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Domestic Sales A/C .');
+                return;
+            }
+            if ($("#AcCodeSX").val() == '' || $("#AcCodeSX").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Export Sales A/C .');
+                return;
+            }
+            if ($("#Stocking").val() == '' || $("#Stocking").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Stocking Type .');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+
+            var AddonSerial = [];
+            $('#addongrid').find('tr[id="datacharge"]').each(function () {
+                var $tds = $(this).find('td');
+                var myDets = {
+                    Fld: $tds.eq(0).text(),
+                    ApplCode: ($tds.eq(4).text() == "C" || $tds.eq(4).text() == "M") ? $tds.find(".addontxtfvalue").val() : $tds.find("input[class='addontxtfvalue']").val(),
+                    FldType: $tds.eq(4).text()
+                }
+
+                AddonSerial.push(myDets);
+            });
+            var ModelData = {};
+            ModelData["Code"] = $("#Code").val();
+            ModelData["Name"] = $("#Name").val();
+            ModelData["Grp"] = $("#ProductGrp").val();
+            ModelData["Unit"] = $("#Unit").val();
+            ModelData["UnitS"] = $("#UnitS").val();
+            ModelData["UnitP"] = $("#UnitP").val();
+            ModelData["UnitM"] = $("#UnitM").val();
+            ModelData["ItemType"] = $("#ItemType").val();
+            ModelData["BarCode"] = $("#BarCode").val();
+            ModelData["AppBranch"] = $("#hdnBranchCodeArray").val();
+            ModelData["Category"] = $("#hdnCategoryCodeArray").val();
+            ModelData["AltItem"] = $("#hdnAlternateItemsArray").val();
+            ModelData["GSTRateLimit"] = $("#GSTRateLimit").is(':checked');
+            ModelData["HSNCode"] = $("#HSNCode").val();
+            ModelData["Hazard"] = $("#Hazard").val();
+            ModelData["Potency"] = $("#Potency").val();
+            ModelData["PotencyAVG"] = $("#PotencyAVG").val();
+            ModelData["Temperature"] = $("#Temperature").val();
+            ModelData["Humidity"] = $("#Humidity").val();
+            ModelData["Storage"] = $("#Storage").val();
+            ModelData["Density"] = $("#Density").val();
+            ModelData["BatchSize"] = $("#BatchSize").val();
+            ModelData["DWGNumber"] = $("#DWGNumber").val();
+            ModelData["IsPartyDrugLic"] = $("#IsPartyDrugLic").is(':checked');
+            ModelData["IsPartyPoisonLic"] = $("#IsPartyPoisonLic").is(':checked');
+            ModelData["ThCode"] = $("#ThCode").val();
+            ModelData["MatterState"] = $("#MatterState").val();
+            ModelData["Flammable"] = $("#Flammable").val();
+            ModelData["GenericCode"] = $("#GenericCode").val();
+            ModelData["ValuationMethod"] = $("#ValuationMethod").val();
+            ModelData["CASNo"] = $("#CASNo").val();
+            ModelData["Stocking"] = $("#Stocking").val();
+            ModelData["VED"] = $("#VED").val();
+            ModelData["ABC"] = $("#ABC").val();
+            ModelData["FSN"] = $("#FSN").val();
+            ModelData["StockistID"] = $("#StockistID").val();
+            ModelData["UNNumber"] = $("#UNNumber").val();
+            ModelData["PackingGrp"] = $("#PackingGrp").val();
+            ModelData["Class"] = $("#Class").val();
+            ModelData["IsPacking"] = $("#IsPacking").is(':checked');
+            ModelData["PackingSize"] = $("#PackingSize").val();
+            ModelData["PackingPlan"] = $("#PackingPlan").val();
+            ModelData["MaxLoad"] = $("#MaxLoad").val();
+            ModelData["PUPrefix"] = $("#PUPrefix").val();
+            ModelData["UnitMaxLoad"] = $("#UnitMaxLoad").val();
+            ModelData["pLength"] = $("#pLength").val();
+            ModelData["pWidth"] = $("#pWidth").val();
+            ModelData["pHeight"] = $("#pHeight").val();
+            ModelData["iLength"] = $("#iLength").val();
+            ModelData["iWidth"] = $("#iWidth").val();
+            ModelData["iHeight"] = $("#iHeight").val();
+            ModelData["UnitDim"] = $("#UnitDim").val();
+            ModelData["NetWeight"] = $("#NetWeight").val();
+            ModelData["GrWeight"] = $("#GrWeight").val();
+            ModelData["UnitWt"] = $("#UnitWt").val();
+            ModelData["Store"] = $("#Store").val();
+            ModelData["BINRequired"] = $("#BINRequired").is(':checked');
+            ModelData["BINNumber"] = $("#BINNumber").val();
+            ModelData["SecondUnit"] = $("#SecondUnit").is(':checked');
+            ModelData["Unit2"] = $("#Unit2").val();
+            ModelData["RateOn2"] = $("#RateOn2").is(':checked');
+            ModelData["CheckPending2"] = $("#CheckPending2").is(':checked');
+            ModelData["CheckMRP"] = $("#CheckMRP").is(':checked');
+            ModelData["LockQty"] = $("#LockQty").is(':checked');
+            ModelData["UnitS2"] = $("#UnitS2").val();
+            ModelData["UnitP2"] = $("#UnitP2").val();
+            ModelData["UnitM2"] = $("#UnitM2").val();
+            ModelData["PurchRate"] = $("#PurchRate").val();
+            ModelData["PurchPer"] = $("#PurchPer").val();
+            ModelData["PurchDiscAmt"] = $("#PurchDiscAmt").val();
+            ModelData["PurchDisc"] = $("#PurchDisc").val();
+            ModelData["PurchTaxCode"] = $("#PurchTaxCode").val();
+            ModelData["PurchTaxOST"] = $("#PurchTaxOST").val();
+            ModelData["PGSTCode"] = $("#PGSTCode").val();
+            ModelData["MRPTaxP"] = $("#MRPTaxP").is(':checked');
+            ModelData["RestrictPR"] = $("#RestrictPR").is(':checked');
+            ModelData["ListPrice"] = $("#ListPrice").val();
+            ModelData["CostRate"] = $("#CostRate").val();
+            ModelData["VerifyItem"] = $("#VerifyItem").is(':checked');
+            ModelData["StrVerifyDate"] = $("#StrVerifyDate").val();
+            ModelData["VerifyDays"] = $("#VerifyDays").val();
+            ModelData["RateMethod"] = $("#RateMethod").val();
+            ModelData["LBTTaxCode"] = $("#LBTTaxCode").val();
+            ModelData["SourceListReq"] = $("#SourceListReq").is(':checked');
+            ModelData["SalesRate"] = $("#SalesRate").val();
+            ModelData["DefQty"] = $("#DefQty").val();
+            ModelData["SalesPer"] = $("#SalesPer").val();
+            ModelData["SalesMargin"] = $("#SalesMargin").val();
+            ModelData["SalesDiscAmt"] = $("#SalesDiscAmt").val();
+            ModelData["SalesDisc"] = $("#SalesDisc").val();
+            ModelData["SalesTaxCode"] = $("#SalesTaxCode").val();
+            ModelData["SalesTaxOST"] = $("#SalesTaxOST").val();
+            ModelData["SGSTCode"] = $("#SGSTCode").val();
+            ModelData["MRP"] = $("#MRP").val();
+            ModelData["MinSaleRate"] = $("#MinSaleRate").val();
+            ModelData["SalesMaxDisc"] = $("#SalesMaxDisc").val();
+            ModelData["MRPTaxS"] = $("#MRPTaxS").is(':checked');
+            ModelData["ReOrdLevel"] = $("#ReOrdLevel").val();
+            ModelData["ReOrdDays"] = $("#ReOrdDays").val();
+            ModelData["ReOrdQty"] = $("#ReOrdQty").val();
+            ModelData["ReOrdDaysC"] = $("#ReOrdDaysC").val();
+            ModelData["ReOrdHighLow"] = $("#ReOrdHighLow").is(':checked');
+            ModelData["MaxQty"] = $("#MaxQty").val();
+            ModelData["MinQty"] = $("#MinQty").val();
+            ModelData["EOQ"] = $("#EOQ").val();
+            ModelData["MinDlyQty"] = $("#MinDlyQty").val();
+            ModelData["MfgLeadTime"] = $("#MfgLeadTime").val();
+            ModelData["PurchPer"] = $("#PurchPer").val();
+            ModelData["CheckReOrderLevel"] = $("#CheckReOrderLevel").is(':checked');
+            ModelData["CheckMaxLevel"] = $("#CheckMaxLevel").is(':checked');
+            ModelData["CheckMinLevel"] = $("#CheckMinLevel").is(':checked');
+            ModelData["DelyTime"] = $("#DelyTime").val();
+            ModelData["ProcLeadTime"] = $("#ProcLeadTime").val();
+            ModelData["GRNProcTime"] = $("#GRNProcTime").val();
+            ModelData["LocationCode"] = $("#LocationCode").val();
+            ModelData["ACCode"] = $("#ACCode").val();
+            ModelData["ACCodeX"] = $("#ACCodeX").val();
+            ModelData["AcCodeS"] = $("#AcCodeS").val();
+            ModelData["AcCodeSX"] = $("#AcCodeSX").val();
+            ModelData["Party"] = $("#Party").val();
+            ModelData["LCharges"] = $("#LCharges").val();
+            ModelData["OCharges"] = $("#OCharges").val();
+            ModelData["MCharges"] = $("#MCharges").val();
+            ModelData["ChargesOnQty2"] = $("#ChargesOnQty2").is(':checked');
+            ModelData["CanSale"] = $("#CanSale").is(':checked');
+            ModelData["CanPurch"] = $("#CanPurch").is(':checked');
+            ModelData["CanSaleOnline"] = $("#CanSaleOnline").is(':checked');
+            ModelData["CanMfg"] = $("#CanMfg").is(':checked');
+            ModelData["CanSubContract"] = $("#CanSubContract").is(':checked');
+            ModelData["AutoMFG"] = $("#AutoMFG").is(':checked');
+            ModelData["QCReqdOPT"] = $("#QCReqdOPT").is(':checked');
+            ModelData["QCReqdMfg"] = $("#QCReqdMfg").is(':checked');
+            ModelData["QCReqdSub"] = $("#QCReqdSub").is(':checked');
+            ModelData["QCReqd"] = $("#QCReqd").is(':checked');
+            ModelData["QCLeadTime"] = $("#QCLeadTime").val();
+            ModelData["QCSampleQty"] = $("#QCSampleQty").val();
+            ModelData["ReTestPeriod"] = $("#ReTestPeriod").val();
+            ModelData["ReTestQty"] = $("#ReTestQty").val();
+            ModelData["RetainQty"] = $("#RetainQty").val();
+            ModelData["ProductLife"] = $("#ProductLife").val();
+            ModelData["BatchReq"] = $("#BatchReq").is(':checked');
+            ModelData["BatchForce"] = $("#BatchForce").is(':checked');
+            ModelData["BatchNoDupl"] = $("#BatchNoDupl").is(':checked');
+            ModelData["AutoBatch"] = $("#AutoBatch").is(':checked');
+            ModelData["BatchSizeQty"] = $("#BatchSizeQty").val();
+            ModelData["BatchWidth"] = $("#BatchWidth").val();
+            ModelData["AutoBatchGRN"] = $("#AutoBatchGRN").is(':checked');
+            ModelData["BatchAutoGRN"] = $("#BatchAutoGRN").is(':checked');
+            ModelData["BatchMFG"] = $("#BatchMFG").is(':checked');
+            ModelData["BatchExp"] = $("#BatchExp").is(':checked');
+            ModelData["BatchDefExpDays"] = $("#BatchDefExpDays").val();
+            ModelData["BatchCheckExp"] = $("#BatchCheckExp").is(':checked');
+            ModelData["BatchExpDays"] = $("#BatchExpDays").val();
+            ModelData["AutoBatchIssue"] = $("#AutoBatchIssue").val();
+            ModelData["BatchRates"] = $("#BatchRates").is(':checked');
+            ModelData["SerialReq"] = $("#SerialReq").is(':checked');
+            ModelData["SerialPrefix"] = $("#SerialPrefix").is(':checked');
+            ModelData["SerialType"] = $("#SerialType").is(':checked');
+            ModelData["AutoSerialGRN"] = $("#AutoSerialGRN").is(':checked');
+            ModelData["StockSerial"] = $("#StockSerial").is(':checked');
+            ModelData["SerialNoDupl"] = $("#SerialNoDupl").is(':checked');
+            ModelData["AutoSerialMFG"] = $("#AutoSerialMFG").is(':checked');
+            ModelData["SerialPatternGRN"] = $("#SerialPatternGRN").val();
+            ModelData["SerialPatternMFG"] = $("#SerialPatternMFG").val();
+            ModelData["MRPReqd"] = $("#MRPReqd").is(':checked');
+            ModelData["MRPControlGroup"] = $("#MRPControlGroup").val();
+            ModelData["MRPWOType"] = $("#MRPWOType").val();
+            ModelData["MRPIPType"] = $("#MRPIPType").val();
+            ModelData["MRPISType"] = $("#MRPISType").val();
+            ModelData["QtyToleMinus"] = $("#QtyToleMinus").val();
+            ModelData["QtyTolePlus"] = $("#QtyTolePlus").val();
+            ModelData["QtyToleWO"] = $("#QtyToleWO").val();
+            ModelData["StockReserve"] = $("#StockReserve").is(':checked');
+            ModelData["OverReserve"] = $("#OverReserve").is(':checked');
+            ModelData["CostValue"] = $("#CostValue").is(':checked');
+            ModelData["CheckStock"] = $("#CheckStock").is(':checked');
+            ModelData["StockDays"] = $("#StockDays").val();
+            ModelData["StrStockDate"] = $("#StrStockDate").val();
+            ModelData["PQtyToleMinus"] = $("#PQtyToleMinus").val();
+            ModelData["PQtyTolePlus"] = $("#PQtyTolePlus").val();
+            ModelData["RouteCode"] = $("#RouteCode").val();
+            ModelData["Mode"] = $("#hdnMode").val();
+            ModelData["Document"] = $("#hdnDocument").val();
+            ModelData["AddOnList"] = AddonSerial;
+            ModelData["RateType"] = $("#RateType").val();
+            ModelData["RateCalcType"] = $("#RateCalcType").val();
+            //ModelData["AllFileStr"] = $('#hdnAllFileStr').val();
+            //ModelData["FileContStr"] = $('#hdnFileContStr').val();
+            //ModelData["FileNameStr"] = $('#hdnFileNameStr').val();
+            ModelData["Narr"] = $('#Narr').val();
+            var DTO = { Model: ModelData };
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        alert("Item Saved Successfully.");
+                        window.location.href = "/Logistics/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Product%20Master&Controller2=ItemMaster"
+                    }
+                    else if (data.Status == 'Error') {
+                        alert(data.Message);
+                        $("#ErrorMessage").show();
+                        //$("#ErrorMessage").text('Select Atleast One Record For Ledger.');
+                    }
+                    else {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $("#btnAddOns").click(function (event) {
+            event.preventDefault();
+            $('#dialog1').modal('show');
+
+        });
+
+        $("#btnUpdateAddOns").click(function (event) {
+            event.preventDefault();
+            if ($('#hdnAddOnSaved').val() == "1") {
+                $('#dialog1').modal('show');
+            }
+            else {
+                var url = '@Url.Action("GetEditAddOnList")?Code=' + $("#hdnDocument").val() + '&TableKey=%ItemMaster';
+                $.ajax({
+                    async: false,
+                    cache: false,
+                    url: url,
+                    type: "GET",
+                    dataType: "json",
+                    cache: false,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        $('#dialog1').modal('show');
+                        $('#Dialog').html(data.Html);
+                        $('#controllername').val(data.Controller);
+                    },
+                });
+            }
+        });
+    });
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">Product Master</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Product%20Master&Controller2=ItemMaster" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        @*<div class="panel">
+            <div class="panel-body">*@
+        <div class="form-horizontal" id="frmEditProduct" role="form" style="margin-top:15px;">
+            <br />
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <div class="form-group" style="margin-left:-0px;">
+                <label class="col-sm-1 control-label">Item Code:</label>
+                <div class="col-sm-4">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.Code, new
+                   {
+                       @class = "form-control",
+                       @Name = "Code",
+                       @Id = "Code",
+                       @style = "font-size:10pt;font-weight:bolder;",
+                       @readonly = "readonly",
+                       @MaxLength = "75"
+                   })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.Code, new
+                   {
+                       @class = "form-control",
+                       @Name = "Code",
+                       @Id = "Code",
+                       @style = "font-size:10pt;font-weight:bolder;",
+                       @MaxLength = "75"
+                   })
+                    }
+                </div>
+                <label class="col-sm-1 control-label">Description:</label>
+                <div class="col-sm-5">
+                    @Html.TextBoxFor(x => x.Name, new
+               {
+                   @class = "form-control",
+                   @Name = "Name",
+                   @Id = "Name",
+                   @style = "font-size:10pt;font-weight:bolder;",
+                   @MaxLength = "100"
+               })
+                </div>
+            </div>
+            <section class="panel">
+                <div class="tab">
+                    <button class="tablinks" style="width:120px;" onclick="openCity(event, 'divLedgerTable')" id="Sales">Basic Data</button>
+                    <button class="tablinks" style="width:120px;" onclick="openCity(event, 'divLedgerTable2')">Plant/BU Details</button>
+                </div>
+                <div id="divLedgerTable" class="tabcontent" style="height:430px;">
+                    @Html.Partial("BasicData", Model)
+                </div>
+                <div id="divLedgerTable2" class="tabcontent" style="height:430px;">
+                    <div id="ItemListTable">
+                        @Html.Partial("BUDetails", Model)
+                    </div>
+                </div>
+            </section>
+        </div>
+        @*</div>
+            </div>*@
+    </div>
+</section>
+
+<script>
+    function openCity(evt, cityName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace("active", "");
+        }
+        document.getElementById(cityName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+    document.getElementById("Sales").click();
+</script>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="col-sm-4" style="padding-left:1px;">
+        <button class="btn btn-warning" type="submit" id="btnAddOns" style="padding-top:4px;height:28px;" name="Command">AddOns</button>
+    </div>
+    <div class="col-sm-4" style="text-align:center;margin-top:4px;color:white;font-family:Tahoma;font-size:8pt;">
+        T.FAT ERP-iX9, Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4">
+        <div class="pull-right">
+            @if (Model.Mode == "Edit" || Model.Mode == "Delete")
+            {
+                if (Model.Mode == "Delete")
+                {
+                    <button class="btn btn-success" style="padding-top:4px;height:28px;" id="Delete">Delete</button>
+                }
+                if (Model.Mode == "Edit")
+                {
+                    <button class="btn btn-success" style="padding-top:4px;height:28px;" id="Submit">Save Data</button>
+                }
+            }
+            @*else
+            {
+                <button class="btn btn-success" style="padding-top:4px;" id="Submit">Save Data</button>
+            }*@
+            <a href="~/Logistics/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Product%20Master&Controller2=ItemMaster" class="btn btn-danger" style="height:28px;padding-top:4px;" id="Cancel">Cancel</a>
+        </div>
+    </div>
+</footer>
+
+<div class="example-modal">
+    <div id="dialog1" class="modal modal-default">
+        <div class="modal-dialog modal-lg" style="width:650px;">
+            <div id="Dialog">
+                @Html.Partial("AddOnGrid")
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.Mode, new
+{
+    @id = "hdnMode",
+    @name = "hdnMode"
+})
+@Html.HiddenFor(x => x.Document, new
+{
+    @id = "hdnDocument",
+    @name = "hdnDocument"
+})
+@Html.HiddenFor(x => x.AddOnSaved, new
+{
+    @Id = "hdnAddOnSaved"
+})
+@Html.HiddenFor(x => x.AlreadyCodeSave, new { @Id = "hdnAlreadyCodeSave" })
+@Html.HiddenFor(x => x.AutoCode, new { @Id = "hdnAutoCode" })

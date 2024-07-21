@@ -1,0 +1,318 @@
+﻿@model LRInvoiceVM
+@using Common;
+  
+<div class="form-horizontal" role="form" style="padding-right:0px;">
+    <header class="panel-heading" style="margin-left:0px; background-color:lightgray;color:black;height:22px;padding-top:1px;border-radius:0px;">
+        Party Details
+    </header>
+    <div class="form-group" style="margin-top:5px;">
+        <div class="col-sm-6">
+            <div class="form-group">
+                <div class="col-sm-2"></div>
+                <div class="col-sm-6">
+                    @Html.TextAreaFor(x => x.AddressFrom, new { @class = "form-control", @id = "AddressFrom", @Name = "AddressFrom", @disabled = "disabled", @style = "height:145px;background-color:#e4e4e4;" })
+                </div>
+            </div>
+        </div>
+   
+    </div>
+    <div id="PlaceOfSDiv">
+        <div class="form-group" style="margin-top:5px;">
+       
+            <div class="col-sm-6">
+                <div class="form-group">
+                    <label class="col-sm-2 control-label" style="padding-left:15px;">Place Of Supply:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.PlaceOfSupply, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "PlaceOfSupply", @Name = "PlaceOfSupply" })
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+
+    <div class="form-group" style="margin-top:5px;">
+        <div class="col-sm-6">
+            <label class="col-sm-2 control-label" style="padding-left:10px;">A/C Balance:</label>
+            <div class="col-sm-2" style="padding-top:6px;">
+                @Html.DisplayFor(x => x.Balance, new { @class = "form-control", @id = "Balance", @Name = "Balance", @style = "width:100%;margin-top:2px;text-align:right;font-weight:bolder;font-size:12pt;color:black;" })
+            </div>
+            <label class="col-sm-2 control-label" style="padding:unset;">Credit Limit:</label>
+            <div class="col-sm-2">
+                <label id="CrLimit" style="width:100%;margin-top:2px;"></label>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="form-group" style="margin-top:5px;">
+        <div class="col-sm-6">
+            <div class="form-group">
+                <label class="col-sm-2 control-label" style="padding-left:25px;">Credit Days:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.CrPeriod, new { @class = "form-control", @id = "CrPeriod", @Name = "CrPeriod", @style = "width:100%;margin-top:2px;text-align:right;", @Value = Model.CrPeriod })
+                </div>
+            </div>
+        </div>
+       
+    </div>
+</div>
+
+@if (Model.Mode != "Add")
+{
+    <script>
+        $(document).ready(function () {
+            LoadAltAddressEdtMd()
+        });
+
+        function LoadAltAddressEdtMd() {
+            $("#AltAddress").empty();
+            var url = '@Url.Action("GetAddrSnoList")?Code=' + $("#Account").val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $.each(result, function (i, item) {
+                        $("#AltAddress").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+                    $('#AltAddress').val('@Model.AltAddress').attr("selected", "selected");
+                    GetAddressFromEdtMd()
+                 $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        }
+
+        function GetAddressFromEdtMd() {
+            var url = '@Url.Action("GetAddressBySno")?Code=' + $("#Account").val() + '&Sno=' + $("#AltAddress").val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $('#AddressFrom').text(result);
+                    $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        }
+
+     
+
+    </script>
+}
+
+<script>
+    $(document).ready(function () {
+        loadParty();
+     
+
+        $('#Account').change(function () {
+            var ModelData = {};
+            ModelData["Code"] = $("#Account").val();
+            ModelData["Type"] = $("#hdnType").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetPartyDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                   
+                    $('#CrPeriod').val(result.CrPeriod);
+                    $('#PlaceOfSupply').select2('data', { id: result.PlaceOfSupply, text: result.PlaceOfSupply });
+                    $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+
+            GetAddrSnoList()
+            GetCrLimit()
+            GetBalancePurch()
+
+        });
+
+        $("#AltAddress").change(function () {
+            GetAddressByAltAddress()
+            GetGstId1BySno()
+        });
+    });
+
+    function loadParty() {
+        var url = '@Url.Action("GetPartyList")';
+        $('#Account').select2({
+            minimumInputLength: @Session["MinAcc"],
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength: @Session["MinAcc"],
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Account', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function GetAddrSnoList() {
+        $("#AltAddress").empty();
+        var url = '@Url.Action("GetAddrSnoList")?Code=' + $("#Account").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#AltAddress").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#AltAddress').val('@Model.AltAddress').attr("selected", "selected");
+                GetAddressByAltAddress()
+               
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function GetAddressByAltAddress() {
+        var url = '@Url.Action("GetAddressBySno")?Code=' + $("#Account").val() + '&Sno=' + $("#AltAddress").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#AddressFrom').text(result);
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function GetCrLimit() {
+        var url = '@Url.Action("GetCreditLimit")?Party=' + $("#Account").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#CrLimit').html(result.CrLimit);
+                $('#CrPeriod').html(result.CrPeriod);
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+    function GetBalancePurch() {
+        var url = '@Url.Action("GetBalanceOnPurchase")?Party=' + $("#Account").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#Balance').html(result.Balance);
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+</script>
+@Html.HiddenFor(x => x.Account, new { @id = "hdnAccountId" })
+@Html.HiddenFor(x => x.AccountName, new { @id = "hdnAccountName" })

@@ -1,0 +1,405 @@
+﻿
+@model ALT_ERP3.Areas.Vehicles.Models.TyreStockTransferVM
+@using Common;
+@{
+    ViewBag.Title = "TyreStockTransfer Master";
+    Layout = null;
+}
+
+<script>
+    $(document).ready(function ()
+    {
+        debugger;
+        if ('@Model.NStockblockDocument' == "True")
+        {
+            if ($("input[name=addontxtfvalue]:checked").val() == "Stepnee")
+            {
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F007") {
+                        tds.eq(1).html('Stepnee No');
+                    }
+                });
+                $("input[name=addontxtfvalue]").prop("disabled", true);
+            }
+            else
+            {
+                $('#truckrelatedtable tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F007") {
+                        tds.eq(1).html('Tyre Placed No');
+                    }
+                });
+                $("input[name=addontxtfvalue]").prop("disabled", true);
+            }
+
+            $("#RelatedChoice").prop("disabled", true);
+            $('#truckrelatedtable tbody tr').each(function () {
+                var tds = $(this).find('td');
+                if (tds.eq(0).text() == "F007") {
+                    tds.find(".addontxtfvalue").prop("disabled", true);
+                }
+                else if (tds.eq(0).text() == "F008") {
+                    tds.find(".addontxtfvalue").prop("disabled", true);
+                }else if (tds.eq(0).text() == "F014") {
+                    tds.find(".addontxtfvalue").prop("disabled", true);
+                }
+            });
+        }
+
+        $('#RelatedChoice').change(function () {
+
+            if ($('#RelatedChoice').val() == "Stock") {
+
+                $("#truckrelatedtable tbody tr").each(function () {
+                    var sectds = $(this).find('td');
+                    if (sectds.eq(0).text() == "F006" || sectds.eq(0).text() == "F007" || sectds.eq(0).text() == "F010" || sectds.eq(0).text() == "F011" || sectds.eq(0).text() == "F013") {
+                        sectds.find(".addontxtfvalue").prop('disabled', true);
+                    }
+                })
+            }
+            else {
+                $("#truckrelatedtable tbody tr").each(function () {
+                    var sectds = $(this).find('td');
+                    if (sectds.eq(0).text() == "F006" || sectds.eq(0).text() == "F007" || sectds.eq(0).text() == "F010" || sectds.eq(0).text() == "F011" || sectds.eq(0).text() == "F013") {
+                        sectds.find(".addontxtfvalue").prop('disabled', false);
+                    }
+
+
+                })
+            }
+        });
+        $("#truckrelatedtable tbody").on('change', '.addontxtfvalue', function () {
+
+            var currentRow = $(this).closest("tr");
+
+            var tds = currentRow.find('td').eq(0).text();
+
+            if (tds == "F001")
+            {
+                var ModelData = {};
+                var mFromType = "";
+                $("#truckrelatedtable tbody tr").each(function ()
+                {
+                   var sectds = $(this).find('td');
+                   if (sectds.eq(0).text() == "F001") {
+                       mFromType = sectds.find(".addontxtfvalue").val();
+                   }
+                })
+                ModelData["FromType"] = mFromType;
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("GetTruckTyreSingleViewList")';
+
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('#TruckRelatedDiv').html(data.Html);
+                        $('.spinner').hide();
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+            }
+
+            if (tds == "F002")
+            {
+                var ModelData = {};
+                var mCode = "";
+                var mexpdate = "";
+                $("#truckrelatedtable tbody tr").each(function () {
+                 var sectds = $(this).find('td');
+                 if (sectds.eq(0).text() == "F002") {
+                     mCode= sectds.find(".addontxtfvalue").val();
+                 }
+                 if (sectds.eq(0).text() == "F010") {
+                     mexpdate = sectds.find(".addontxtfvalue").val();
+                 }
+             })
+                ModelData["Type"] = mCode;
+                ModelData["FromDate"] = mexpdate;
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("GetTyreDetail")';
+                $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                    success: function (data)
+                    {
+                        $('.spinner').hide();
+                        var c = new Date();
+                        $('#truckrelatedtable tbody tr').each(function () {
+                            var tds = $(this).find('td');
+                            if (tds.eq(0).text() == "F003") {
+
+                                tds.find(".addontxtfvalue").val(data.Cost);
+                            }
+                            else if (tds.eq(0).text() == "F004") {
+
+                                tds.find(".addontxtfvalue").val(data.KM);
+                            }
+                            else if (tds.eq(0).text() == "F005") {
+
+                                tds.find(".addontxtfvalue").val(data.Days);
+                            }
+                            else if (tds.eq(0).text() == "F012") {
+
+                                tds.find(".addontxtfvalue").val(data.ExpDays);
+                            }
+                        })
+                    },
+                    error: function () {
+                    alert("Error occured while processing your request.");
+                    }
+                });
+            }
+
+            if (tds == "F006") {
+                if ($("input[name=addontxtfvalue]:checked").val() == "Stepnee") {
+                    $('#truckrelatedtable tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        if (tds.eq(0).text() == "F007") {
+                            tds.eq(1).html('Stepnee No');
+                        }
+                    })
+                }
+                else {
+                    $('#truckrelatedtable tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        if (tds.eq(0).text() == "F007") {
+                            tds.eq(1).html('Tyre Placed No');
+                        }
+                    })
+                }
+            }
+
+            if (tds == "F010")
+            {
+
+                var ModelData = {};
+                var mexpdays = 0;
+                var mexpdate = "";
+                $("#truckrelatedtable tbody tr").each(function () {
+
+                    var sectds = $(this).find('td');
+                    if (sectds.eq(0).text() == "F005") {
+                        mexpdays = sectds.find(".addontxtfvalue").val();
+                    }
+                    if (sectds.eq(0).text() == "F010") {
+                     mexpdate = sectds.find(".addontxtfvalue").val();
+                 }
+                })
+
+                ModelData["FromDate"] = mexpdate;
+                ModelData["ExpDays"] = mexpdays;
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("GetCalcTyreDetail")';
+                $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var c = new Date();
+                    $('#truckrelatedtable tbody tr').each(function () {
+                        var tds = $(this).find('td');
+
+                        if (tds.eq(0).text() == "F012") {
+
+                            tds.find(".addontxtfvalue").val(data.ExpDays);
+                        }
+                    })
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+            }
+
+            if ( tds == "F011")
+            {
+                var mKm = 0;
+                var laterkm = 0;
+
+                $("#truckrelatedtable tbody tr").each(function () {
+
+                    var sectds = $(this).find('td');
+                    if (sectds.eq(0).text() == "F004") {
+                        mKm = parseFloat(sectds.find(".addontxtfvalue").val());
+                    }
+                });
+                $('#truckrelatedtable tbody tr').each(function () {
+
+                    var tds = $(this).find('td');
+                    if (tds.eq(0).text() == "F011") {
+                        var getkm = tds.find(".addontxtfvalue").val();
+                        laterkm = parseFloat(getkm) + parseFloat(mKm);
+                    }
+                    if (tds.eq(0).text() == "F013") {
+                        tds.find(".addontxtfvalue").val(laterkm);
+                    }
+                });
+            }
+        });
+
+        $("#truckrelatedtable tbody").on('focusout', '.addontxtfvalue', function ()
+        {
+            var currentRow = $(this).closest("tr");
+            var tds = currentRow.find('td').eq(0).text();
+
+            if (tds == "F007")
+            {
+                var mvehicle = '';
+                var mNo = '';
+                var mTyreStep = '';
+                var mCode = '';
+
+                mvehicle = $("#RelatedChoice").val();
+
+                $('#truckrelatedtable tbody tr').each(function () {
+                     var tds = $(this).find('td');
+                     if (tds.eq(0).text() == "F007") {
+                         mNo = tds.find(".addontxtfvalue").val();
+                    }
+                    if (tds.eq(0).text() == "F002") {
+                        mCode = tds.find(".addontxtfvalue").val();
+                    }
+                    if (tds.eq(0).text() == "F006") {
+                        mTyreStep = tds.find("input[name=addontxtfvalue]:checked").val();
+                    }
+                 })
+                var ModelData = {};
+                ModelData["VehicleList"] = mvehicle;
+                ModelData["TyrePlaceNo"] = mNo;
+                ModelData["InstallFor"] = mTyreStep;
+                ModelData["Type"] = mCode;
+                ModelData["Document"] = $("#Document").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("GetTyreStockDetail")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "Error") {
+                            alert(data.Message)
+                            $('#TruckRelatedStockDiv').html('');
+                            $('#TruckRelatedStockDiv').html(data.Html);
+                            return;
+                        }
+                        else if (data.Status == "Success") {
+                            debugger;
+                            $('#TruckRelatedStockDiv').html('');
+                            $('#TruckRelatedStockDiv').html(data.Html);
+                        }
+
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+    });
+</script>
+<table id="truckrelatedtable" class="zui-table">
+    <thead>
+    </thead>
+    <tbody>
+        @if (Model.AddOnList != null)
+        {
+            foreach (var item in @Model.AddOnList.ToList())
+            {
+                <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                    <td style="width:10%;" hidden="hidden">@item.Fld</td>
+                    <td style="width:20%;">@item.Head</td>
+
+                    @if (item.FldType == "C")
+                    {
+                        <td style="width:40%;">
+                            <select class="addontxtfvalue" id="txtf_@item.Fld" alt="@item.Fld" style="width:100%">
+                                @foreach (var item2 in item.QueryText.Split('^').ToList())
+                                {
+
+                                    <option value="@item2" @(item2 == item.ApplCode ? "selected" : "")>@item2</option>
+
+                                }
+                            </select>
+                        </td>
+
+                    }
+                    else if (item.FldType == "M")
+                    {
+
+                        <td style="width:50%;"><textarea type="textarea" rows="5" cols="20" id="txtf_@item.Fld" alt="@item.Fld" class="addontxtfvalue" style="width:100%;">@item.ApplCode</textarea></td>
+
+                    }
+                    else if (item.FldType == "D")
+                    {
+                        <td style="width:50%;"><input type="date" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="addontxtfvalue" style="width:100%;" maxlength="250" /></td>
+                    }
+                    else if (item.FldType == "N")
+                    {
+                        <td style="width:50%;"><input type="number" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="addontxtfvalue" style="width:100%;" maxlength="250" /></td>
+                    }
+                    else if (item.FldType == "R")
+                    {
+                        <td style="width:50%;">
+                            <div>
+                                @foreach (var item2 in item.QueryText.Split('^').ToList())
+                                {
+                                    <div class="col-sm-2 control-label" style="padding-top:0px;">
+                                        @item2:  <input @(item2 == item.ApplCode ? "checked=checked" : "") class="addontxtfvalue" name="addontxtfvalue" style="padding-left:0px;width:20px;height:20px;" type="radio" value="@item2">
+                                    </div>
+
+
+                                }
+
+                            </div>
+
+                        </td>
+
+                    }
+                    else
+                    {
+
+                        <td style="width:50%;"><input type="text" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="addontxtfvalue" style="width:100%;" maxlength="250" /></td>
+                    }
+                    <td style="width:1%;" hidden="hidden">@item.FldType</td>
+                    <td style="width:1%;" hidden="hidden">@item.TableKey</td>
+                </tr>
+
+            }
+        }
+
+    </tbody>
+</table>

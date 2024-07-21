@@ -1,0 +1,317 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common
+
+<script>
+    $(document).ready(function ()
+    {
+        $(".chkFM").change(function ()
+        {
+
+            var Row = $(this).closest('tr');
+            var ID = $(this).attr("id");
+            if (this.checked)
+            {
+                $(".chkFM").prop("disabled", true);
+                $(this).prop("disabled", false);
+
+                if ($("#FMOrNOt").val() == "True" || $("#FMOrNOt").val() == "true") {
+
+                    var DTO = { FMNo: ID };
+                    var url = '@Url.Action("FetchFreight_Advance")';
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json;charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            $("#ErrorMessage").hide();
+                            $('.spinner').hide();
+                            if (data.Status == "Success")
+                            {
+                                Row.find(".txtTripCharge").val(data.TripCharges);
+                                Row.find(".txtLocalCharges").val(data.LocalCharges);
+                                Row.find(".txtViaCharges").val(data.ViaCharges);
+                                Row.find(".txtPaymentAmt").val(data.PaymentAmt);
+                                var Total = (parseFloat(data.TripCharges) + parseFloat(data.LocalCharges) + parseFloat(data.ViaCharges));// - (parseFloat(data.PaymentAmt));
+                                Row.find(".txtTotal").val(Total);
+                                if ($("#ChangeCharge").val() == "True")
+                                {
+                                    Row.find(".txtTripCharge").prop("disabled", false);
+                                    Row.find(".txtLocalCharges").prop("disabled", false);
+                                    Row.find(".txtViaCharges").prop("disabled", false);
+                                    Row.find(".txtPaymentAmt").prop("disabled", true);
+                                }
+                                $(".chkFM").prop("disabled", false);
+                            }
+                            else
+                            {
+                                alert("Not Found Trip Charges....!");
+                                Row.find(".txtTripCharge").prop("disabled", false);
+                                Row.find(".txtLocalCharges").prop("disabled", false);
+                                Row.find(".txtViaCharges").prop("disabled", false);
+                                Row.find(".txtPaymentAmt").prop("disabled", true);
+                            }
+
+                        },
+                        error: function () {
+                            alert("Error occured while processing your request.");
+                        }
+                    });
+                }
+                else
+                {
+                    var DTO = { LRNO: ID };
+                    var url = '@Url.Action("FetchLRTripExp_Advance")';
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json;charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            $("#ErrorMessage").hide();
+                            $('.spinner').hide();
+                            if (data.Status == "Success")
+                            {
+                                Row.find(".txtTripCharge").val(data.TripCharges);
+                                Row.find(".txtLocalCharges").val(data.LocalCharges);
+                                Row.find(".txtViaCharges").val(data.ViaCharges);
+                                Row.find(".txtPaymentAmt").val(data.PaymentAmt);
+                                var Total = (parseFloat(data.TripCharges) + parseFloat(data.LocalCharges) + parseFloat(data.ViaCharges));// - (parseFloat(data.PaymentAmt));
+                                Row.find(".txtTotal").val(Total);
+                                //Row.find(".txtTripBal").val(Total - (parseFloat(data.PaymentAmt)));
+                                if ($("#ChangeCharge").val() == "True")
+                                {
+                                    Row.find(".txtTripCharge").prop("disabled", false);
+                                    Row.find(".txtLocalCharges").prop("disabled", false);
+                                    Row.find(".txtViaCharges").prop("disabled", false);
+                                    Row.find(".txtPaymentAmt").prop("disabled", true);
+                                }
+
+
+                                $(".chkFM").prop("disabled", false);
+                            }
+                            else
+                            {
+                                alert("Not Found Trip Charges....!");
+                                Row.find(".txtTripCharge").prop("disabled", false);
+                                Row.find(".txtLocalCharges").prop("disabled", false);
+                                Row.find(".txtViaCharges").prop("disabled", false);
+                                Row.find(".txtPaymentAmt").prop("disabled", true);
+                            }
+
+                        },
+                        error: function () {
+                            alert("Error occured while processing your request.");
+                        }
+                    });
+                }
+
+
+            }
+            else
+            {
+                Row.find(".txtTripCharge").val("0");
+                Row.find(".txtLocalCharges").val("0");
+                Row.find(".txtViaCharges").val("0");
+                Row.find(".txtPaymentAmt").val("0");
+                //Row.find(".txtTripBal").val("0");
+                Row.find(".txtTripCharge").prop("disabled", true);
+                Row.find(".txtLocalCharges").prop("disabled", true);
+                Row.find(".txtViaCharges").prop("disabled", true);
+                Row.find(".txtPaymentAmt").prop("disabled", true);
+                Row.find(".txtTotal").val("0");
+            }
+        });
+
+        $(".txtTripCharge,.txtLocalCharges,.txtViaCharges,.txtPaymentAmt").blur(function ()
+        {
+            var Row = $(this).closest('tr');
+            var txtTripCharge = parseFloat(Row.find(".txtTripCharge").val());
+            var txtLocalCharges = parseFloat(Row.find(".txtLocalCharges").val());
+            var txtViaCharges = parseFloat(Row.find(".txtViaCharges").val());
+            var txtPaymentAmt = parseFloat(Row.find(".txtPaymentAmt").val());
+            var Sum = (txtTripCharge + txtLocalCharges + txtViaCharges);//- (txtPaymentAmt);
+            Row.find(".txtTotal").val(Sum);
+            //Row.find(".txtTripBal").val(Sum - txtPaymentAmt);
+        });
+        $('#pickrecord').click(function (event) {
+            var ModelData = {};
+            var FMMasterTrip = [];
+            $("#tblFmCombo > tbody  > tr").each(function ()
+            {
+                if ($(this).find('input[type=checkbox]').prop("checked") == true)
+                {
+                    debugger;
+                    var Row = $(this).closest('tr');
+                    var tds = $(this).find('td');
+                    var myDets =
+                    {
+                        RefTablekey: $(this).find('input[type=checkbox]').attr("id"),
+                        FMNo: tds.eq(2).text(),
+                        Date: tds.eq(3).text(),
+                        VehicleNo: tds.eq(4).text(),
+                        Driver: tds.eq(5).text(),
+                        DriverC: tds.eq(5).attr("id"),
+                        From: tds.eq(6).text(),
+                        FromC: tds.eq(6).attr("id"),
+                        To: tds.eq(7).text(),
+                        ToC: tds.eq(7).attr("id"),
+                        RouteVia: tds.eq(8).text(),
+                        RouteViaC: tds.eq(8).attr("id"),
+                        Tripchages: Row.find('.txtTripCharge').val(),
+                        LocalCharges: Row.find('.txtLocalCharges').val(),
+                        ViaCharges: Row.find('.txtViaCharges').val(),
+                        PaymentAmt: Row.find('.txtPaymentAmt').val(),
+                        DieselLtr: Row.find('.txtDieselLTR').val(),
+                        //TripBal: Row.find('.txtTripBal').val(),
+                        Total: Row.find('.txtTotal').val(),
+                    }
+                    FMMasterTrip.push(myDets);
+                }
+             });
+
+            if (FMMasterTrip.length == 0)
+            {
+                 alert('Select Altealst One Document...!');
+                 return;
+            }
+            ModelData["fMMasters"] = FMMasterTrip;
+            ModelData["FMOrNOt"] = $("#FMOrNOt").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("AddFMToList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function ()
+                {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    debugger;
+                    $('.spinner').hide();
+                    var BillListDiv = $("#divLedgerTable");
+                    BillListDiv.html('');
+                    BillListDiv.html(data.Html);
+                    $('#pickuplist').modal('hide');
+                    CalculateNetAmount();
+
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+    });
+</script>
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            <h4 class="modal-title">Pick from Source Document</h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" id="PickTable" style="max-height:450px; min-height:450px;overflow: scroll;">
+                <table id="tblFmCombo" class="zui-table" style="width:100%; ">
+                    <thead>
+                        <tr role="row">
+                            <th style="width: 2%;"></th>
+                            <th style="width: 2%;">Sr.</th>
+                            <th style="width: 4%;">Doc No</th>
+                            <th style="width: 6%;">Date</th>
+                            <th style="width: 8%;">VehicleNo</th>
+                            <th style="width: 8%;">Driver</th>
+                            <th style="width: 5%;">From</th>
+                            <th style="width: 5%;">To</th>
+                            @if (Model.FMOrNOt)
+                            {
+                                <th style="width: 10%;">Via Route</th>
+                            }
+                            else
+                            {
+                                <th style="width: 10%;">Bill Party</th>
+                            }
+                            <th style="width: 7%;">Trip Chrg.</th>
+                            <th style="width: 7%;">Local Chrg.</th>
+                            <th style="width: 7%;">Via Chrg.</th>
+                            <th style="width: 7%;">Total Exp.</th>
+                            @if (Model.FMOrNOt)
+                            {
+                                <th style="width: 7%;">FM Advance</th>
+                                <th style="width: 7%;">Diesel Ltr</th>
+                            }
+                            else
+                            {
+                                <th style="width: 7%;">Diesel Ltr</th>
+                            }
+
+                            @*<th class="hidden" style="width: 7%;">Trip Bal.</th>*@
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            int i = 1;
+                            if (Model.fMMasters != null)
+                            {
+                                foreach (var item in @Model.fMMasters.ToList())
+                                {
+                                    <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                        <td style=""><center><input type="checkbox" class="chkFM" id="@item.RefTablekey" style="height:20px;width:20px;" /></center></td>
+                                        <td style="">@i</td>
+                                        <td style="">@item.FMNo</td>
+                                        <td style="">@item.Date.ToShortDateString()</td>
+                                        <td style="">@item.VehicleNo</td>
+                                        <td id="@item.DriverC">@item.Driver</td>
+                                        <td id="@item.FromC">@item.From</td>
+                                        <td id="@item.ToC">@item.To</td>
+                                        <td id="@item.RouteViaC">@item.RouteVia</td>
+                                        <td style=""><input type="text" class="form-control txtTripCharge" value="@item.Tripchages" disabled /></td>
+                                        <td style=""><input type="text" class="form-control txtLocalCharges" value="@item.LocalCharges" disabled /></td>
+                                        <td style=""><input type="text" class="form-control txtViaCharges" value="@item.ViaCharges" disabled /></td>
+                                        <td style=""><input type="text" class="form-control txtTotal" value="@item.Total" disabled /></td>
+
+                                        @if (Model.FMOrNOt)
+                                        {
+                                            <td style=""><input type="text" class="form-control txtPaymentAmt" value="@item.PaymentAmt" disabled /></td>
+                                            <td style=""><input type="text" class="form-control txtDieselLTR" value="@item.DieselLtr" disabled /></td>
+                                        }
+                                        else
+                                        {
+                                            <td style=""><input type="text" class="form-control txtDieselLTR" value="@item.DieselLtr" disabled /></td>
+                                        }
+                                        @*<td class="hidden" style=""><input type="text"  class="form-control txtTripBal" value="0" disabled /></td>*@
+
+                                    </tr>
+                                    ++i;
+                                }
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;">
+            <button type="button" class="btn btn-success" id="pickrecord">Accept Data</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal">Discard</button>
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x => x.FMOrNOt)

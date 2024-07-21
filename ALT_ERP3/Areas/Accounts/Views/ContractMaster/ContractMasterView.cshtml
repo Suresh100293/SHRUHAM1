@@ -1,0 +1,572 @@
+﻿
+@model ALT_ERP3.Areas.Accounts.Models.ContractMasterVM
+@using Common;
+@{
+    ViewBag.Title = "Contract Master";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        LoadCustomer();
+        LoadToBranch();
+        LoadFromBranch();
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        if ('@Model.Mode' != "ADD")
+        {
+            if ('@Model.CustomerType' == "MA")
+            {
+                $("#MA").prop("checked", true);
+            }
+            else
+            {
+                $("#CU").prop("checked", true);
+            }
+        }
+
+        $('#FromDate,#ToDate,#DocDate').datepicker({
+            format: 'dd/mm/yyyy',
+            autoclose: true,
+
+        })
+
+        $("#MA,#CU").change(function (event) {
+            $('#Customer').select2('data', { id: '', text: '' });
+        });
+
+
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#ChargeType").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+        $("#ShortName").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+
+        $('#btnCopy').click(function (event)
+        {
+            event.preventDefault();
+
+            if ($("#Customer").val() == null || $("#Customer").val() == '') {
+
+                alert('Customer is Required..');
+                return;
+            }
+
+            var url = '@Url.Action("Copy")';
+            var DTO = { DocNo: $("#Document").val(), CustType: $('input[name="Customer"]:checked').val(), CustCode: $("#Customer").val() };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#CopyModal");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#copymodal').modal('show');
+                },
+            });
+
+        });
+
+        $('#btnSubmitCopy').click(function (event)
+        {
+            event.preventDefault();
+            $("#ChkBranchOnly").prop("checked", false);
+            $("#issuppress").prop("checked", false);
+            var ModelData = {};
+
+            var CopyId = "";
+            $('#ContractCopy_table > tbody  > tr').each(function () {
+                var Row = $(this);
+                debugger;
+                var Checkbox = Row.find(".checkbox").prop("checked");
+                debugger;
+                if (Checkbox)
+                {
+                    CopyId = Row.find(".checkbox").attr("id");
+                }
+            });
+            ModelData["copyDocument"] = CopyId;
+
+            if (CopyId == "" || CopyId == null)
+            {
+                alert("Please Select Which One Want To Copy...!");
+            }
+            else
+            {
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("CopyContractMaster")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "Error") {
+                            alert(data.Message);
+                        }
+                        var BillListDiv = $("#ContractListDiv");
+                        BillListDiv.html('');
+                        BillListDiv.html(data.Html);
+                        $('#copymodal').modal('hide');
+                    },
+                    error: function (err) {
+                        alert(JSON.stringify(err))
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#StateMaster").validate().form() == false)
+            //    return;
+
+            if ($("#Customer").val() == null || $("#Customer").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Customer is Required..');
+                return;
+            }
+            if ($("#FromBranch").val() == null || $("#FromBranch").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('From is Required..');
+                return;
+            }
+            if ($("#ToBranch").val() == null || $("#ToBranch").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To is Required..');
+                return;
+            }
+            if ($("#DocDate").val() == null || $("#DocDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate is Required..');
+                return;
+            }
+            if ($("#FromDate").val() == null || $("#FromDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('FromDate is Required..');
+                return;
+            }
+            if ($("#ToDate").val() == null || $("#ToDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('ToDate is Required..');
+                return;
+            }
+
+            CheckDate($("#DocDate").val(), true, $("#FromDate").val(), $("#ToDate").val());
+
+
+        });
+    });
+
+    function CheckDate(docdt, DOC, fromdt, todt) {
+        debugger;
+        var url = '@Url.Action("CheckDate")';
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: url,
+            data: { DocDate: docdt, DOCDT: DOC, FromDT: fromdt, ToDT: todt },
+            success: function (result) {
+                debugger;
+                if (!result.Status) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text(result.Message);
+                    return;
+
+                } else {
+                    SaveContract();
+                    //CheckRangeDate($("#DocDate").val(), false, $("#FromDate").val(), $("#ToDate").val());
+                }
+            }
+        });
+    }
+    function CheckRangeDate(docdt, DOC, fromdt, todt) {
+        debugger;
+        var url = '@Url.Action("CheckDate")';
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: url,
+            data: { DocDate: docdt, DOCDT: DOC, FromDT: fromdt, ToDT: todt },
+            success: function (result) {
+                debugger;
+                if (!result.Status) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text(result.Message);
+                    return;
+
+                } else {
+                    SaveContract();
+                }
+            }
+        });
+    }
+    function SaveContract() {
+
+        var url = '@Url.Action("SaveData")';
+        @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+        var ModelData = {};
+        ModelData["Document"] = $("#Document").val();
+        ModelData["Customer"] = $("#Customer").val();
+        ModelData["FromBranch"] = $("#FromBranch").val();
+        ModelData["ToBranch"] = $("#ToBranch").val();
+        ModelData["DocDate"] = $("#DocDate").val();
+        ModelData["FromDate"] = $("#FromDate").val();
+        ModelData["ToDate"] = $("#ToDate").val();
+        ModelData["PaymentTerms"] = $("#PaymentTerms").val();
+        ModelData["Remark"] = $("#Remark").val();
+
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+        if ($("#MA").prop("checked")) {
+            ModelData["CustomerType"] = "MA";
+        } else {
+            ModelData["CustomerType"] = "CU";
+        }
+
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                    $("#ErrorMessage").hide();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadCustomer() {
+        var url = '@Url.Action("LoadCustomer")'
+        $('#Customer').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        MasterAccount: $("#MA").prop("checked")
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code,
+                                MasterAccount:true
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Customer', text: '@Model.CustomerN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    }
+    function LoadFromBranch() {
+        var url = '@Url.Action("LoadBranch")'
+        $('#FromBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.FromBranch', text: '@Model.FromBranchN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    }
+    function LoadToBranch() {
+        var url = '@Url.Action("LoadBranch")'
+        $('#ToBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ToBranch', text: '@Model.ToBranchN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    }
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-top:0%;">
+    <div class="panel-body">
+        <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none;margin-top:0px;"></div>
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:4%;">
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <div class="col-sm-2" style="display: flex;">
+                    <input type="radio" class="form-control" name="Customer" id="CU" value="CU" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Customer Master</label>
+                    <input type="radio" class="form-control" name="Customer" id="MA" value="MA" style="height:20px;width:35px;" /><label class=" bold control-label">Group Master</label>
+                </div>
+                <label class="col-sm-1 control-label">Customer:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Customer, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Customer })
+                </div>
+                <label class="col-sm-1 control-label">From:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.FromBranch, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.FromBranch })
+                </div>
+                <label class="col-sm-1 control-label">To:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.ToBranch, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.ToBranch })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Doc. Date:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.DocDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.DocDate, @autocomplete = "off" })
+                </div>
+                <label class="col-sm-1 control-label">From Date:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.FromDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.FromDate, @autocomplete = "off" })
+                </div>
+
+                <label class="col-sm-1 control-label">To Date:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.ToDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.ToDate, @autocomplete = "off" })
+                </div>
+                <div class="col-sm-2">
+                    <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnCopy" data-toggle="tooltip" data-placement="top" title="Copy">Copy From</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Payment Term:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.PaymentTerms, new { @class = "form-control", @style = "width:100%;", @Value = Model.PaymentTerms })
+                </div>
+                <label class="col-sm-1 control-label">Remark:</label>
+                <div class="col-sm-8">
+                    @Html.TextAreaFor(x => x.Remark, new { @class = "form-control", @style = "width:100%;", @Value = Model.Remark, @maxlength = "150", @rows = "1" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            <div id="ContractListDiv" class="form-group">
+                @Html.Partial("ContractList", Model)
+
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@*<input type="hidden" id="controllername" />*@
+@Html.HiddenFor(x => x.Document)
+
+
+<div class="example-modal">
+    <div id="addnewledger" class="modal modal-default">
+        <div class="modal-dialog modal-lg" style="width:1040px;overflow:unset">
+            <div id="AddnNewLedgerList">
+                @*@Html.Partial("AddNewContract",Model.ContractList)*@
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!--Copy Modal -->
+<div class="modal right fade" id="copymodal" style="margin-top: 20px;" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl">
+        <div class="modal-content" style="width: 70%;">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <h4 class="modal-title"><b>Copy Contract Master List</b></h4>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div class="grid" id="FormatTable">
+                    <div class="form-group col-sm-12" id="CopyModal" style="overflow: auto;width: 100%;display: block;min-height:500px;max-height:500px;">
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                @*<button class="btn btn-warning" style="color:black; font-size: 13px;padding:3px 12px;" id="btnSubmitCopy" data-toggle="tooltip" data-placement="top" title="Copy"></button>*@
+                <button type="button" class="btn btn-warning" style="color:black;font-weight: bold;" id="btnSubmitCopy" data-toggle="tooltip" data-placement="top" title="Copy">Get Copy Area</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,562 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.SalesTaxVM
+@using Common;
+@{
+    ViewBag.Title = "Sales Tax";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        GetMyFavorites('@Model.ViewDataId');
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadPostCode();
+        LoadSGSTCode();
+        LoadCGSTCode();
+        LoadIGSTCode();
+        LoadCessCode();
+
+        @* iX9: make all the fields hidden with visible property=false *@
+        $("#TaxMaster_Inclusive").hide();
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#TaxMaster_Scope').val('@Model.TaxMaster_Scope').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#TaxMaster_Form').val('@Model.TaxMaster_Form').attr("selected", "selected");
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#SalesTax').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TaxMaster_Code: {required: true,},
+                TaxMaster_Name: {required: true,},
+               },
+            messages: {
+                TaxMaster_Code: {required: 'Code is Required',},
+                TaxMaster_Name: {required: 'Name is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#TaxMaster_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TaxMaster_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TaxMaster_Pct").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TaxMaster_SGSTRate").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TaxMaster_CGSTRate").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TaxMaster_IGSTRate").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TaxMaster_CessRate").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#SalesTax").validate().form() == false)
+            //    return;
+
+            if ($("#TaxMaster_Code").val() == null || $("#TaxMaster_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Code is Required..');
+                return;
+            }
+            if ($("#TaxMaster_Name").val() == null || $("#TaxMaster_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["TaxMaster_Code"] = $("#TaxMaster_Code").val();
+            ModelData["TaxMaster_Scope"] = $("#TaxMaster_Scope").val();
+            ModelData["TaxMaster_Name"] = $("#TaxMaster_Name").val();
+            ModelData["TaxMaster_VATGST"] = $("#TaxMaster_VATGST").is(':checked');
+            ModelData["TaxMaster_DiscOnTxbl"] = $("#TaxMaster_DiscOnTxbl").is(':checked');
+            ModelData["TaxMaster_Pct"] = $("#TaxMaster_Pct").val();
+            ModelData["TaxMaster_MRPTax"] = $("#TaxMaster_MRPTax").is(':checked');
+            ModelData["TaxMaster_Inclusive"] = $("#TaxMaster_Inclusive").is(':checked');
+            ModelData["TaxMaster_PostCode"] = $("#TaxMaster_PostCode").val();
+            ModelData["TaxMaster_SGSTRate"] = $("#TaxMaster_SGSTRate").val();
+            ModelData["TaxMaster_SGSTCode"] = $("#TaxMaster_SGSTCode").val();
+            ModelData["TaxMaster_CGSTRate"] = $("#TaxMaster_CGSTRate").val();
+            ModelData["TaxMaster_CGSTCode"] = $("#TaxMaster_CGSTCode").val();
+            ModelData["TaxMaster_IGSTRate"] = $("#TaxMaster_IGSTRate").val();
+            ModelData["TaxMaster_IGSTCode"] = $("#TaxMaster_IGSTCode").val();
+            ModelData["TaxMaster_CessRate"] = $("#TaxMaster_CessRate").val();
+            ModelData["TaxMaster_CessCode"] = $("#TaxMaster_CessCode").val();
+            ModelData["TaxMaster_Composition"] = $("#TaxMaster_Composition").is(':checked');
+            ModelData["TaxMaster_Form"] = $("#TaxMaster_Form").val();
+            ModelData["TaxMaster_Exempted"] = $("#TaxMaster_Exempted").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    } else if (data.Status == 'Error') {
+                        alert(data.Message);
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadPostCode() {
+        var url = '@Url.Action("AutoCompletePostCode")'
+        $('#TaxMaster_PostCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TaxMaster_PostCode', text: '@Model.PostCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadSGSTCode() {
+        var url = '@Url.Action("AutoCompleteSGSTCode")'
+        $('#TaxMaster_SGSTCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TaxMaster_SGSTCode', text: '@Model.SGSTCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCGSTCode() {
+        var url = '@Url.Action("AutoCompleteCGSTCode")'
+        $('#TaxMaster_CGSTCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TaxMaster_CGSTCode', text: '@Model.CGSTCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadIGSTCode() {
+        var url = '@Url.Action("AutoCompleteIGSTCode")'
+        $('#TaxMaster_IGSTCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TaxMaster_IGSTCode', text: '@Model.IGSTCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCessCode() {
+        var url = '@Url.Action("AutoCompleteCessCode")'
+        $('#TaxMaster_CessCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TaxMaster_CessCode', text: '@Model.CessCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="SalesTax" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TaxMaster_Code, new { @maxlength = "5", @class = "form-control", @Name = "TaxMaster_Code", @Value = Model.TaxMaster_Code, @Id = "TaxMaster_Code" })
+                </div>
+                <label class="col-sm-1 control-label">Scope:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.DropDownListFor(m => m.TaxMaster_Scope, Model.ScopeList, new { @class = "form-control", @Id = "TaxMaster_Scope", @Name = "TaxMaster_Scope", @readonly = "readonly", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    }
+                    else
+                    {
+                        @Html.DropDownListFor(m => m.TaxMaster_Scope, Model.ScopeList, new { @class = "form-control", @Id = "TaxMaster_Scope", @Name = "TaxMaster_Scope", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TaxMaster_Name, new { @maxlength = "30", @class = "form-control", @Name = "TaxMaster_Name", @Value = Model.TaxMaster_Name, @Id = "TaxMaster_Name" })
+                </div>
+                <label class="col-sm-1 control-label">GST? else VAT:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.TaxMaster_VATGST, new { @value = Model.TaxMaster_VATGST, @id = "TaxMaster_VATGST", @name = "TaxMaster_VATGST", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Disc on Txble?:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.TaxMaster_DiscOnTxbl, new { @value = Model.TaxMaster_DiscOnTxbl, @id = "TaxMaster_DiscOnTxbl", @name = "TaxMaster_DiscOnTxbl", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Tax%:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TaxMaster_Pct, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TaxMaster_Pct", @Value = Model.TaxMaster_Pct, @Id = "TaxMaster_Pct" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">MRP Based?:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.TaxMaster_MRPTax, new { @value = Model.TaxMaster_MRPTax, @id = "TaxMaster_MRPTax", @name = "TaxMaster_MRPTax", @style = "height:16px;width:16px;" })
+                </div>
+                <label style="display:none;" class="col-sm-1 control-label">Inclusive:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.TaxMaster_Inclusive, new { @value = Model.TaxMaster_Inclusive, @id = "TaxMaster_Inclusive", @name = "TaxMaster_Inclusive", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">Accounts Posting Details for VAT</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Posting for VAT (No GST):</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TaxMaster_PostCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TaxMaster_PostCode", @Value = Model.TaxMaster_PostCode, @Name = "TaxMaster_PostCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">Accounts Posting Details for GST</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">SGST/UGST%:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TaxMaster_SGSTRate, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TaxMaster_SGSTRate", @Value = Model.TaxMaster_SGSTRate, @Id = "TaxMaster_SGSTRate" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">SGST Post:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TaxMaster_SGSTCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TaxMaster_SGSTCode", @Value = Model.TaxMaster_SGSTCode, @Name = "TaxMaster_SGSTCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">CGST%:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TaxMaster_CGSTRate, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TaxMaster_CGSTRate", @Value = Model.TaxMaster_CGSTRate, @Id = "TaxMaster_CGSTRate" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">CGST Post:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TaxMaster_CGSTCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TaxMaster_CGSTCode", @Value = Model.TaxMaster_CGSTCode, @Name = "TaxMaster_CGSTCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">IGST%:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TaxMaster_IGSTRate, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TaxMaster_IGSTRate", @Value = Model.TaxMaster_IGSTRate, @Id = "TaxMaster_IGSTRate" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">IGST Post:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TaxMaster_IGSTCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TaxMaster_IGSTCode", @Value = Model.TaxMaster_IGSTCode, @Name = "TaxMaster_IGSTCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Cess%:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TaxMaster_CessRate, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TaxMaster_CessRate", @Value = Model.TaxMaster_CessRate, @Id = "TaxMaster_CessRate" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Cess Post:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TaxMaster_CessCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TaxMaster_CessCode", @Value = Model.TaxMaster_CessCode, @Name = "TaxMaster_CessCode" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Composition?:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.TaxMaster_Composition, new { @value = Model.TaxMaster_Composition, @id = "TaxMaster_Composition", @name = "TaxMaster_Composition", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Form?:</label>
+                <div class="col-sm-3">
+                    @Html.DropDownListFor(m => m.TaxMaster_Form, Model.FormList, new { @class = "form-control", @Id = "TaxMaster_Form", @Name = "TaxMaster_Form", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                </div>
+                <label class="col-sm-1 control-label">Exempted?:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.TaxMaster_Exempted, new { @value = Model.TaxMaster_Exempted, @id = "TaxMaster_Exempted", @name = "TaxMaster_Exempted", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Tue 26-Nov-2019 04:19 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 52
+    by Team Shruham Software *@
+

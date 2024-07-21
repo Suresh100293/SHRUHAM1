@@ -1,0 +1,423 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.AttachmentVM
+
+<style>
+    #HideImg1 {
+        visibility: hidden;
+        display: none;
+        /*position: absolute;*/
+        top: 0px;
+        left: 0px;
+        right: 0px;
+        box-shadow: 0px 0px 20px 0px black;
+        width: 100%;
+        height: 400px;
+        margin: 0%;
+        padding: 7px;
+        background-color: white;
+    }
+
+    /*#close_image1 {
+        width: 24px;
+        height: 22px;
+        visibility: hidden;
+        display: none;
+        position: absolute;
+    }
+
+    #close_image1 {
+        top: 9.5%;
+        left: 590px;
+        background-color: red;
+        color: white;
+    }*/
+</style>
+<script src="~/Content/WebCamera/webcam.js"></script>
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        $('#FileUpload').on('change', function () {
+            debugger;
+            //get the file name
+            //var fileName = $(this).val();
+            //replace the "Choose a file" label
+            $('.custom-file-control').html(this.value.split("\\").pop());
+        });
+        debugger;
+        //$('#Cameramodal').modal('hide');
+        $("#btnCamera").click(function (e) {
+            e.preventDefault();
+            $('#NormalAttach,#btnCamera').addClass('hidden');
+            $('#CameraAttach,#btnHideCamera').removeClass('hidden');
+            Webcam.set({
+                width: 360,
+                height: 260,
+                image_format: 'jpeg',
+                jpeg_quality: 90
+            });
+            Webcam.attach('#idwebcam');
+
+        });
+        $("#btnHideCamera").click(function (e) {
+            e.preventDefault();
+            $('#NormalAttach,#btnCamera').removeClass('hidden');
+            $('#CameraAttach,#btnHideCamera').addClass('hidden');
+        });
+        $("#btncapture").click(function () {
+            debugger;
+            $('#attachdoc').modal('show');
+            Webcam.snap(function (data_uri) {
+                debugger;
+                Webcam.snap(function (data_uri) {
+                    debugger;
+                    //$("#idcaptured")[0].src = data_uri;
+                    document.getElementById('idcaptured').innerHTML =
+                        '<img src="' + data_uri + '"/>';
+                });
+            });
+            $('#attachdoc').modal('show');
+        });
+
+        $("#btnreset").click(function () {
+            $('#attachdoc').modal('show');
+            Webcam.snap(function (data_uri) {
+                Webcam.snap(function (data_uri) {
+                    //$("#idcaptured")[0].src = "";
+                    document.getElementById('idcaptured').innerHTML =
+                        '<img src=""/>';
+                });
+            });
+            $('#attachdoc').modal('show');
+        });
+
+        $("#btnAddDocument").click(function (event) {
+            event.preventDefault();
+            var size = 0;
+            var formData = new FormData();
+            var totalFiles = document.getElementById("FileUpload").files.length;
+            for (var i = 0; i < totalFiles; i++)
+            {
+                var file = document.getElementById("FileUpload").files[i];
+                size += file.size;
+                if (file.size < 26214400)
+                {
+                    debugger;
+                    formData.append("FileUpload", file);
+                    formData.append("Srl", $("#Srl").val());
+                    formData.append("RefType", $("#RefType").val());
+                    formData.append("Type", $("#Type").val());
+                    formData.append("Mode", $("#Mode").val());
+                    formData.append("DocType", $("#DocType").val());
+                }
+                else
+                {
+                    alert('File Size Must Not Exceed 25 MB')
+                    return;
+                }
+            }
+            if (size > 26214400)
+            {
+                alert('File Size Must Not Exceed 25 MB')
+                return;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("AttachDocument")',
+                data: formData,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    if (data.Status == "CancelError")
+                    {
+                        alert(data.Message);
+                    }
+                    else
+                    {
+                        $('.spinner').hide();
+                        var AttachDoc = $("#AttachDoc");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                        $('#attachdoc').modal('show');
+                        $('.custom-file-control').html("");
+                    }
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+
+        $('button[action|="Delete"]').click(function (event) {
+            debugger;
+            event.preventDefault();
+            debugger;
+            var url = '/Logistics/Attachment/DeleteUploadFile';
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["Mode"] = $("#Mode").val();
+            ModelData["Type"] = $("#Type").val();
+            ModelData["Srl"] = $("#Srl").val();
+            ModelData["RefType"] = $("#RefType").val();
+            ModelData["DocType"] = $("#DocType").val();
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+
+        $("#btnCameraUpload").click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("WebCamCaptureImg")';
+            //var file = document.getElementById("idcaptured")[0].src;
+            var file = $('#idcaptured img').attr('src');
+
+            var DTO = { DocumentStr: file, Mode: $("#Mode").val(), Type: $("#Type").val(), Srl: $("#Srl").val(), RefType: $("#RefType").val(), DocType: $("#DocType").val()};
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+    });
+
+    function big_image(src, index) {
+        debugger;
+        $("#HideImg1").fadeIn(1000);
+        $('#HideImg1').attr('src', src);
+        visibility();
+        document.getElementById("img_no1").value = index;
+    }
+    function visibility() {
+        $('#ImgView3').modal('show');
+        document.getElementById("HideImg1").style.visibility = "visible";
+        document.getElementById("HideImg1").style.display = "block";
+    }
+    function HideOnlyCurrntModel() {
+        $('#ImgView3').modal('hide');
+    }
+</script>
+
+
+<div class="modal-dialog" style="width:unset;">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title">Attach Document</h4>
+        </div>
+        <div class="modal-body" style="padding:unset;min-height:450px;max-height:450px;overflow:auto;">
+            <div class="panel-body">
+                <div class="">
+                    <div role="form">
+                        @if (!Model.HideDelete)
+                        {
+                            <div id="NormalAttach">
+                                <div class="form-group">
+                                    <label>File input</label>
+                                    <label for="FileUpload" class="btn" style="border:1px double black;color:blue;background-color:blanchedalmond;">Choose Files / Camera : </label><span style="color: blue;" class="custom-file-control form-control-file "></span>
+                                    <input type="file" id="FileUpload" style="visibility:hidden;" multiple />
+                                </div>
+                                <input type="submit" value="Upload" class="btn btn-warning" id="btnAddDocument" />
+                            </div>
+                            <div id="CameraAttach" class="hidden">
+                                <div class="form-group">
+                                    <table class="zui-tableww" id="">
+                                        <thead>
+                                            <tr>
+                                                <th>Live Camera</th>
+                                                <th colspan="2">Capture Picture</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>
+                                                    <div id="idwebcam"></div>
+                                                </td>
+                                                <td colspan="2">
+                                                    <div id="idcaptured" class="idcaptured" style="width:360px;"></div>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>
+                                                    <input type="button" id="btncapture" value="btncapture" class="btn btn-danger" />
+                                                </td>
+                                                <td>
+                                                    <input type="button" id="btnreset" value="btnreset" class="btn btn-danger" />
+                                                </td>
+                                                <td>
+                                                    <input type="button" id="btnCameraUpload" value="Upload" class="btn btn-danger" />
+                                                </td>
+
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <br />
+                            <br />
+                        }
+
+                        <table class="zui-tableww" id="AttachTable" style="width:70%;">
+                            <thead>
+                                <tr>
+                                    <th style="width:10%;">Date</th>
+                                    <th style="width:20%;">Name</th>
+                                    <th style="width:5%;">Delete</th>
+                                    <th style="width:5%;">Download</th>
+                                    <th style="width:5%;">Image</th>
+                                    <th style="width:10%;">Attach Ref.</th>
+                                    <th style="width:10%;">Attach DocType.</th>
+                                    <th style="width:5%;">Attach By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                                @if (Model.DocumentList != null)
+                                {
+                                    foreach (var fName in Model.DocumentList.ToList())
+                                    {
+
+                                        <tr>
+
+                                            <td>@fName.DocDate</td>
+                                            <td>@fName.FileName</td>
+                                            @if (fName.AUTHIDS == "N")
+                                            {
+                                                <td></td>
+                                            }
+                                            else
+                                            {
+                                                if (fName.HideDelete)
+                                                {
+                                                    <td>
+                                                    </td>
+
+                                                }
+                                                else
+                                                {
+                                                    <td>
+                                                        <center><button type="button" action="Delete" value="@fName.tempId" style="padding: 4px 8px;all:unset;cursor:pointer;" title="Delete"><i class="glyphicon glyphicon-trash" style="color: red;font-size:30px;"></i></button></center>
+                                                    </td>
+                                                }
+                                            }
+                                            <td>
+                                                @*@Html.ActionLink("Download", "Download", new { Area = "Logistics", Controller = "Attachment", tempId = fName.tempId }, new { @Class = "sc_button sc_button_round sc_button_small", @tooltip = "Add", @action = "Download" })*@
+                                                <center>@Html.ActionLink(" ", "Download", "Attachment", new { Area = "Logistics", tempId = fName.tempId }, new { @class = "glyphicon glyphicon-download", @tooltip = "Download", @style = "color: blueviolet;font-size:35px;" })</center>
+
+                                            </td>
+                                            <td hidden="hidden">
+                                                @fName.ImageStr
+                                            </td>
+                                            <td hidden="hidden">
+                                                @fName.tempId
+                                            </td>
+                                            <td>
+                                                @{
+                                                    string imageSrc = string.Format("data:image/gif;base64,{0}", fName.ImageStr);
+                                                    <a class="btnShow" id="@fName.tempId"><img src="@imageSrc" alt=@fName.FileName class="img-thumbnail" onclick="big_image(this.src,4)" style="height:50px;width:100px;" /></a>
+                                                }
+                                            </td>
+                                            <td>
+                                                @fName.RefType
+                                            </td>
+                                            <td>
+                                                @fName.DocType
+                                            </td>
+                                            <td>
+                                                @fName.ENTEREDBY
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc">
+            <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnCamera" title="Camera">Web-Camera</button>
+            <button class="btn btn-warning hidden" style="font-size: 13px;padding:3px 12px;background-color:#896230!important;" id="btnHideCamera" title="Camera">Close Camera</button>
+            <input type="submit" value="Close" class="btn btn-danger" data-dismiss="modal" />
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="ImgView3" class="modal modal-default" style="margin-top:-4%;height:fit-content;width:fit-content;">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="ImgView3Div">
+                <div class="modal-body" style="">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" onclick="HideOnlyCurrntModel();" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>View Attachment</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+
+                                <img src="" id="HideImg1" style="object-fit:contain;">
+
+                            </div>
+                            <br />
+
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button onclick="HideOnlyCurrntModel();" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<input type="button" value="X" id="close_image1">*@
+<input type="hidden" id="img_no1" value="1">
+@Html.HiddenFor(x => x.Srl)
+@Html.HiddenFor(x => x.Type)
+@Html.HiddenFor(x => x.Mode)
+@Html.HiddenFor(x => x.RefType)
+@Html.HiddenFor(x => x.DocType)
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,325 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common;
+
+<style>
+    .boldlabel {
+        font-weight: bold;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+        @*if ('@Model.PartialDivName' == "LR") {
+            $('#LRDetailsDialogD').removeClass("hidden");
+            $('#FMDetailsDialogD').addClass("hidden");
+        }
+        else if ('@Model.PartialDivName' == "FM") {
+            $('#FMDetailsDialogD').removeClass("hidden");
+            $('#LRDetailsDialogD').addClass("hidden");
+        }*@
+        document.getElementById("btnLRDesignD").click();
+
+        loadexpenseAc();
+        $("#AmountD").constrain({ allow: { regex: "[0-9.]" } });
+        $("#ExpensesAcD").change(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["Code"] = $("#ExpensesAcD").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("RelatedToDecide")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    debugger;
+                    $("#hdnPartialDivName").val(data.PartialDivName);
+                    $("#hdnCCAmtMatch").val(data.CostCenterTally);
+                    $('#LRDetailsDialogD').html(data.LRDetails);
+                    $('#FMDetailsDialogD').html(data.FMDetails);
+                    $("#RelatedToD").val(data.PartialDivName);
+                    $("#ExpensesAcNameD").val(data.Name);
+                    //if (data.PartialDivName == "LR" /*&& AccReqRelated*/) {
+
+                    //    $('#LRDetailsDialogD').removeClass("hidden");
+                    //    $('#FMDetailsDialogD').addClass("hidden");
+                    //}
+                    //else if (data.PartialDivName == "FM" /*&& AccReqRelated*/) {
+
+                    //    $('#FMDetailsDialogD').removeClass("hidden");
+                    //    $('#LRDetailsDialogD').addClass("hidden");
+                    //}
+                    //else {
+                    //    $('#FMDetailsDialogD').addClass("hidden");
+                    //    $('#LRDetailsDialogD').addClass("hidden");
+                    //}
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#btnAddDeduction').click(function (event) {
+            event.preventDefault();
+
+            if ($('#ExpensesAcD').val() == '' || $('#ExpensesAcD').val() == '0') {
+                alert('Expenses Account Required...')
+                return;
+            }
+
+            //if ($("#CostCenter").val() == "True") {
+            //    if ($("#RelatedToD").val() == "LR") {
+            //        if ($('#DocNoD').val() == '' || $('#DocNoD').val() == null) {
+            //            alert('LR NO Required...')
+            //            return;
+            //        }
+            //    }
+            //    if ($("#RelatedToD").val() == "FM") {
+            //        if ($('#DocNoD').val() == '' || $('#DocNoD').val() == null) {
+            //            alert('FM NO Required...')
+            //            return;
+            //        }
+            //    }
+            //}
+
+            //if ($('#AmountD').val() == '' || $('#AmountD').val() == '0') {
+            //    alert('Amount Required...')
+            //    return;
+            //}
+            var mlrqty = 0;
+            $('#lrtabledataD tbody tr').each(function () {
+                var tds = $(this).find('td');
+                mlrqty = parseFloat(mlrqty) + parseFloat(tds.eq(3).text());
+            });
+            var mfmqty = 0;
+            $('#FMtabledataD tbody tr').each(function () {
+                var tds = $(this).find('td');
+                mfmqty = parseFloat(mfmqty) + parseFloat(tds.eq(3).text());
+            });
+            //if (($('#hdnCCAmtMatch').val() == "True" || $('#hdnCCAmtMatch').val() == "true")) {
+            //    if ((mfmqty + mlrqty) != parseFloat($("#AmountD").val())) {
+            //        alert('FM Amount total does not Tally please check..');
+            //        $("#btnAddDeduction").prop("disabled", false);
+            //        return;
+            //    }
+            //}
+            var myBatchArray = [];
+            $('#lrtabledataD tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempId: tds.eq(1).text(),
+                    LRNumber: tds.eq(2).text(),
+                    LRAmt: tds.eq(3).text(),
+                    ConsignmentKey: tds.eq(5).text(),
+                }
+                myBatchArray.push(myDets);
+            });
+
+            var myBatchArray2 = [];
+            $('#FMtabledataD tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = {
+                    tempId: tds.eq(1).text(),
+                    FMNumber: tds.eq(2).text(),
+                    FMAmt: tds.eq(3).text(),
+                    FreightMemoKey: tds.eq(5).text(),
+                }
+                myBatchArray2.push(myDets2);
+            });
+            var otherExpenses = {
+                tempId: $("#tempIdD").val(),
+                ExpensesAc: $("#ExpensesAcD").val(),
+                ExpensesAcName: $("#ExpensesAcNameD").val(),
+                DocNo: $("#DocNoD").val(),
+                Amount: $("#AmountD").val(),
+                Narr: $("#NarrD").val(),
+                RelatedTo: $("#RelatedToD").val(),
+                FMDetailList: myBatchArray2,
+                LRDetailList: myBatchArray,
+                PartialDivName: $('#hdnPartialDivName').val(),
+                CostCenterTally: $("#hdnCCAmtMatch").val(),
+            };
+
+
+            var ModelData = {};
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["otherExpenses"] = otherExpenses;
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddEditSelectedDeduction")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage1').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message)
+                        return;
+                    }
+
+                    $('#adddeduction').modal('hide');
+                    $('#MainDeductionDiv').html(data.Html);
+                    CalculateNetAmount();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });
+    function openCityNew(evt, cityName) {
+
+        $("#ErrorMessage1").hide();
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontentNew");
+        for (i = 0; i < tabcontent.length; i++) {
+
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("ItemDesignD");
+        for (i = 0; i < tablinks.length; i++) {
+
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(cityName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+    function loadexpenseAc() {
+        var url = '@Url.Action("GetTripDebitAcList")';
+        $('#ExpensesAcD').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.otherExpenses.ExpensesAc', text: '@Model.otherExpenses.ExpensesAcName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+</script>
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">@Model.Mode Record</h4>
+    </div>
+    <div class="modal-body">
+        <div class="form-horizontal" id="ProListupdate">
+            <div class="form-group col-sm-6">
+                <div class="form-group">
+                    <label class="col-sm-4 control-label boldlabel">Expenses Account:</label>
+                    <div class="col-sm-8">
+                        @Html.TextBoxFor(x => x.otherExpenses.ExpensesAc, new { @class = "input-large-query", @Name = "ExpensesAcD", @Id = "ExpensesAcD", @style = "text-align:right;width: 100%;", @value = Model.otherExpenses.ExpensesAc })
+                    </div>
+                    <div class="col-sm-4 hidden">
+                        @Html.TextBoxFor(x => x.otherExpenses.ExpensesAcName, new { @class = "form-control", @Name = "ExpensesAcNameD", @Id = "ExpensesAcNameD", @style = "text-align:right", @disabled = "disabled", @value = Model.otherExpenses.ExpensesAc })
+                    </div>
+                </div>
+                @*<div class="form-group" id="DeductionLRFMdiv">
+            <label class="col-sm-4 control-label boldlabel" id="ChangeLableTextD">DocNO:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.otherExpenses.DocNo, new { @class = "form-control", @Name = "DocNoD", @Id = "DocNoD", @style = "width:100%;", @value = Model.otherExpenses.DocNo })
+            </div>
+        </div>*@
+                <div class="form-group">
+                    <label class="col-sm-4 control-label boldlabel">Amount:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.otherExpenses.Amount, new { @class = "form-control", @Name = "AmountD", @Id = "AmountD", @style = "width:100%;", @value = Model.otherExpenses.Amount })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label boldlabel">Narr:</label>
+                    <div class="col-sm-8">
+                        @Html.TextAreaFor(x => x.otherExpenses.Narr, new { @class = "form-control", @Name = "NarrD", @Id = "NarrD", @style = "width:100%;", @value = Model.otherExpenses.Narr })
+                    </div>
+                </div>
+            </div>
+            @*<div class="col-sm-6" id="DocDetailsD" style="padding-left:3% !important;">
+
+            </div>*@
+        </div>
+        <div style="max-height:300px;min-height:300px;overflow-y:scroll;width:100%; ">
+            <div class="tab">
+                <button class="tablinks ItemDesignD LRTabDesignD" onclick="openCityNew(event, 'TabdivLedgerTable1D')" id="btnLRDesignD">Lorry Receipt</button>
+                <button class="tablinks ItemDesignD FMTabDesignD" onclick="openCityNew(event, 'TabdivLedgerTable2D')" id="btnFMDesignD">Freight Memo</button>
+            </div>
+            <div id="TabdivLedgerTable1D" class="tabcontent tabcontentNew" style="min-height:270px;max-height:270px;overflow-y:scroll;">
+                <div id="LRDetailsDialogD" style="display:block;">
+                    @Html.Partial("LRDetailsD")
+                </div>
+            </div>
+            <div id="TabdivLedgerTable2D" class="tabcontent tabcontentNew" style="min-height:270px;max-height:270px;overflow-y:scroll;">
+                <div id="FMDetailsDialogD" style="display:block;">
+                    @Html.Partial("FMDetailsD")
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc">
+        @if (Model.Mode == "Add")
+        {
+            <button type="button" class="btn btn-success" id="btnAddDeduction">Save</button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-success" id="btnAddDeduction">Update</button>
+        }
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.otherExpenses.tempId, new { @id = "tempIdD" })
+@Html.HiddenFor(x => x.otherExpenses.RelatedTo, new { @id = "RelatedToD" })
+@Html.HiddenFor(x => x.PartialDivName, new { @id = "hdnPartialDivName", @name = "hdnPartialDivName" })
+@Html.HiddenFor(x => x.CostCenterTally, new { @id = "hdnCCAmtMatch" })
+@Html.HiddenFor(x => x.DectionCostCenter, new { @id = "hdnDectionCostCenter" })

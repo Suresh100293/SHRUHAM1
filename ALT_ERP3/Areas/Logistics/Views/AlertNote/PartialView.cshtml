@@ -1,0 +1,758 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.AlertNoteVM
+@using Common;
+@{
+    ViewBag.Title = "Alert Note Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+
+<link href="~/Content/ToogleCreate/CreateTgl.css" rel="stylesheet" />
+<script src="~/Content/ToogleCreate/CreateTgl.js"></script>
+
+
+<style>
+
+
+    .bold {
+        font-weight: bold !important;
+    }
+
+    hr {
+        border: 1px solid #dec0c0;
+    }
+
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+
+    legend {
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    .legend2 {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        background-color: white;
+        color: red;
+        width: auto;
+        z-index: auto;
+        padding: 5px 20px 5px 20px;
+        margin-bottom: 0px !important;
+        margin-top: -36px;
+        height: 33px;
+    }
+
+    .display {
+        display: block;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        $('#attachdoc,#multidoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        })
+        $("#attachdoc,#multidoc").modal("hide");
+
+        GetMyFavorites('@Model.ViewDataId');
+        $("#TypeCode").constrain({ allow: { regex: "[0-9]" } });
+
+        if ('@Model.Mode' == "Delete" || '@Model.Mode' == "View")
+        {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        LoadType();
+        //LoadRefDoc();
+        $('#ALerttbl > tbody  > tr').each(function () {
+            var Row = $(this).closest('tr');
+            var CheckBox = Row.find('.chkfvalue').prop("checked");
+            if (CheckBox) {
+                Row.find('.chkfvalueStop').prop("disabled", false);
+            }
+        });
+
+        $('#MultDocdumentTbl > tbody  > tr').dblclick(function () {
+            var Row = $(this).closest('tr');
+
+
+        });
+
+        //$("#InstantMail").click(function (event) {
+        //    event.preventDefault();
+        //    if ($("#DocumentKey").val() == null || $("#DocumentKey").val() == "") {
+        //        alert("Document Not Found...!");
+        //        return;
+        //    }
+        //    var murl = "/SendEmail/Index?MenuName=T&ViewDataId=MultiPartySelect&TableKey=" + $("#DocumentKey").val() + '&PurchType=' + $("#Remark").val();
+        //    window.open(murl, '_blank');
+        //});
+
+        $('#LcDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+
+
+
+
+        $('#TypeCode').blur(function (event) {
+            if ($("#TypeCode").val() != "" && $("#TypeCode").val() != null)
+            {
+                event.preventDefault();
+                var url = '@Url.Action("CheckDocumentYear")';
+                var DTO = { Type: $("#AType").val(), DocNo: $("#TypeCode").val()};
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        debugger;
+
+                        if (data.Status == "Yes")
+                        {
+                            $("#DocumentKey").val(data.Tablekey);
+                            var url = '@Url.Action("CheckDocument")';
+                            var DTO = { Type: $("#AType").val(), DocNo: $("#TypeCode").val(), DocumentKey: $("#DocumentKey").val()};
+                            $.ajax({
+                                type: "POST",
+                                dataType: "json",
+                                data: JSON.stringify(DTO),
+                                cache: false,
+                                url: url,
+                                contentType: "application/json; charset=utf-8",
+                                beforeSend: function ()
+                                {
+                                    $('.spinner').show();
+                                },
+                                success: function (data)
+                                {
+                                    $("#ErrorMessage").hide();
+                                    $('.spinner').hide();
+                                    debugger;
+                                    var LoadDownLoadFiles = $("#BasicDetailsDiv");
+                                    if (data.Status == "Success")
+                                    {
+                                        LoadDownLoadFiles.html('');
+                                        LoadDownLoadFiles.html(data.BasicHtml);
+                                    }
+                                    else
+                                    {
+                                        $("#TypeCode").val("");
+                                        LoadDownLoadFiles.html('');
+                                        //var result = confirm(data.Message +"Are you sure To Continue?");
+                                        //if (result)
+                                        //{
+
+                                        //} else {
+                                        //    $("#TypeCode").val("");
+                                        //    LoadDownLoadFiles.html('');
+                                        //}
+                                    }
+                                },
+                            });
+                        }
+                        else
+                        {
+                            $("#DocumentKey").val("");
+                            var AttachDoc = $("#MultiDoc");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#multidoc').modal('show');
+                        }
+                    },
+                });
+            }
+        });
+        $('#AType').change(function (event)
+        {
+            var LoadDownLoadFiles1 = $("#BasicDetailsDiv");
+            LoadDownLoadFiles1.html('');
+
+            $("#TypeCode").val("");
+            if ($("#AType").val() == "LR000")
+            {
+                $("#lblTypeCode").html("LR NO<span style='color: red;'>*</span> :");
+            }
+            else if ($("#AType").val() == "FM000" || $("#AType").val() == "FMH00")
+            {
+                $("#lblTypeCode").html("FM NO<span style='color: red;'>*</span> :");
+            }
+            else if ($("#AType").val() == "SLR00" || $("#AType").val() == "SLW00") {
+                $("#lblTypeCode").html("Bill NO<span style='color: red;'>*</span> :");
+            }
+
+
+            event.preventDefault();
+            var url = '@Url.Action("SetToOtherType")';
+            var ModelData = {};
+            ModelData["AType"] = $("#AType").val();
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function ()
+                {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    var LoadDownLoadFiles = $("#RefTypeDiv");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                },
+            });
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            if ('@Model.Mode' == "Delete")
+            {
+                var result = confirm("Are you sure you want to Delete This Document ?");
+                if (result)
+                {
+                    SaveAlert();
+                }
+            }
+            else
+            {
+                SaveAlert();
+            }
+        });
+
+        $('#SubmitAndSend').click(function (event) {
+            event.preventDefault();
+
+            if ($("#AType").val() == null || $("#AType").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Type is required..');
+                return;
+            }
+            if ($("#TypeCode").val() == null || $("#TypeCode").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Reference No is required..');
+                return;
+            }
+
+            var AlertRefType = [];
+            debugger;
+            $('#ALerttbl > tbody  > tr').each(function () {
+                var tds = $(this).find('td');
+                if ($(this).find(".chkfvalue").prop("checked") == true || $(this).find(".chkfvalueStop").prop("checked"))
+                {
+                    var myDets =
+                    {
+                        Code: tds.eq(1).text(),
+                        select: $(this).find(".chkfvalue").prop("checked"),
+                        stop: $(this).find(".chkfvalueStop").prop("checked"),
+                    }
+                    AlertRefType.push(myDets);
+                }
+            });
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["AType"] = $("#AType").val();
+            ModelData["TypeCode"] = $("#TypeCode").val();
+            ModelData["RefersType"] = AlertRefType;
+            ModelData["Remark"] = $("#Remark").val();
+            ModelData["DocumentKey"] = $("#DocumentKey").val();
+            ModelData["Bling"] = $("#Bling").is(":checked");
+            ModelData["PartyNarr"] = $("#PartyNarr").is(":checked");
+            ModelData["ShortCutKey"] = '@Model.ShortCutKey';
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+
+            var DTO = { mModel: ModelData };
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function ()
+                {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    $('.spinner').hide();
+                    $("#ErrorMessage").hide();
+                    if (data.Status == 'Success')
+                    {
+                        debugger;
+                        if ('@Model.ShortCutKey' == "True")
+                        {
+                            window.top.close();
+                            document.getElementById("close-window").addEventListener("click", function () {
+                            window.close();
+                        });
+                        }
+                        else
+                        {
+                            var murl = "/SendEmail/Index?MenuName=T&ViewDataId=MultiPartySelect&TableKey=" + $("#DocumentKey").val() + '&PurchType=' + $("#Remark").val();
+                            if ($("#DocumentKey").val() != null && $("#DocumentKey").val() != "") {
+                                window.open(murl, '_blank');
+                            }
+                            window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+
+                        }
+                    }
+                    else
+                    {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+
+        $("#btnAddDoc").click(function (event) {
+            event.preventDefault();
+            debugger;
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Srl"] = $("#Document").val();
+            ModelData["Type"] = "Alert";
+            ModelData["RefType"] = "Alert";
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+    });
+    function SaveAlert()
+    {
+        debugger;
+        if ($("#AType").val() == null || $("#AType").val() == '')
+        {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Type is required..');
+            return;
+        }
+        if ($("#TypeCode").val() == null || $("#TypeCode").val() == '')
+        {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Reference No is required..');
+            return;
+        }
+        if ($("#DocumentKey").val() == null || $("#DocumentKey").val() == '')
+        {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('DOcument Not Found...');
+            return;
+        }
+        var AlertRefType = [];
+        debugger;
+        $('#ALerttbl > tbody  > tr').each(function () {
+            var tds = $(this).find('td');
+            if ($(this).find(".chkfvalue").prop("checked") == true || $(this).find(".chkfvalueStop").prop("checked"))
+            {
+                var myDets =
+                {
+                    Code: tds.eq(1).text(),
+                    select: $(this).find(".chkfvalue").prop("checked"),
+                    stop: $(this).find(".chkfvalueStop").prop("checked"),
+                }
+                AlertRefType.push(myDets);
+            }
+
+        });
+
+        var url = '@Url.Action("SaveData")';
+        @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+        var ModelData = {};
+        ModelData["Document"] = $("#Document").val();
+        ModelData["AType"] = $("#AType").val();
+        ModelData["TypeCode"] = $("#TypeCode").val();
+        ModelData["RefersType"] = AlertRefType;
+        ModelData["Remark"] = $("#Remark").val();
+        ModelData["DocumentKey"] = $("#DocumentKey").val();
+        ModelData["Bling"] = $("#Bling").is(":checked");
+        ModelData["PartyNarr"] = $("#PartyNarr").is(":checked");
+        ModelData["ShortCutKey"] = '@Model.ShortCutKey';
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+
+        var DTO = { mModel: ModelData };
+        $.ajax({
+        type: "POST",
+        dataType: "json",
+        data: JSON.stringify(DTO),
+        cache: false,
+        url: url,
+        contentType: "application/json; charset=utf-8",
+            beforeSend: function ()
+            {
+                $('.spinner').show();
+            },
+            success: function (data)
+            {
+                $('.spinner').hide();
+                $("#ErrorMessage").hide();
+                if (data.Status == 'Success')
+                {
+                    debugger;
+                    if ('@Model.ShortCutKey' == "True")
+                    {
+                        window.top.close();
+                        document.getElementById("close-window").addEventListener("click", function () {
+                            window.close();
+                        });
+                    }
+                    else
+                    {
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                    }
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+
+    function LoadType() {
+        var url = '@Url.Action("GetType")'
+        $('#AType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AType', text: '@Model.ATypeN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadRefDoc() {
+
+        var url = '@Url.Action("GetRefDoc")'
+        $('#DocReceived').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Type: $("#AType").val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocReceived', text: '@Model.DocReceivedN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                var Select = exercise.text;
+                const myArr = Select.split("| ");
+                $("#TypeCode").val(myArr[0]);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            @if (Model.ShortCutKey)
+            {
+                <a href='' onclick="window.top.close();" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+            }
+            else
+            {
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+            }
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="FreightMemo" role="form" style="margin-top:0%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none;"></div>
+            <fieldset class=" col-sm-12" style="margin-top: 2%;">
+                <legend>Alert Note</legend>
+                @*<div class="legend2" style="font-size: 14px;padding:6px 20px 6px 20px;width:fit-content;float:right;margin-right:5%;">Set Alert Note</div>*@
+                <div class="panel panel-default" style="margin-bottom: 0px !important;">
+                    <div class="panel-body " style="padding-left: 20px;padding: 1px !important;">
+                        <div class="col-sm-12">
+                            <div class="form-group col-sm-10">
+                                <label class=" bold   col-sm-1 control-label" style="">Doc No:</label>
+                                <div class="col-sm-1">
+                                    @Html.TextBoxFor(x => x.DocNo, new { @class = "form-control", @style = "width:100%;font-weight:bold;", @Value = Model.DocNo, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1 control-label" style="">Type<span style="color:red;">*</span> :</label>
+                                <div class="col-sm-3">
+                                    @if (Model.Mode == "Add")
+                                    {
+                                        @Html.TextBoxFor(x => x.AType, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.AType })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.AType, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.AType, @disabled = "disabled" })
+                                    }
+
+                                </div>
+                                <label class=" bold   col-sm-1 control-label" id="lblTypeCode" style="width:auto;">RefDoc No<span style="color:red;">*</span> :</label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.TypeCode, new { @class = "form-control", @style = "width:100%;font-weight:bold;", @Value = Model.TypeCode })
+                                </div>
+                                <label class=" bold   col-sm-1 control-label">Blink :</label>
+                                <div class="col-sm-1" style="padding:0px !important;width:auto;">
+                                    @Html.CheckBoxFor(x => x.Bling, new { @class = "form-control", @style = "height:20px;width:20px;", @Value = Model.Bling })
+                                </div>
+                                <label class=" bold   col-sm-1 control-label">Party Narr:</label>
+                                <div class="col-sm-1" style="padding:0px !important;width:auto;">
+                                    @Html.CheckBoxFor(x => x.PartyNarr, new { @title = " This Note Show In Consignment Report. ", @class = "form-control", @style = "height:20px;width:20px;", @Value = Model.PartyNarr })
+                                </div>
+
+                            </div>
+                            @*<div class="col-sm-1">
+                                <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="InstantMail" data-toggle="tooltip" data-placement="top" title="Save">Send Mail</button>
+                            </div>*@
+                            <div class="form-group col-sm-9 ">
+                                <label class=" bold  col-sm-1 control-label">Note :</label>
+                                <div class="col-sm-11">
+                                    @Html.TextAreaFor(x => x.Remark, new { @class = "form-control", @Value = Model.Remark, @rows = "2", @maxlength = 200 })
+                                </div>
+                            </div>
+                            <div class="form-group col-sm-11 " id="BasicDetailsDiv" style="">
+                                <div class="col-sm-12" style="padding:0px;">
+                                    @Html.Partial("BasicDetailsDocView", Model)
+                                </div>
+                            </div>
+                            <div class="form-group col-sm-9">
+                                <div class="col-sm-offset-1 col-sm-11" style="padding-left: 1px !important;">
+                                    <div class="col-sm-8" id="RefTypeDiv">
+                                        @Html.Partial("SetAlertPartialView", Model)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="col-md-4 pull-left" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:5px;font-size:9pt; width:unset;">
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnAddDoc" title="Attachment">Attachment</button>
+            </div>
+        </div>
+        <div class="col-sm-2" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.LAT ERP-3.0, Shruham Software
+        </div>
+        <div class="col-sm-5">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Submit" data-toggle="tooltip" data-placement="top" title="Save">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit" data-toggle="tooltip" data-placement="top" title="Save">Save</button>
+                        <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="SubmitAndSend" data-toggle="tooltip" data-placement="top" title="Save Document Then Send Mail">Save & Send</button>
+                    }
+                }
+                @if (Model.ShortCutKey)
+                {
+                    <a href='' onclick="window.top.close();" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">Cancel</a>
+                }
+                else
+                {
+                    <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">Cancel</a>
+                }
+            </div>
+        </div>
+    </div>
+</footer>
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.DocumentKey)
+
+@*<input type="checkbox" id="hdnLRExist" />*@
+<!--Attachment Modal -->
+<div class="example-modal">
+    <div id="attachdoc" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="AttachDoc">
+            </div>
+        </div>
+    </div>
+</div>
+<div class="example-modal">
+    <div id="multidoc" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="MultiDoc">
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+

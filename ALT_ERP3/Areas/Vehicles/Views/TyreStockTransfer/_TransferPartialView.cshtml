@@ -1,0 +1,310 @@
+﻿
+@model ALT_ERP3.Areas.Vehicles.Models.TyreStockTransferVM
+@using Common;
+
+
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        loadStockTransfer();
+        loadVehicle();
+        loadInstallFor();
+        loadPreviousStatus();
+
+        $("#TyreSerialNo").val($("#OldStkTyreSerialNo").val());
+        $("#TyreSerialNo1").val($("#OldStkTyreSerialNo").val());
+        $("#TyreSerialNo").prop("disabled", true);
+        $("#TyreSerialNo1").prop("disabled", true);
+        $("#TyrePlaceNo,#InstallKM").constrain({ allow: { regex: "[0-9]" } });
+
+            if ('@Model.TransferToStock' == "Vehicle")
+            {
+                $("#VehicleList").prop("disabled", false);
+                $("#VehicleInfo").removeClass("hidden");
+                $("#VehicleOTher").addClass("hidden");
+            }
+            else
+            {
+                $("#VehicleList").prop("disabled", true);
+                $("#VehicleInfo").addClass("hidden");
+                $("#VehicleOTher").removeClass("hidden");
+            }
+
+
+        if ('@Model.Mode'=="Delete" || '@Model.Mode'=="View" || '@Model.blockDocument'=="True" ) {
+            $("#VehicleList").prop("disabled", true);
+        }
+
+        $("#TransferToStock").change(function () {
+            if ($("#TransferToStock").val() == "Vehicle") {
+                $("#VehicleList").prop("disabled", false);
+                $("#VehicleInfo").removeClass("hidden");
+                $("#VehicleOTher").addClass("hidden");
+            } else {
+                $("#VehicleList").prop("disabled", true);
+                $("#VehicleInfo").addClass("hidden");
+                $("#VehicleOTher").removeClass("hidden");
+            }
+        });
+        $("#InstallFor,#TransferToStock,#VehicleList").change(function () {
+            //if (($("#VehicleList").val()) == "0") {
+            //    alert("Please Select VehicleNo .....!");
+            //    return;
+            //}
+            //if (!(parseInt($("#TyrePlaceNo").val()) > 0)) {
+            //    alert("Please Enter Proper Tyre Place NO.....!");
+            //    return;
+            //}
+
+
+            getVehicleDetails();
+        });
+        $("#TyrePlaceNo").blur(function () {
+            //debugger;
+            //if (($("#VehicleList").val()) == "0") {
+            //    alert("Please Select VehicleNo .....!");
+            //    return;
+            //}
+            //if ($("#InstallFor").val() == "0") {
+            //    alert("Please Select Install For.....!");
+            //    return;
+            //}
+            getVehicleDetails();
+        });
+
+    });
+    function loadStockTransfer()
+    {
+        var url = '@Url.Action("PopulateUpdateStock")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result)
+            {
+                $.each(result, function (i, item) {
+                    $("#TransferToStock").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#TransferToStock').val('@Model.TransferToStock').attr("selected", "selected");
+            },
+            error: function ()
+            {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+
+    };
+    function loadVehicle()
+    {
+        var url = '@Url.Action("PopulateVehicle")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result)
+            {
+                $.each(result, function (i, item) {
+                    $("#VehicleList").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#VehicleList').val('@Model.VehicleList').attr("selected", "selected");
+            },
+            error: function ()
+            {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+
+    };
+    function loadInstallFor()
+    {
+        var url = '@Url.Action("PopulateInstallFor")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result)
+            {
+                $.each(result, function (i, item) {
+                    $("#InstallFor").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#InstallFor').val('@Model.InstallFor').attr("selected", "selected");
+            },
+            error: function ()
+            {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+
+    };
+    function loadPreviousStatus()
+    {
+        var url = '@Url.Action("PopulateUpdateOldVehicleStock")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result)
+            {
+                $.each(result, function (i, item) {
+                    $("#PreviousVehicleStatusTransferToStock").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#PreviousVehicleStatusTransferToStock').val('@Model.PreviousVehicleStatusTransferToStock').attr("selected", "selected");
+            },
+            error: function ()
+            {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+
+    };
+</script>
+
+<div class="form-group ">
+    <label class="col-sm-1 control-label" style="font-weight: bold;">Transfer To :</label>
+    <div class="col-sm-2">
+        @Html.DropDownListFor(m => m.TransferToStock, DropdownHelper.EmptyList(), new { @class = "form-control" })
+    </div>
+    <label class="col-sm-1 control-label" style="font-weight: bold;">Vehicle NO :</label>
+    <div class="col-sm-2">
+        @Html.DropDownListFor(m => m.VehicleList, DropdownHelper.EmptyList(), new { @class = "form-control" })
+    </div>
+
+</div>
+<div class="col-sm-12 " style="padding:0px!important;margin:0px!important;">
+    <div class="col-sm-7 hidden" id="VehicleInfo" style="padding:0px!important;margin:0px!important;">
+        <div class="form-group">
+            <label class="col-sm-2 control-label" style="font-weight: bold;">Install For :</label>
+            <div class="col-sm-3">
+                @Html.DropDownListFor(m => m.InstallFor, DropdownHelper.EmptyList(), new { @class = "form-control" })
+            </div>
+            <label class="col-sm-2 control-label" style="font-weight: bold;">Place NO :</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.TyrePlaceNo, new { @class = "form-control" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label" style="font-weight: bold;">Serial No :</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.TyreSerialNo, new { @class = "form-control", @disabled = "disabled" })
+            </div>
+            <label class="col-sm-2 control-label" style="font-weight: bold;">Install Date :</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.InstallDate, new { @class = "form-control" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label" style="font-weight: bold;">Install KM :</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.InstallKM, new { @class = "form-control" })
+            </div>
+        </div>
+
+    </div>
+    <div class="col-sm-7 hidden" id="VehicleOTher" style="padding:0px!important;margin:0px!important;">
+        <div class="form-group">
+            <label class="col-sm-2 control-label" style="font-weight: bold;">Serial No :</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.TyreSerialNo, new { @class = "form-control", @id = "TyreSerialNo1", @disabled = "disabled" })
+            </div>
+            <label class="col-sm-2 control-label" style="font-weight: bold;">Install Date :</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.InstallDate, new { @class = "form-control", @id = "InstallDate1" })
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-5" id="OldStatusInfo" style="padding:0px!important;margin:0px!important;">
+        @if (Model.PreviousVehicleStatusStockAt != "" && Model.PreviousVehicleStatusStockAt != null)
+        {
+            <div class="form-group" style="font-weight: bold;color: #f34b0a;padding-left: 37px;">
+                <label>Update Previous Vehicle Tyre Stock</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Status :</label>
+                <div class="col-sm-4">
+                    @Html.DropDownListFor(m => m.PreviousVehicleStatusTransferToStock, DropdownHelper.EmptyList(), new { @class = "form-control" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Serail NO :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusStockSerial, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Install Date :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusInstallDate, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Install KM :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusInstallKM, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Expiry Date :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusExpirtDate, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Expiry KM :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusExpiryKM, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Stock In :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusStockAt, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Active :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusIsActive, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">TKEy :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusTablekey, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-weight: bold;">Branch :</label>
+                <div class="col-sm-4">
+                    @Html.TextBoxFor(x => x.PreviousVehicleStatusBranch, new { @class = "form-control", @readonly = "readonly" })
+                </div>
+            </div>
+
+        }
+    </div>
+
+</div>

@@ -1,0 +1,823 @@
+﻿@model LRInvoiceVM
+@using Common;
+
+
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            <h4 class="modal-title">Pick from Source Document</h4>
+        </div>
+        <div class="modal-body" style="padding: 0px;">
+            <div class="form-group">
+                <div class="col-sm-1 control-label">Filter By:</div>
+                <div class="col-sm-2" style="display:flex;">
+                    <input type="radio" class="form-control" name="filCustomer" id="ACustomer" value="Customer" style="height:20px;width:50px;" /><label class=" bold control-label" style="font-size: 14px;"> Customer</label>
+                    <input type="radio" class="form-control" name="filCustomer" id="AGroup" value="Group" style="height:20px;width:50px;" /><label class=" bold control-label" style="font-size: 14px;"> Group</label>
+                </div>
+                <div class="col-sm-4" style="display:flex;">
+                    <input type="radio" class="form-control" name="filBranch" id="CurrentBranch" value="CurrentBranch" style="height:20px;width:100px;" /><label class=" bold control-label" style="font-size: 14px;width:70%;"> Current Branch</label>
+                    <input type="radio" class="form-control" name="filBranch" id="AllBranch" value="AllBranch" style="height:20px;width:100px;" /><label class=" bold control-label" style="font-size: 14px;width:70%;"> All Branch</label>
+                </div>
+                <div class="col-sm-5">
+                    <div class="col-sm-2">
+                        <label class=" bold control-label" style="margin-top: 5px;"> Select By</label>
+                    </div>
+                    <div class="col-sm-3">
+                        <input type="text" id="SelectLR" tabindex="1" class="form-control" placeholder="LR NO" />
+                    </div>
+                    <div class="col-sm-2">
+                        <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                    </div>
+                    <div class="col-sm-5">
+                        <input type="text" id="SearchPickup"tabindex="2" class="form-control" placeholder="Search Here" />
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="fixPickupTableHead" id="PickTable" style="width:100%;">
+                @*<div id="tabLedger" class="tabcontent" style="height:450px;padding:0px 0px 0px 0px;display:block !important;">*@
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="tabledatapick" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager" style="height:32px;width:100%;"></div>
+                </div>
+                @*</div>*@
+
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;">
+
+            <button type="button" class="btn btn-success"tabindex="3" id="pickrecord">Accept Data</button>
+            <button type="button" class="btn btn-danger" tabindex="4" data-dismiss="modal">Discard</button>
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x => x.TotalQty, new { @id = "hdnuCount" })
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script>
+    $(document).ready(function () {
+
+        $("#ACustomer").attr("checked", true);
+        $("#AllBranch").attr("checked", true);
+        if ('@Model.FilCustomer' == 'Customer') {
+            $("#ACustomer").attr("checked", true);
+        }
+        if ('@Model.FilCustomer' == 'Group') {
+            $("#AGroup").attr("checked", true);
+        }
+
+        if ('@Model.FilBranch' == 'Current') {
+            $("#CurrentBranch").attr("checked", true);
+        }
+        if ('@Model.FilBranch' == 'All') {
+            $("#AllBranch").attr("checked", true);
+        }
+
+        $('#tabledatapick').jqGrid('clearGridData');
+        $("#tabledatapick").jqGrid("GridUnload");
+        $('#tabledatapick').trigger('reloadGrid');
+        GridReload();
+        
+        $("#SelectLR").blur(function () {
+            var ScrollRow;
+            if ($("#SelectLR").val() != "" && $("#SelectLR").val() != null) {
+                var count = 0;
+                var WantToselectLRNO = $("#SelectLR").val();
+                $('#tabledatapick > tbody > tr').removeClass("SelectedRow");
+                $('#tabledatapick > tbody > tr > td').removeClass("SearchRow");
+                $('#tabledatapick tbody tr').each(function () {
+                    var Row = $(this).closest('tr');
+                    var LRNO = Row.find('td:eq(6)').text();
+                    var CheckBox = $(this).find("input[class='DebitGrid']").is(':checked');
+                    if (LRNO == WantToselectLRNO) {
+                        ScrollRow = Row;
+                        Row.find("input[class='DebitGrid']").prop("checked", true);
+                        count++;
+                        var objTable = $("#tabledatapick");
+                        var iRow = ScrollRow.find("td:eq(5)").text();
+                        objTable.jqGrid('setSelection', iRow);
+                        jQuery("#tabledatapick").jqGrid('setRowData', parseInt(iRow), false, { background: 'rgb(225 205 225)' });
+                        Row.addClass("SelectedRow");
+                        CHeckboxClick();
+                        $("#BillQty" + iRow).focus();
+                    }
+                    else {
+                        if (CheckBox) {
+                            Row.addClass("SelectedRow");
+                        }
+                    }
+                });
+                if (count == 0) {
+                    alert("Not Found");
+                    $("#SelectLR").focus();
+                }
+                else {
+                    //$("#SelectLR").focus();
+                }
+            }
+            $("#SelectLR").val("");
+        });
+        $('#SearchPickup,#SelectLR').keyup(function () {
+            var value = $(this).val();
+            if (value != "") {
+                $('#tabledatapick > tbody > tr').removeClass('SearchRow');
+
+                $("#tabledatapick > tbody > tr > td ").each(function () {
+                    if ($(this).text().toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                        var dd = $(this).text().toLowerCase();
+                        $(this).addClass("SearchRow");
+                    }
+                    else {
+                        $(this).removeClass("SearchRow");
+                    }
+                });
+            }
+            else {
+                $('#tabledatapick td').removeClass('SearchRow');
+            }
+        });
+        $('#ACustomer').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["Account"] = $("#Account").val();
+            ModelData["AccParentGrp"] = $('#AccParentGrp').val();
+            if (($("#ACustomer").is(":checked") == true)) {
+                ModelData["FilCustomer"] = 'Customer';
+            }
+            else {
+                ModelData["FilCustomer"] = 'Group';
+            }
+            if (($("#CurrentBranch").is(":checked") == true)) {
+                ModelData["FilBranch"] = "Current"
+            }
+            else {
+                ModelData["FilBranch"] = "All";
+            }
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetPickUp")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#pickuplist').modal('show');
+                    $('#PickUpList').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#AGroup').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["Account"] = $("#Account").val();
+            ModelData["AccParentGrp"] = $('#AccParentGrp').val();
+            if (($("#ACustomer").is(":checked") == true)) {
+                ModelData["FilCustomer"] = 'Customer';
+            }
+            else {
+                ModelData["FilCustomer"] = 'Group';
+            }
+            if (($("#CurrentBranch").is(":checked") == true)) {
+                ModelData["FilBranch"] = "Current"
+            }
+            else {
+                ModelData["FilBranch"] = "All";
+            }
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetPickUp")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#pickuplist').modal('show');
+                    $('#PickUpList').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+         });
+
+       
+        $('#CurrentBranch').click(function (event) {
+            event.preventDefault();
+
+            var ModelData = {};
+            ModelData["Account"] = $("#Account").val();
+            ModelData["AccParentGrp"] = $('#AccParentGrp').val();
+            if (($("#ACustomer").is(":checked") == true)) {
+                ModelData["FilCustomer"] = 'Customer';
+            }
+            else {
+                ModelData["FilCustomer"] = 'Group';
+            }
+            if (($("#CurrentBranch").is(":checked") == true)) {
+                ModelData["FilBranch"] = "Current"
+            }
+            else {
+                ModelData["FilBranch"] = "All";
+            }
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetPickUp")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#pickuplist').modal('show');
+                    $('#PickUpList').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#AllBranch').click(function (event) {
+            event.preventDefault();
+
+            var ModelData = {};
+            ModelData["Account"] = $("#Account").val();
+            ModelData["AccParentGrp"] = $('#AccParentGrp').val();
+            if (($("#ACustomer").is(":checked") == true)) {
+                ModelData["FilCustomer"] = 'Customer';
+            }
+            else {
+                ModelData["FilCustomer"] = 'Group';
+            }
+            if (($("#CurrentBranch").is(":checked") == true)) {
+                ModelData["FilBranch"] = "Current"
+            }
+            else {
+                ModelData["FilBranch"] = "All";
+            }
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetPickUp")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#pickuplist').modal('show');
+                    $('#PickUpList').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#pickrecord').click(function (event) {
+            event.preventDefault();
+            
+            var check = $('#tabledatapick').find("input[class='DebitGrid']:checked").length;
+            if (parseInt(check) == parseInt(0)) {
+                alert('Select Document to Pickup')
+                return;
+            }
+            var PPSerial = [];
+            $('#tabledatapick tr:not(:first)').each(function () {
+                var tds = $(this).find('td');
+                if (tds.find("input[class='DebitGrid']").is(':checked')) {
+                    PPSerial.push(tds.eq(8).text());
+                }
+            });
+
+            var ModelData = {};
+            ModelData["Code"] = PPSerial.toString();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("LRPickupValidation")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    if (result.POD == true) {
+                        var confrm = confirm(result.Message + "Do you want to continue");
+                        if (confrm == false) {
+                            $('.spinner').hide();
+                           return;
+                        } else {
+                            SavePickupData();
+                        }
+                    }
+                    else {
+                        SavePickupData();
+                    }
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    alert("1-An error occurred while processing the request.");
+                }
+            });
+        });
+    });
+    function CHeckboxClick(iRow) {
+        $('#tabledatapick > tbody > tr').removeClass("SelectedRow");
+        debugger;
+        
+        $('#tabledatapick tbody tr').each(function () {
+            var Row = $(this).closest('tr');
+            var CheckBox = $(this).find("input[class='DebitGrid']").is(':checked');
+
+            if (CheckBox) {
+                debugger;
+                Row.find(".txtCharges").prop("disabled", false);
+                Row.find(".PODChk").prop("checked", true);
+                Row.find(".BillQty").prop("disabled", false);
+                Row.find(".BillQty").val(Row.find('.PendQty').val());
+                Row.addClass("SelectedRow");
+            }
+            else {
+                Row.find(".txtCharges").prop("disabled", true);
+                Row.find(".PODChk").prop("checked", false);
+                Row.find(".BillQty").val("0");
+                Row.find(".BillQty").prop("disabled", true);
+            }
+        });
+
+        $("#BillQty" + iRow).focus();
+    }
+    function CheckQty(value) {
+        var CurrQty = parseInt($("#PendQty" + value).val());
+        var BillQty = parseInt($("#BillQty" + value).val());
+        if (!(BillQty <= CurrQty)) {
+            $("#BillQty" + value).val(CurrQty);
+            alert("Bill Qty Not Greater Than " + CurrQty + "");
+        }
+    }
+    function GridReload() {
+        //event.preventDefault();
+        var ColName, Coldata;
+
+        //Exist Lr Exclude From The Grid
+        //Branch And Account
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=InvoicePickUpDocument';
+        
+        var Customer = true;
+        var Code = "",Branch="All";
+        if (($("#ACustomer").is(":checked"))) {
+            Customer = true;
+            Code = $("#Account").val();
+        } else {
+            Customer = false;
+            Code = $('#AccParentGrp').val();
+        }
+        if (($("#CurrentBranch").is(":checked"))) {
+            Branch = "Current"
+        }
+        else {
+            Branch = "All"
+        }
+        var sUrlpath = '@Url.Action("GetMasterGridData")?ViewDataId=InvoicePickUpDocument&CustomerF=' + Customer + '&Code=' + Code + '&Branch=' + Branch;
+        if (Code != "")
+        {
+            $.ajax({
+                url: sPathUrl,
+                type: "POST",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    var obj = $.parseJSON(data);
+                    ColName = obj[0].split(",");
+                    Coldata = obj[1];
+                    CreateGridData();
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    alert("Error with AJAX callback");
+                }
+            });
+        }
+        
+
+        function CreateGridData() {
+            $('#tabledatapick').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                //scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    //e.preventDefault();
+                    //$('#GetCurrentRow').val($('#list').jqGrid('getCell', id, 'Document'));
+                    //$('#EditFlag').val($('#list').jqGrid('getCell', id, 'EditUpto'));
+                    //$('#DeleteFlag').val($('#list').jqGrid('getCell', id, 'DeleteUpto'));
+                    $('.spinner').hide();
+
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    //var myGrid = $('#list');
+                    //var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    //location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=View&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                },
+
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    debugger;
+                    var HitContactType = $("#HitContractType").val();
+                    var ids = jQuery("#tabledatapick").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i]; totalCalculation
+                        
+                        var Check = "<input type ='checkbox' id='" + rowId + "' value='" + jQuery("#tabledatapick").getCell(rowId, "Document") + "'  onclick='CHeckboxClick(" + rowId + ");' class='DebitGrid' name='DebitGrid'  style='height: 22px;width: 19px;' />";
+                        var Narr = "<center><textarea value='' class='Narr' onblur='SearchFocus();' name='Narr' rows='1' cols='50' maxlength='80' /></center>";
+                        var Txtxbox1 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F001") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox2 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F002") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox3 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F003") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox4 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F004") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox5 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F005") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox6 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F006") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox7 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F007") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox8 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F008") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox9 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F009") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox10 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F010") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox11 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F011") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox12 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F012") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox13 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F013") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox14 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F014") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox15 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F015") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox16 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F016") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox17 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F017") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox18 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F018") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox19 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F019") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox20 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F020") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox21 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F021") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox22 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F022") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox23 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F023") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox24 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F024") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var Txtxbox25 = "<center><input type ='text' onblur = 'totalCalculation();' value='" + jQuery("#tabledatapick").getCell(rowId, "F025") + "' id=txtCharges" + rowId + " class='txtCharges' name='txtCharges' style='width:95px;' disabled /></center>";
+                        var TxtxboxTotal = "<center><input type ='text' value='0.00' id=txtTotal" + rowId + " class='txtTotal' name='txtTotal' style='width:95px;' disabled /></center>";
+                        var CustomerContract = "", GeneralContract = "";
+                        var Contract = "";
+                        if (HitContactType == "C")
+                        {
+                            CustomerContract = "ForceToGetCustomerContract(" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + ", true);";
+                            GeneralContract = "GeneralContract(" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + ", true);";
+                            Contract = "<center><button type ='button' title='Contract Calculate' value='" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + "' class='calPoditem ChargeTypeWiseContract' id='ChargeTypeWiseContract' name='calPoditem' style='font-size: 9pt;font-family: Verdana, Geneva, Tahoma, sans-serif;background-color:#f3c022;border-color: #f3c022;color:#FFFFFF;line-height:1.5;border-radius:3px;height:22px;width:25px;'><i class='fa fa-file'></i></button>  <button type ='button' title='General Contract Calculate' value='" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + "' class='calGenPoditem ChargeTypeWiseGeneralContract' id='ChargeTypeWiseGeneralContract' name='calGenPoditem' style='font-size: 9pt;font-family: Verdana, Geneva, Tahoma, sans-serif;background-color:#358dc1;border-color: #358dc1;color:#FFFFFF;line-height:1.5;margin-top: 5px;border-radius:3px;height:22px;width:25px;'><i class='fa fa-file'></i></button></center>";
+
+                        }
+                        else if (HitContactType == "I")
+                        {
+                            CustomerContract = "ItemwiseCustomerContract(" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + ", true);";
+                            GeneralContract = "GeneralItemContract(" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + ", true);";
+                            Contract = "<center><button type ='button' title='Contract Calculate' value='" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + "' class='calPoditem ItemWiseContract' id='ItemWiseContract' name='calPoditem' style='font-size: 9pt;font-family: Verdana, Geneva, Tahoma, sans-serif;background-color:#f3c022;border-color: #f3c022;color:#FFFFFF;line-height:1.5;border-radius:3px;height:22px;width:25px;'><i class='fa fa-file'></i></button>  <button type ='button' title='General Contract Calculate' value='" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + "' class='calGenPoditem ItemWiseGeneralContract' id='ItemWiseGeneralContract' name='calGenPoditem' style='font-size: 9pt;font-family: Verdana, Geneva, Tahoma, sans-serif;background-color:#358dc1;border-color: #358dc1;color:#FFFFFF;line-height:1.5;margin-top: 5px;border-radius:3px;height:22px;width:25px;'><i class='fa fa-file'></i></button></center>";
+                        }
+
+                        //var Contract = "<center><button type ='button' onclick='" + CustomerContract + "' title='Contract Calculate' value='" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + "' class='calPoditem' name='calPoditem' style='font-size: 9pt;font-family: Verdana, Geneva, Tahoma, sans-serif;background-color:#f3c022;border-color: #f3c022;color:#FFFFFF;line-height:1.5;border-radius:3px;height:22px;width:25px;'><i class='fa fa-file'></i></button>  <button type ='button' onclick='" + GeneralContract + "' title='General Contract Calculate' value='" + jQuery("#tabledatapick").getCell(rowId, "TableKey") + "' class='calGenPoditem' name='calGenPoditem' style='font-size: 9pt;font-family: Verdana, Geneva, Tahoma, sans-serif;background-color:#358dc1;border-color: #358dc1;color:#FFFFFF;line-height:1.5;margin-top: 5px;border-radius:3px;height:22px;width:25px;'><i class='fa fa-file'></i></button></center>";
+                        var TxtBillQty = "<center><input type ='text' value='0' id=BillQty" + rowId + " onblur='CheckQty(" + rowId + ");' class='BillQty' name='BillQty' style='width:95px;' disabled /></center>";
+                        var TxtPendQty = "<center><input type ='text' value='" + jQuery("#tabledatapick").getCell(rowId, "PendingQty") + "'  id=PendQty" + rowId + " class='PendQty' name='PendQty' style='width:95px;' disabled /></center>";
+                        var PODCHK = "<input type ='checkbox' id='" + rowId + "' class='PODChk' name='PODChk'  style='height: 22px;width: 19px;' />";
+
+                        jQuery("#tabledatapick").jqGrid('setRowData', rowId, { 'Select': Check, 'BillNarr': Narr, 'Contract': Contract, 'POD': PODCHK, 'PendingQty': TxtPendQty, 'BillQty': TxtBillQty, 'F001': Txtxbox1, 'F002': Txtxbox2, 'F003': Txtxbox3, 'F004': Txtxbox4, 'F005': Txtxbox5, 'F006': Txtxbox6, 'F007': Txtxbox7, 'F008': Txtxbox8, 'F009': Txtxbox9, 'F010': Txtxbox10, 'F011': Txtxbox11, 'F012': Txtxbox12, 'F013': Txtxbox13, 'F014': Txtxbox14, 'F015': Txtxbox15, 'F016': Txtxbox16, 'F017': Txtxbox17, 'F018': Txtxbox18, 'F019': Txtxbox19, 'F020': Txtxbox20, 'F021': Txtxbox21, 'F022': Txtxbox22, 'F023': Txtxbox23, 'F024': Txtxbox24, 'F025': Txtxbox25, 'Total': TxtxboxTotal });
+                    }
+                    $(".txtCharges").constrain({ allow: { regex: "[0-9.]" } });
+                    $(".BillQty").constrain({ allow: { regex: "[0-9]" } });
+
+                    $("#tabledatapick").jqGrid('setLabel', 'F001', '@Model.AllHeaderList[0]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F002', '@Model.AllHeaderList[1]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F003', '@Model.AllHeaderList[2]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F004', '@Model.AllHeaderList[3]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F005', '@Model.AllHeaderList[4]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F006', '@Model.AllHeaderList[5]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F007', '@Model.AllHeaderList[6]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F008', '@Model.AllHeaderList[7]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F009', '@Model.AllHeaderList[8]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F010', '@Model.AllHeaderList[9]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F011', '@Model.AllHeaderList[10]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F012', '@Model.AllHeaderList[11]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F013', '@Model.AllHeaderList[12]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F014', '@Model.AllHeaderList[13]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F015', '@Model.AllHeaderList[14]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F016', '@Model.AllHeaderList[15]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F017', '@Model.AllHeaderList[16]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F018', '@Model.AllHeaderList[17]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F019', '@Model.AllHeaderList[18]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F020', '@Model.AllHeaderList[19]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F021', '@Model.AllHeaderList[20]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F022', '@Model.AllHeaderList[21]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F023', '@Model.AllHeaderList[22]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F024', '@Model.AllHeaderList[23]');
+                    $("#tabledatapick").jqGrid('setLabel', 'F025', '@Model.AllHeaderList[24]');
+
+                    $("button").click(function (event)
+                    {
+                        debugger;
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#list');
+                        //selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        //var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        //var DocNo = myGrid.jqGrid('getCell', curRowId, 'FMNO');
+                        switch (btntype)
+                        {
+                            case "ChargeTypeWiseContract":
+                                ForceToGetCustomerContract(curRowId,true);
+                                break;
+                            case "ChargeTypeWiseGeneralContract":
+                                GeneralContract(curRowId,true);
+                                break;
+                            case "ItemWiseContract":
+                                ItemwiseCustomerContract(curRowId, true);
+                                break;
+                            case "ItemWiseGeneralContract":
+                                GeneralItemContract(curRowId, true);
+                                break;
+                        }
+                    });
+
+                    $('.spinner').hide();
+                    $("#SelectLR").focus();
+                },
+            });
+            jQuery("#tabledatapick").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#tabledatapick").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            //$('#GetLRLIst').modal('show');
+        };
+    };
+
+    function SearchFocus() {
+        $("#SelectLR").focus();
+    }
+
+    function GetOtherOptionTypeContract() {
+        var url = '@Url.Action("OTherContract")';
+        var ModelData = {};
+        ModelData["Document"] = $("#Document").val();
+        ModelData["BillParty"] = $("#BillParty").val();
+        ModelData["BookDate"] = $("#BookDate").val();
+        ModelData["Source"] = $("#Source").val();
+        ModelData["Dest"] = $("#Dest").val();
+        ModelData["ChgType"] = $("#ChgType").val();
+        ModelData["ActWt"] = $("#ActWt").val();
+        ModelData["ChgWt"] = $("#ChgWt").val();
+        ModelData["TotQty"] = $("#TotQty").val();
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == "Success") {
+
+                    $('.spinner').hide();
+
+                } else if (data.Status == "Error") {
+                    alert(data.Message);
+                    RefreshCharges();
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                }
+            },
+            error: function (error) {
+                alert("errror");
+            }
+        });
+    }
+    function totalCalculation() {
+        $('#tabledatapick  > tbody  > tr').each(function () {
+            debugger;
+            var TotalAmount = 0;
+            var Row = $(this).closest('tr');
+            if (Row.find("input[class='DebitGrid']").is(':checked')) {
+                Row.find("input[class='txtCharges']").each(function () {
+                    TotalAmount += parseFloat($(this).val());
+                });
+                $(this).find(".txtTotal").val(TotalAmount);
+            }
+        });
+    }
+    function SavePickupData()
+    {
+        var myTableArray = [];
+        var check = $('#tabledatapick').find("input[class='DebitGrid']:checked").length;
+        if (parseInt(check) == parseInt(0)) {
+            alert('Select Document to Pickup')
+            return;
+        }
+        //$(':input[id="pickrecord"]').prop('disabled', true);
+        var abcCount = parseInt(21) + parseInt($('#hdnuCount').val());
+        var TotalAmount = 0;
+        $('#tabledatapick  > tbody  > tr').each(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            if (Row.find("input[class='DebitGrid']").is(':checked')) {
+                var PPSerial = [];
+                Row.find("input[class='txtCharges']").each(function () {
+                    debugger;
+                    PPSerial.push($(this).val());
+                    TotalAmount += parseFloat($(this).val());
+                });
+                var myDets = {
+                    ChgPickupList: PPSerial,
+                    tempId: Row.find('td:eq(5)').text(),
+                    Code: Row.find('td:eq(6)').text(),
+                    TableKey: Row.find('td:eq(8)').text(),
+                    ParentKey: Row.find('td:eq(9)').text(),
+                    POD: Row.find('.PODChk').is(':checked'),
+                    LRDocuDate: Row.find('td:eq(11)').text(),
+                    FromLocation: Row.find('td:eq(12)').text(),
+                    ToLocation: Row.find('td:eq(13)').text(),
+                    TotalQty: Row.find('td:eq(14)').text(),
+                    Qty: $(this).find(".BillQty").val(),
+                    ActWt: Row.find('td:eq(17)').text(),
+                    ChargeType: Row.find('td:eq(19)').text(),
+                    Unit: Row.find('td:eq(20)').text(),
+                    Consignor: Row.find('td:eq(21)').text(),
+                    Consignee: Row.find('td:eq(22)').text(),
+                    Account: Row.find('td:eq(23)').text(),
+                    Branch: Row.find('td:eq(24)').text(),
+                    BillNarr: $(this).find(".Narr").val(),
+                }
+                myTableArray.push(myDets);
+            }
+        });
+        //if (TotalAmount == 0) {
+        //    
+        //    alert('Please Enter The Charges Amount....!');
+        //    return;
+        //}
+
+
+
+        var ModelData = {};
+        ModelData["PickUpList"] = myTableArray;
+        ModelData["SubType"] = $("#hdnSubType").val();
+        ModelData["MainType"] = $("#hdnMainType").val();
+        ModelData["Type"] = $("#hdnType").val();
+        ModelData["Mode"] = $('#hdnMode').val();
+        ModelData["TDSCode"] = $("#addTDSCode").val();
+        ModelData["GSTCode"] = $("#addGSTCode").val();
+        ModelData["Account"] = $("#Account").val();
+        ModelData["PlaceOfSupply"] = $("#PlaceOfSupply").val();
+        ModelData["DocuDate"] = $("#DocuDate").val();
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("PostPickUp")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+                $('#SaveData').prop('disabled', true);
+                $('#BothSaveEmail').prop('disabled', true);
+                $('#Print').prop('disabled', true);
+            },
+            success: function (data) {
+                
+                //$(':input[id="pickrecord"]').prop('disabled', false);
+                if (data.Status == "ErrorStatus") {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    alert(data.Message)
+
+                    $('#SaveData').prop('disabled', false);
+                    $('#BothSaveEmail').prop('disabled', false);
+                    $('#Print').prop('disabled', false);
+                }
+                if (data.Status == "Success") {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#pickuplist').modal('hide');
+                    $('#divLedgerTable').html(data.Html);
+                    $('#txttotitemqty').val(data.TotalQty);
+                    $('#txttottxable').val(data.Taxable.toFixed(2));
+                    $('#addTaxable').val(data.Taxable.toFixed(2));
+
+                    $('#addTaxable').val(data.Taxable.toFixed(2));
+                    $('#txtf_F001').val(data.Taxable);
+
+                    SetValuesInTable();
+
+                    $('#SaveData').prop('disabled', false);
+                    $('#BothSaveEmail').prop('disabled', false);
+                    $('#Print').prop('disabled', false);
+                    document.getElementById("Direct").click();
+
+                    AlertNoteMaster();
+                }
+                else if (data.Status == "Fail") {
+                    alert(data.Message)
+                }
+            },
+            error: function (err) {
+                alert(JSON.stringify(err))
+                $('.spinner').hide();
+                alert("error occured while processing your request.");
+            }
+        });
+    }
+
+
+</script>
+
+<style>
+    .fixPickupTableHead {
+        overflow-y: auto;
+        height: 450px;
+    }
+
+        .fixPickupTableHead thead th {
+            position: sticky;
+            top: 0;
+        }
+
+
+        .fixPickupTableHead tfoot tr {
+            position: sticky;
+            bottom: 0;
+        }
+</style>

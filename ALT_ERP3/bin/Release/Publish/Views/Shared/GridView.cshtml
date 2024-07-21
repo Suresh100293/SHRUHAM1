@@ -1,0 +1,262 @@
+﻿@model IEnumerable<TFATERPWebApplication.Areas.Logistics.Models.LcDetailsVM>
+
+@{
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        $('#example').DataTable();
+
+        $('.editrow').click(function () {
+
+            var Row = $(this).closest('tr');
+            var Edit = Row.find(".EditLDC").text();
+            if (Edit == "True") {
+                Row.find(".LoadGQty").prop("disabled", false);
+                Row.find(".LoadDQty").prop("disabled", false);
+                Row.find(".LoadWeight").prop("disabled", false);
+                Row.find(".AmountEdit1").prop("disabled", false);
+                Row.find(".editrow").hide();
+                Row.find(".Saverow").removeClass("hidden");
+            } else {
+                alert("Cannot Edit This Row...!");
+            }
+        });
+        $('.Saverow').click(function () {
+
+            var Row = $(this).closest('tr');
+            Row.find(".LoadGQty").prop("disabled", true);
+            Row.find(".LoadDQty").prop("disabled", true);
+            Row.find(".LoadWeight").prop("disabled", true);
+            Row.find(".AmountEdit1").prop("disabled", true);
+            Row.find(".editrow").show();
+            Row.find(".Saverow").addClass("hidden");
+
+            var GQty = Row.find('.LoadGQty').val();
+            var DQty = Row.find('.LoadDQty').val();
+            var Weight = Row.find('.LoadWeight').val();
+            var Reco = Row.find('.RecordeKey').text();
+
+            ChangeTempDataQtyWeight(GQty,DQty, Weight, Reco);
+
+        });
+
+        $(".deletebtn").click(function () {
+
+            var Row = $(this).closest('tr');
+            var Edit = Row.find(".EditLDC").text();
+            if (Edit == "True") {
+                var PickType = $(this).closest('tr').find(".PickType").text();
+                var LRNO = $(this).closest('tr').find(".LRValue ").text();
+                $(this).closest('tr').remove();
+                var url = '@Url.Action("DeleteLRFromTempData")';
+                var DTO = { LRno: LRNO, PickType: PickType };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                    },
+                });
+
+            } else {
+                alert("Cannot Delete This Row...!");
+            }
+
+
+        });
+
+    }); 
+    function LoadQtyBlur1(value) {
+
+        var Row = $("#" + value);
+        var Qty = Row.find(".Qty").text();
+        $("#example> tbody  > tr").each(function () {
+            debugger;
+            if (parseInt(value) == parseInt(this.id)) {
+                var Qty = $(this).find(".Qty").text();
+                var LoadGQty = Row.find(".LoadGQty").val();
+                var LoadDQty = Row.find(".LoadDQty").val();
+
+                var LoadQty = parseInt(LoadGQty) + parseInt(LoadDQty);
+               // var LoadQty = $(this).find(".LoadQty").val();
+                var Weight = $(this).find(".Weight").text();
+                if (parseFloat(Qty) < parseFloat(LoadQty)) {
+
+                    alert("Load Qty Not Greater Than Qty OF Lr.....!");
+                    $(this).find(".LoadGQty").val(Qty);
+                    $(this).find(".LoadDQty").val("0");
+                    $(this).find(".LoadWeight").val(Weight);
+                } else {
+                    var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+                    if (parseInt(CalculateWeight) >= parseInt(Weight)) {
+                        $(this).find(".LoadWeight").val(Math.round(Weight));
+                    } else {
+                        $(this).find(".LoadWeight").val(Math.round(CalculateWeight));
+                    }
+                }
+            }
+
+        });
+    }
+    function LoadweightBlur1(value) {
+
+        var Row = $("#" + value);
+
+        $("#example> tbody  > tr").each(function () {
+
+            if (parseInt(value) == parseInt(this.id)) {
+                var Qty = $(this).find(".Qty").text();
+                var LoadGQty = Row.find(".LoadGQty").val();
+                var LoadDQty = Row.find(".LoadDQty").val();
+
+                var LoadQty = parseInt(LoadGQty) + parseInt(LoadDQty);
+                //var LoadQty = $(this).find(".LoadQty").val();
+                var Weight = $(this).find(".Weight").text();
+                var LWeight = $(this).find(".LoadWeight").val();
+                if (parseFloat(Weight) < parseFloat(LWeight)) {
+                    $(this).find(".LoadWeight").val(Weight);
+                    alert("Weight Not Greater Than Act Weight OF Lr.....!");
+                } else {
+                    if (Qty == LoadQty) {
+                        if (Weight != LWeight) {
+                            alert("Weight Cant Change .....!");
+                            $(this).find(".LoadWeight").val(Weight);
+                        }
+                    } else if (parseInt(Qty) > parseInt(LoadQty)) {
+                        if (Weight == LWeight) {
+                            alert("Cant Enter Total Weight .....!");
+                            var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+                            $(this).find(".LoadWeight").val(Math.round(CalculateWeight));
+                        }
+                    }
+                }
+            }
+
+        });
+    }
+</script>
+<style>
+    .span6 {
+        display: none !important;
+    }
+</style>
+<div class="container-fluid" style="margin-top:8px;margin-left:-5px;">
+    @if (Model != null)
+    {
+        var AmonuColumnFlag = Model.Select(x => x.ShowAmountColumn).FirstOrDefault();
+        var QtyandWeightInput = Model.Select(x => x.ShowLoadQtyANdWeight).FirstOrDefault();
+
+        <div>
+            <table id="example" class="table-bordered example" style="">
+                <thead>
+                    <tr>
+                        <th class="hidden">Reco</th>
+                        <th>Delete</th>
+                        <th>Edit</th>
+                        <th>LRNo</th>
+                        <th>Pick From</th>
+                        <th>Quantity</th>
+                        @if (QtyandWeightInput)
+                        {
+                            <th>Load Godown Quantity</th>
+                            if (AmonuColumnFlag)
+                            {
+                                <th class="hidden">Load Direct Quantity</th>
+                            }
+                            else
+                            {
+                                <th>Load Direct Quantity</th>
+                            }
+                            <th>Weight</th>
+                        }
+                        @if (AmonuColumnFlag)
+                        {
+                            <th>Amount</th>
+                        }
+                        <th>Charge Weight</th>
+                        <th>Actual Weight</th>
+                        <th>Charge Type</th>
+                        <th>Description</th>
+                        <th>Unit</th>
+                        <th>From</th>
+                        <th>TO</th>
+                        <th>Consigner</th>
+                        <th>Consignee</th>
+                        <th>LR Type</th>
+                        <th>Delivery</th>
+                        <th>Collection</th>
+                        <th class="hidden">EditColumn</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model)
+                    {
+                    <tr id="@item.Lrno">
+
+                        <td class="hidden RecordeKey">@item.recordekey</td>
+                        <td>
+                            <center>
+                                <button class="btn btn-danger deletebtn" style="font-size: 13px;padding:3px 13px;" id="@("btnDelete"+item.Lrno)"><i class="glyphicon glyphicon-trash" style="font-size: 1.2em;"></i></button>
+                            </center>
+                        </td>
+                        <td>
+                            <center>
+                                <button class="btn btn-primary editrow" style="font-size: 13px;padding:3px 13px;" id="@("btnEdit"+item.Lrno)"><i class="glyphicon glyphicon-edit" style="font-size: 1.2em;"></i></button>
+                                <button class="btn btn-primary Saverow hidden" style="font-size: 13px;padding:3px 13px;" id="@("btnEdit"+item.Lrno)"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 1.2em;"></i></button>
+                            </center>
+                        </td>
+                        <td class="LRValue">@item.Lrno</td>
+                        <td class="PickType">@item.PickType</td>
+                        <td class="Qty">@item.Qty</td>
+                        @if (QtyandWeightInput)
+                        {
+                            <td><center><input type="text" class="LoadGQty" style="width:100px;" value="@item.LoadGQty" disabled onblur="LoadQtyBlur1(@item.Lrno)" /></center></td>
+                            if (AmonuColumnFlag)
+                            {
+                                <td class="hidden"><center><input type="text" class="LoadDQty " style="width:100px;" value="@item.LoadDQty" disabled onblur="LoadQtyBlur1(@item.Lrno)" /></center></td>
+                            }
+                            else
+                            {
+                                <td><center><input type="text" class="LoadDQty" style="width:100px;" value="@item.LoadDQty" disabled onblur="LoadQtyBlur1(@item.Lrno)" /></center></td>
+                            }
+                            <td><center><input type="text" class="LoadWeight" style="width:70px;" value="@item.LRActWeight" disabled onblur="LoadweightBlur1(@item.Lrno)" /></center></td>
+                        }
+                        @if (AmonuColumnFlag)
+                        {
+                            <td class=" "><center><input type="text" class="AmountEdit1" style="width:100px;" disabled value="@item.Amount" /></center></td>
+                        }
+                        <td>@item.ChrWeight</td>
+                        <td class="Weight">@item.ActWeight</td>
+                        <td>@item.ChrgeType</td>
+                        <td>@item.Description</td>
+                        <td>@item.Unit</td>
+                        <td>@item.From</td>
+                        <td>@item.To</td>
+                        <td>@item.Consignor</td>
+                        <td>@item.Consignee</td>
+                        <td>@item.LrType</td>
+                        <td>@item.LRDelivery</td>
+                        <td>@item.LRColln</td>
+                        <td class="hidden EditLDC">@item.EditLDC</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div>
+
+

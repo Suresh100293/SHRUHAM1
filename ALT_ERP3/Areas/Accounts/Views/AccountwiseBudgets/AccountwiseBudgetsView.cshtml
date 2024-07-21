@@ -1,0 +1,393 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AccountwiseBudgetsVM
+@using Common;
+@{
+    ViewBag.Title = "Account wise Budgets";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        if ('@Model.Mode' == 'View' || '@Model.Mode' == 'Delete') {
+            $('.form-group :input').prop('disabled', true);
+            $('.form-horizontal :input').prop('disabled', true);
+        }
+        if ('@Model.Mode' == 'Add') {
+            $('#nextbutton').hide();
+            $('#previousbutton').hide();
+        }
+
+        var mheight = $(window).innerHeight() - 165;
+        $('#divGeneral').height(mheight);
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadBudgets_Code()
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#Budgets_Prefix').val('@Model.Budgets_Prefix').attr("selected", "selected");
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#Budgets_Prefix").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Budgets_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Budgets_Annual").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val1").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val2").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val3").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val4").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val5").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val6").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val7").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val8").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val9").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val10").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val11").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#Budgets_Val12").constrain({ allow: { regex: "[0-9.-]" } });
+
+        if ($('#hdnCheckMode').val() == 'True' || $('#hdnCheckMode').val() == 'true') {
+            alert('@Model.Message');
+        }
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            SaveData('SD');
+        });
+
+        $('#btnSaveExit').click(function (event) {
+            event.preventDefault();
+            SaveData('SX')
+        });
+
+        $('#btnSaveContinue').click(function (event) {
+            event.preventDefault();
+            SaveData('SC')
+        });
+
+    });
+
+    function NextEntry(mmode)
+    {
+        var url = '@Url.Action("MoveNextPrevious")?Mode=' + mmode + '&mdocument=' + $("#hdnDocument").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                if (result.data != '') {
+                    window.location.href = "/Setup/" + @Model.Controller2 + "/Index?Document=" + result.data + "&Mode=@Model.Mode&Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                }
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function SaveData(mpara) {
+        var url = '@Url.Action("SaveData")';
+        @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+        var ModelData = {};
+        ModelData["Budgets_RECORDKEY"] = $("#Budgets_RECORDKEY").val();
+        ModelData["Budgets_Prefix"] = $("#Budgets_Prefix").val();
+        ModelData["Budgets_Code"] = $("#Budgets_Code").val();
+        ModelData["Budgets_Annual"] = $("#Budgets_Annual").val();
+        ModelData["Budgets_Val1"] = $("#Budgets_Val1").val();
+        ModelData["Budgets_Val2"] = $("#Budgets_Val2").val();
+        ModelData["Budgets_Val3"] = $("#Budgets_Val3").val();
+        ModelData["Budgets_Val4"] = $("#Budgets_Val4").val();
+        ModelData["Budgets_Val5"] = $("#Budgets_Val5").val();
+        ModelData["Budgets_Val6"] = $("#Budgets_Val6").val();
+        ModelData["Budgets_Val7"] = $("#Budgets_Val7").val();
+        ModelData["Budgets_Val8"] = $("#Budgets_Val8").val();
+        ModelData["Budgets_Val9"] = $("#Budgets_Val9").val();
+        ModelData["Budgets_Val10"] = $("#Budgets_Val10").val();
+        ModelData["Budgets_Val11"] = $("#Budgets_Val11").val();
+        ModelData["Budgets_Val12"] = $("#Budgets_Val12").val();
+        ModelData["Header"] = '@Model.Header';
+        ModelData["Mode"] = '@Model.Mode';
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    alert("Document Saved:\n\n" + data.NewSrl);
+                    $('#ErrorMessage').hide();
+                    $('#hdnDocument').val(data.NewSrl);
+                    if (mpara == 'SP' || mpara == 'SPE') {  // print only or saveprintemail
+                        PrintDocument();
+                    }
+                    if (mpara == 'SE' || mpara == 'SPE') {  // save,email || save , print and email
+                        $('#emailprint').modal('show');
+                        $('#hdnSendEmailDocument').val($("#hdnDocument").val());
+                        window.location.href = "/Setup/TransactionMaintenanceGrid?Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                    }
+                    if (mpara == 'SC') {                     // save and continue
+                        window.location.href = "/Setup/AccountwiseBudgets?Mode=@Model.Mode&Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                    }
+                    if (mpara == 'SP' ||  mpara=='SD' || mpara == 'SX') {   // exit
+                        window.location.href = "/Setup/MasterGrid?Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                    }
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    };
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadBudgets_Code() {
+        var url = '@Url.Action("AutoCompleteCode")'
+        $('#Budgets_Code').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Budgets_Code', text: '@Model.CodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt" id="headercaption">@Model.Header</b>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="background-color:orangered;color:white;border-color:none;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2"><i class="fa ico-close"></i></a>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:14pt;font-weight:bold;width:unset;">
+            <b class="CodeSt">@Model.Mode.ToLower() mode</b>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button id="nextbutton" class="btn btn-white" style="font-size:13px;border-color:black;color:black;height:26px;padding:2px 12px;" tooltip="Show Next Document" onclick="NextEntry('N')">Next >></button>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button id="previousbutton" class="btn btn-white" style="font-size:13px;border-color:black;color:black;height:26px;padding:2px 12px;" tooltip="Show Previous Document" onclick="NextEntry('P')"><< Previous</button>
+        </div>
+    </div>
+</header>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body" style="padding-left:7px;padding-right:3px;">
+        <div class="form-horizontal" id="AccountwiseBudgets" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">RECORDKEY:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Budgets_RECORDKEY, new { @maxlength = "10", @class = "form-control", @disabled = "disabled", @Name = "Budgets_RECORDKEY", @Value = Model.Budgets_RECORDKEY, @style = "font-size:9pt;", @Id = "Budgets_RECORDKEY" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Annual Budget:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.DropDownListFor(m => m.Budgets_Prefix, Model.PrefixList, new { @class = "form-control", @Id = "Budgets_Prefix", @Name = "Budgets_Prefix", @disabled = "disabled" })
+                    }
+                    else
+                    {
+                        @Html.DropDownListFor(m => m.Budgets_Prefix, Model.PrefixList, new { @class = "form-control", @Id = "Budgets_Prefix", @Name = "Budgets_Prefix" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Account:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.Budgets_Code, new { @class = "input-large search-query", @disabled = "disabled", @style = "width:100%;margin-top:2px;", @id = "Budgets_Code", @Value = Model.Budgets_Code, @Name = "Budgets_Code" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.Budgets_Code, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;", @id = "Budgets_Code", @Value = Model.Budgets_Code, @Name = "Budgets_Code" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Annual Budget:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Annual, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Annual", @Value = Model.Budgets_Annual, @Id = "Budgets_Annual" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Month-1:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val1, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val1", @Value = Model.Budgets_Val1, @Id = "Budgets_Val1" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Month-2:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val2, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val2", @Value = Model.Budgets_Val2, @Id = "Budgets_Val2" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Month-3:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val3, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val3", @Value = Model.Budgets_Val3, @Id = "Budgets_Val3" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Month-4:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val4, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val4", @Value = Model.Budgets_Val4, @Id = "Budgets_Val4" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Month-5:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val5, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val5", @Value = Model.Budgets_Val5, @Id = "Budgets_Val5" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Month-6:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val6, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val6", @Value = Model.Budgets_Val6, @Id = "Budgets_Val6" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Month-7:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val7, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val7", @Value = Model.Budgets_Val7, @Id = "Budgets_Val7" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Month-8:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val8, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val8", @Value = Model.Budgets_Val8, @Id = "Budgets_Val8" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Month-9:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val9, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val9", @Value = Model.Budgets_Val9, @Id = "Budgets_Val9" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Month-10:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val10, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val10", @Value = Model.Budgets_Val10, @Id = "Budgets_Val10" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Month-11:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val11, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val11", @Value = Model.Budgets_Val11, @Id = "Budgets_Val11" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Month-12:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Budgets_Val12, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;font-size:9pt;", @Name = "Budgets_Val12", @Value = Model.Budgets_Val12, @Id = "Budgets_Val12" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer id="fixedbottom" class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4">
+        </div>
+        <div class="col-sm-4" style="text-align:center;margin-top:4px;color:white;font-family:Tahoma;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right" style="padding-right:10px;">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;font-family: Verdana;padding:3px 12px;" id="Submit"><i class="fa fa-trash-o"></i>&nbsp;&nbsp;Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size:13px;font-family: Verdana;padding:3px 12px;" id="Submit"><i class="fa fa-save"></i>&nbsp;&nbsp;Save Data</button>
+                    }
+                }
+                else
+                {
+                }
+                <div class="btn-group dropup">
+                    <button data-toggle="dropdown" style="font-size: 13px;padding:3px 12px;font-family: Verdana;" class="btn btn-success dropdown-toggle" type="button">More..&nbsp;&nbsp;<span class="caret"></span></button>
+                    <ul role="menu" class="dropdown-menu" style="border: 1px thin;box-shadow:3px 3px 15px 1px rgba(0,0,0,0.2) !important; background-color: whitesmoke; height: 170px; font-family: Tahoma; font-weight: bolder; color: darkgray; padding-left: 10px; padding-right: 10px; left:-100px;">
+                        <li><a id="btnSaveContinue" style="font-family:Tahoma;font-weight:bolder;" href=""><i class="fa fa-save"></i>&nbsp;&nbsp;Save & Continue</a></li>
+                        <li><a id="btnSaveExit" style="font-family:Tahoma;font-weight:bolder;" href=""><i class="fa fa-arrow-circle-left"></i>&nbsp;&nbsp;Save & Exit</a></li>
+                    </ul>
+                </div>
+                <a href="~/Accounts/AccountwiseBudgets/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@Html.HiddenFor(x => x.Document, new { @id = "hdnDocument" })
+@*
+    Code Auto Generated on Wed 05-Aug-2020 11:56 AM
+    Engine: iX9Generator, ver: 3.9 Revision: 32
+    by Team Suchan, T.FAT *@
+

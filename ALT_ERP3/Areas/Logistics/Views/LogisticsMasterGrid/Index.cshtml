@@ -1,0 +1,390 @@
+﻿@model ALT_ERP3.GridOption
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<style>
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+        /*Suresh*/
+        text-align: center;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .btncolor {
+        background-color: slategray;
+        color: white;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+
+        gridreload();
+
+        $('#btnopnFormat').click(function(event){
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["ViewDataId"] = '@ViewBag.ViewDataId';
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    $('#updTfatsearchDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+
+
+     function AddNewEntry() {
+          window.location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Add&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+    }
+
+    function EditEntry() {
+        var GetLR = $('#GetCurrentRow').val();
+        if (GetLR == "" || GetLR == null) {
+            alert("Please Select LR");
+        } else {
+            if ($('#EditFlag').val()=="false") {
+                alert("Not Allow To Edit");
+            } else {
+                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Edit&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+            }
+        }
+    }
+
+    function DeleteEntry() {
+        var GetLR = $('#GetCurrentRow').val();
+        if (GetLR == "" || GetLR == null) {
+            alert("Please Select LR");
+        } else {
+            if ($('#DeleteFlag').val()=="false") {
+                alert("Not Allow To Delete");
+            } else {
+                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+            }
+        }
+    }
+    function Print() {
+
+        var sUrlpath = window.open('@Url.Action("GetMasterGridData")?ViewDataId=' + '@ViewBag.id' + '&mWhat=PDL', '_blank');
+
+        //location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+
+    }
+    //$('#btnListPrint').click(function () {
+    //    });
+     @*function clickPrint(mwhat) {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val() + '&mWhat=' + mwhat, '_blank');
+    };
+
+    function PrintReport() {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var murl="/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=" + mformat + "&mopening="+ $('#openb').val()+"&mRunning=true&mParaString=Code^" + $('#Account').val()+ '&Code=' + $('#Account').val();
+        window.open(murl,'_blank');
+    };*@
+
+
+
+
+    function gridreload() {
+        //event.preventDefault();
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+
+        var sPathUrl = "/Logistics/LogisticsMasterGrid/GetGridStructureRecords/?id=" + '@ViewBag.ViewDataId' + '&TableName=' + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Logistics/LogisticsMasterGrid/GetMasterGridData/?ViewDataId=" + '@ViewBag.ViewDataId' + '&TableName=' + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:450,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#GetCurrentRow').val($('#list').jqGrid('getCell', id, 'Document'));
+                    $('#EditFlag').val($('#list').jqGrid('getCell', id, 'EditUpto'));
+                    $('#DeleteFlag').val($('#list').jqGrid('getCell', id, 'DeleteUpto'));
+                    $('.spinner').hide();
+
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#list');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=View&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                },
+
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    @*var ids = jQuery("#list").jqGrid('getDataIDs');
+                    //$("#pager").height(25);
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var rowData = jQuery('#list').jqGrid('getRowData', rowId);
+                        var ed = "<button id='btnEdit" + rowId + "' value='" + rowId + "' Class='edit' tooltip='Edit' , title='Edit' , attr='" + rowId + "' />";
+                        var del = "<button id='btnDelete" + rowId + "' type='button' value='" + rowId + "' Class='delete' tooltip='Delete' , title='Delete' />";
+                        var view = "<button id='btnView" + rowId + "' type='button' value='" + rowId + "' Class='view' tooltip='View' , title='View' />";
+                        var print = "<button id='btnPrint" + rowId + "' type='button' value='" + rowId + "' Class='print' tooltip='Print' , title='Print' />";
+                        jQuery("#list").jqGrid('setRowData', rowId, { Delete: del });
+                        jQuery("#list").jqGrid('setRowData', rowId, { Edit: ed });
+                        jQuery("#list").jqGrid('setRowData', rowId, { View: view });
+                        jQuery("#list").jqGrid('setRowData', rowId, { Print: print });
+                    }
+                    $('.edit').html('<img src="/Content/Images/Edit.ico" />');
+                    $('.delete').html('<img src="/Content/Images/Delete.ico" />');
+                    $('.view').html('<img src="/Content/Images/FindOrFilter.ico" />');
+                    $('.print').html('<img src="/Content/Images/Print.ico" />');
+                    $("button").click(function (event) {
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var celValue = jQuery("#list").jqGrid('getCell', 'Document');
+                        var btncode = btnname.replace(/\D/g, '');
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#list');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        var abc = rowData.KeyCol;
+                        var btnmode = "";
+                        switch (btntype) {
+                            case "btnEdit":
+                                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Edit&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                            case "btnDelete":
+                                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal)  + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                            case "btnView":
+                                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=View&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                        }
+                    });*@
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+</script>
+
+
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0px;">
+    <div class="fixhead">
+        <div class="col-md-3">
+            <b class="CodeSt">@ViewBag.Header</b>
+        </div>
+
+        @*<div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" tooltip="Add" onclick=AddNewEntry();>Add New</button>
+            </div>
+
+            <div class="col-md-1 pull-right" style="padding-left:0px;font-family:Tahoma;padding-top:6px;font-size:9pt; width:unset;color:black;">
+                Set Default
+            </div>
+            <div class="col-md-1 pull-right" style="padding-left:6px;width:30px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                <input title='Set this View as Default' type="checkbox" id="isdefault" name="isdefault" style="margin-top:2px; width:17px;height:17px;" />
+            </div>
+            <div class="col-md-3 pull-right">
+                @Html.TextBoxFor(x => x.ViewDataId, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "formats", @name = "formats" })
+            </div>*@
+        @*<div class="col-md-1 pull-right" style="padding-left:6px;padding-right:0px;font-family:Tahoma;padding-top:6px;font-size:9pt; width:unset;color:black;">
+                <button id="btnopnFormat" class="btn btn-info"  style="font-size: 13px;padding:3px 12px;"><i class="fa fa-edit" style="color:blue;" data-toggle="tooltip" data-placement="top" title="Which Column U Want In The List Page."></i> </button>
+            </div>*@
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnopnFormat" data-toggle="tooltip" data-placement="top" title="Which Column U Want In The List Page."><i class="glyphicon glyphicon-edit"><br />View</i></button>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnShare" data-toggle="tooltip" data-placement="top" title="Share"><i class="glyphicon glyphicon-share"><br />Share</i></button>
+        </div>
+        @if (Model.xPrint)
+        {
+            <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnListPrint" onclick="Print();" data-toggle="tooltip" data-placement="top" title="Print"><i class="glyphicon glyphicon-print"><br />Print</i></button>
+            </div>
+        }
+        @if (Model.xDelete)
+        {
+            <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete" onclick="DeleteEntry();" data-toggle="tooltip" data-placement="top" title="Delete"><i class="glyphicon glyphicon-trash"><br />Delete</i></button>
+            </div>
+        }
+        @if (Model.xEdit)
+        {
+            <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Edit" onclick="EditEntry();" data-toggle="tooltip" data-placement="top" title="Edit"><i class="glyphicon glyphicon-edit"><br />Edit</i></button>
+            </div>
+        }
+        @if (Model.xAdd)
+        {
+            <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" data-toggle="tooltip" data-placement="top" title="Add" onclick=AddNewEntry();><i class="glyphicon glyphicon-plus"><br />Add</i></button>
+            </div>
+        }
+
+    </div>
+</header>
+
+<section class="panel">
+
+    <div class="panel-body" style="margin-top:3%;height:auto;padding-left:0px;padding-right:0px;">
+        <div id="page-contentgrid">
+            <div class="jqGrid">
+                <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                <div id="pager" style="height:34px;"></div>
+            </div>
+        </div>
+    </div>
+
+</section>
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.LAT ERP-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+            </div>
+        </div>
+    </div>
+</footer>
+<div class="example-modal">
+    <div id="updTfatsearch" class="modal modal-default">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="updTfatsearchDiv">
+                @Html.Partial("TfatSearchUpdate")
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<input type="hidden" name="action" id="GetCurrentRow" />
+<input type="hidden" name="action" id="EditFlag" />
+<input type="hidden" name="action" id="DeleteFlag" />

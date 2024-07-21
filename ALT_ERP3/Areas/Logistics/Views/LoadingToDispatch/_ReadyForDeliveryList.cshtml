@@ -1,0 +1,217 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.LoadingDispachVM
+@{
+    Layout = null;
+}
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<style>
+    td, th {
+        padding: 4px !important;
+    }
+
+    .Ordertable {
+        display: table;
+    }
+
+    .Ordertable-row {
+        display: table-row;
+        color: black;
+    }
+
+    .Ordertable-cell {
+        display: table-cell;
+        border: 1px solid black;
+        padding: 5px;
+        /*text-align: center;*/
+    }
+
+
+    .otherBranch {
+        background-color: #d690aa;
+    }
+
+    .ClickrowColor {
+        background-color: #71a1af !important;
+        color: black;
+    }
+
+    /*.inputColor{
+        color:black;
+    }*/
+    input[type=text] {
+        color: black !important;
+    }
+
+    .span6 {
+        display: none !important;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        var table = $('#DeliveryTable').dataTable({
+            "iDisplayLength": -1
+        });
+
+        $(".DLQty,.DLShortQty").constrain({ allow: { regex: "[0-9]" } });
+        $('.DLDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+
+        $('#DeliveryTable  > tbody  > tr').click(function () {
+            $("#DeliveryTable > tbody  > tr").removeClass('ClickrowColor');
+            $(this).addClass('ClickrowColor');
+        });
+
+        $(".checkbox").click(function () {
+            debugger;
+            $("#DelSelectAll").prop('checked', false);
+            var Row = $(this).closest('tr');
+            //var tds = Row.find('td:eq(0)').text();
+            var CheckBox = Row.find('.checkbox').prop("checked");
+            if (CheckBox) {
+                Row.find(".DLQty,.DLDate,.DLVehicle").prop("disabled", false);
+                Row.find("#DelStatus,#item_DelNarr").prop("disabled", false);
+                
+                Row.find(".DLQty").val(Row.find('td:eq(4)').text());
+            } else {
+                Row.find(".DLQty,.DLDate,.DLVehicle").prop("disabled", true);
+                Row.find("#DelStatus,#item_DelNarr,#item_ShortQty").prop("disabled", true);
+                Row.find("#DelStatus,#item_DelNarr").val("OK");
+                Row.find(".DLQty").val("0");
+                Row.find("#item_ShortQty").val("0");
+            }
+        });
+
+        $("#DelSelectAll").click(function ()
+        {
+            $(".checkbox").prop('checked', $(this).prop('checked'));
+            if ($(this).prop("checked") == true)
+            {
+                $("#DeliveryTable > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    Row.find(".DLQty,.DLDate,.DLVehicle").prop("disabled", false);
+                    Row.find("#DelStatus,#item_DelNarr").prop("disabled", false);
+
+                    Row.find(".DLQty").val(Row.find('td:eq(4)').text());
+                });
+            }
+            else
+            {
+                $("#DeliveryTable > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    Row.find(".DLQty,.DLDate,.DLVehicle").prop("disabled", true);
+                    Row.find("#DelStatus,#item_DelNarr,#item_ShortQty").prop("disabled", true);
+                    Row.find("#DelStatus,#item_DelNarr").val("OK");
+                    Row.find(".DLQty").val("0");
+                    Row.find("#item_ShortQty").val("0");
+                });
+            }
+        });
+
+        $("#DelStatus").change(function () {
+            var Row = $(this).closest('tr');
+            if ($(this).val() == "Short") {
+                Row.find("#item_ShortQty").prop("disabled", false);
+            } else {
+                Row.find("#item_ShortQty").prop("disabled", true);
+            }
+            Row.find("#item_DelNarr").val($(this).val());
+        });
+
+
+    });
+    function LoadQtyBlur(value) {
+        debugger;
+        var Row = $("#" + value);
+        var Qty = parseInt(Row.find('td:eq(4)').text());
+        var DelQty = parseInt(Row.find(".DLQty").val());
+
+        if (!(DelQty <= Qty))
+        {
+            alert("Del Qty Not Greater Than Avl Qty OF Lr.....!");
+            Row.find(".DLQty").val(Row.find('td:eq(4)').text());
+        }
+    }
+
+    function ShortQtyBlur(value) {
+        debugger;
+        var Row = $("#" + value);
+        var Qty = parseInt(Row.find('td:eq(4)').text());
+        var DelQty = parseInt(Row.find(".DLQty").val());
+        var ShortQty = parseInt(Row.find(".DLShortQty").val());
+        var BalQty = Qty - DelQty;
+        if (!(BalQty >= ShortQty))
+        {
+            alert("Not Allow To " + ShortQty +" Qty For Short Qty...!");
+            Row.find(".DLShortQty").val(BalQty);
+        }
+    }
+
+
+</script>
+@if (Model.vehicleDeliveries != null)
+{
+    <div class="container-fluid" style="margin-top:8px;margin-left:-5px;">
+        <table id="DeliveryTable" class="table-bordered example" style="width:100%!important;">
+            <thead style="color: black;">
+                <tr>
+                    <th class="hidden">TableKey</th>
+                    <th><center><input type="checkbox" id="DelSelectAll" style="height: 17px;width: 18px;" /></center></th>
+                    <th>Lr No</th>
+                    <th>Lr Date</th>
+                    <th>Avl Qty</th>
+                    <th>Weight</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Consigner</th>
+                    <th>Consignee</th>
+                    <th>LC No</th>
+                    <th>Lc From</th>
+                    <th style="background-color:aquamarine !important;">Lc TO</th>
+                    <th>Del Qty</th>
+                    <th>Del Date</th>
+                    <th>Del Vehicle</th>
+                    <th>Del Status</th>
+                    <th>Del ShortQty</th>
+                    <th>Del Narr</th>
+                </tr>
+            </thead>
+            <tbody style="max-height:400px;min-height:400px;width:100%; overflow-x:hidden;overflow-y:auto">
+                @foreach (var item in Model.vehicleDeliveries)
+                {
+                <tr id="@item.Lrno">
+                    <td class="hidden">@item.TableKey</td>
+                    <td><center><input type="checkbox" class="checkbox" style="height: 17px;width: 18px;" /></center></td>
+                    <td>@item.Lrno</td>
+                    <td>@item.LRDate</td>
+                    <td>@item.Qty</td>
+                    <td>@item.Weight</td>
+                    <td>@item.From</td>
+                    <td>@item.To</td>
+                    <td>@item.Consignor</td>
+                    <td>@item.Consignee</td>
+                    <td>@item.Lcno</td>
+                    <td>@item.LcFrom</td>
+                    <td style="background-color:aquamarine !important;color:black;">@item.LCTo</td>
+                    @*<td class="DelQty">
+                        <center><input type="text" class="form-control DLQty" style="width:100px;" onblur="LoadQtyBlur('@item.Lrno')" value="0" disabled /></center>
+                    </td>*@
+                    <td><center>@Html.TextBoxFor(x => item.DeliveredQty, new { @disabled = "disabled", @class = "form-control DLQty", @style = "width:130px;", @Value = item.DeliveredQty,@onblur="LoadQtyBlur('"+item.Lrno+"')" })</center></td>
+                    <td><center>@Html.TextBoxFor(x => item.DelDate, new { @disabled = "disabled", @class = "form-control DLDate", @style = "width:130px;", @Value = item.DelDate })</center></td>
+                    <td><center>@Html.TextBoxFor(x => item.DelVehicleNo, new { @disabled = "disabled", @class = "form-control DLVehicle", @style = "width:130px;", @Value = item.DelVehicleNo })</center></td>
+                    <td><center>@Html.DropDownListFor(m => item.DelStatus, Model.DelStatuss.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = item.DelStatus == null ? false : item.DelStatus.Contains(y.Value) }), "--Select--", new { @disabled = "disabled", @value = item.DelStatus, @class = "form-control", @style = "font-size:14px;font-weight:bolder;", @id = "DelStatus", @name = "DelStatus" })</center></td>
+                    <td><center>@Html.TextBoxFor(x => item.ShortQty, new { @disabled = "disabled", @class = "form-control DLShortQty", @style = "width:100px;", @Value = item.ShortQty, @onblur = "ShortQtyBlur('" + item.Lrno + "')" })</center></td>
+                    <td><center>@Html.TextAreaFor(x => item.DelNarr, new { @disabled = "disabled", @style = "resize: none;", @name = "", @maxlength = "100", @cols = 100, @rows = 2, @Value = item.DelNarr })</center></td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

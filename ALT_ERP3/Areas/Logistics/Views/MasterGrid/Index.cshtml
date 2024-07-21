@@ -1,0 +1,1717 @@
+﻿@model ALT_ERP3.GridOption
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<style>
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+        /*Suresh*/
+        text-align: center;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .btncolor {
+        background-color: slategray;
+        color: white;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+</style>
+
+<script type="text/javascript">
+    var SetActive = "";
+
+    function GetMessengerEvents() {
+        event.preventDefault();
+        var url = '@Url.Action("GetMessengerEvents")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#AcType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#AcType').val('0').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function GetNotificationEvents() {
+        event.preventDefault();
+        var url = '@Url.Action("GetNotificationEvents")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#AcType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#AcType').val('0').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function LoadTemplate() {
+
+        var url = '@Url.Action("LoadTemplate")'
+        $('#TemplateCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TemplateCode', text: '@Model.TemplateName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function SetNotification(value)
+    {
+        if (value == "Active") {
+            SetActive = "Clear = 'false'";
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            gridreload();
+        } else if (value == "Clear") {
+            SetActive = "Clear = 'true'";
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            gridreload();
+        } else {
+            SetActive = "1=1";
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            gridreload();
+        }
+    }
+    function SetFlag(value) {
+        debugger;
+
+        if (value =="Active") {
+            SetActive = "Hide='false'";
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            gridreload();
+        } else if (value == "Lock") {
+            SetActive = "Locked='true'";
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            gridreload();
+        } else {
+            SetActive = "Hide in ('false','true')";
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            gridreload();
+        }
+    }
+    $(document).ready(function () {
+        
+        $('#ShareModel,#AlertNoteModal,#attachdoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        })
+        $("#ShareModel,#AlertNoteModal,#attachdoc").modal("hide");
+        $("#ShareModel,#AlertNoteModal,#attachdoc").css("display", "none");
+
+        //$('#attachdoc').modal({
+        //    backdrop: 'static',
+        //    keyboard: false
+        //})
+        //$("#attachdoc").modal("hide");
+
+        if ('@Model.ViewDataId' =="Messenger") {
+            GetMessengerEvents();
+        }
+        else if ('@Model.ViewDataId' =="Notification") {
+            GetNotificationEvents();
+        }
+
+        $("#btnAddNarr").click(function (e) {
+            e.preventDefault();
+            if ($("#GetCurrentRowA").val() == '' || $("#GetCurrentRowA").val() == null) {
+                alert('Please Select Document...');
+                return;
+            }
+
+            $("#AlertNoteDiv,#btnAddNarr").addClass("hidden");
+            $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").removeClass("hidden");
+
+            var url = '/Logistics/AlertNote/PartialView';
+            var ModelData = {};
+            ModelData["AType"] = "LR000";
+            ModelData["DocReceived"] = $("#GetCurrentRowDocNo").val();
+            ModelData["DocumentKey"] = $("#GetCurrentRowA").val();
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    debugger;
+                    var AttachDoc = $("#AddAlertNoteDiv");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                },
+            });
+        });
+        $("#btnNarrList").click(function (e) {
+            e.preventDefault();
+            $("#AlertNoteDiv,#btnAddNarr").removeClass("hidden");
+            $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").addClass("hidden");
+        });
+        $('#btnNarrSave').click(function (event) {
+            event.preventDefault();
+            debugger;
+            if ($("#AType").val() == null || $("#AType").val() == '') {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Type is required..');
+                return;
+            }
+            if ($("#TypeCode").val() == null || $("#TypeCode").val() == '') {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Reference No is required..');
+                return;
+            }
+
+            if ($("#CommonRemark").val() == null || $("#CommonRemark").val() == '') {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Remark is required..');
+                return;
+            }
+            if ($("#GetCurrentRowA").val() == '' || $("#GetCurrentRowA").val() == null) {
+                $("#CommonErrorMessage").show();
+                $("#CommonErrorMessage").text('Document Not Found...');
+                return;
+            }
+
+            var AlertRefType = [];
+            debugger;
+            $('#ALerttbl > tbody  > tr').each(function () {
+                var tds = $(this).find('td');
+                if ($(this).find(".chkfvalue").prop("checked") == true || $(this).find(".chkfvalueStop").prop("checked")) {
+                    var myDets =
+                    {
+                        Code: tds.eq(1).text(),
+                        select: $(this).find(".chkfvalue").prop("checked"),
+                        stop: $(this).find(".chkfvalueStop").prop("checked"),
+                    }
+                    AlertRefType.push(myDets);
+                }
+            });
+            var url = '/Logistics/AlertNote/SaveDataGetList';
+            var ModelData = {};
+            ModelData["AType"] = $("#AType").val();
+            ModelData["TypeCode"] = $("#TypeCode").val();
+            ModelData["RefersType"] = AlertRefType;
+            ModelData["Remark"] = $("#CommonRemark").val();
+            ModelData["DocumentKey"] = $("#GetCurrentRowA").val();
+            ModelData["Bling"] = $("#Bling").is(":checked");
+            ModelData["PartyNarr"] = $("#PartyNarr").is(":checked");
+            ModelData["Mode"] = 'Edit';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message);
+                    } else
+                    {
+                        var LoadDownLoadFiles = $("#AlertNoteDiv");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#AlertNoteDiv,#btnAddNarr").removeClass("hidden");
+                        $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").addClass("hidden");
+                    }
+                },
+            });
+        });
+         $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        var mstartdate = $('#hdnStartDate').val();
+        var menddate = $('#hdnEndDate').val();
+        if ('@Model.ViewDataId' == "Delivery")
+        {
+            $('#Fromdate,#ToDate').datepicker({
+                format: "dd/mm/yyyy",
+                autoclose: true,
+                startDate: new Date(mstartdate),
+                endDate: new Date(menddate)
+            });
+        } else {
+            $('#Fromdate,#ToDate').datepicker({
+                format: "dd/mm/yyyy",
+                autoclose: true,
+                startDate: new Date(mstartdate),
+                endDate: new Date(menddate)
+            });
+        }
+
+        LoadTemplate();
+        $('#txtDataSearch').val("");
+
+        gridreload();
+
+        $('#btnShare').click(function (event) {
+            event.preventDefault();
+            $("#ShareModel").modal("show");
+            $("#ShareModel").css("display", "block");
+        });
+
+
+        $('#btnopnFormat').click(function(event){
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["ViewDataId"] = '@ViewBag.ViewDataId';
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    $('#updTfatsearchDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnMasterAddDoc").click(function (event) {
+            event.preventDefault();
+
+            var GetLRExist = $('#GetCurrentRowDocNoExist').val();
+            if (GetLRExist == 'false') {
+                alert("Document Not Exist In Our System....!");
+                return;
+            }
+
+            var GetLR = $('#GetCurrentRowA').val();
+            if (GetLR == "" || GetLR == null) {
+                alert("Please Select Document To Attachment....!");
+                return;
+            }
+
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = "Edit";
+            if ("@Model.ViewDataId" == "Delivery" || "@Model.ViewDataId" == "Opening Consignment" || "@Model.ViewDataId" == "Notification" )
+            {
+                ModelData["Srl"] = $("#GetCurrentRowA").val();
+                ModelData["Type"] = "LR000";
+                ModelData["RefType"] = "@Model.Header";
+            }
+            if ("@Model.ViewDataId" == "PickUp / Order Request")
+            {
+                ModelData["Srl"] = $("#GetCurrentRowA").val();
+                ModelData["Type"] = "PCK00";
+                ModelData["RefType"] = "@Model.Header";
+            }
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+
+    });
+    $("#MessageSelectAll").click(function () {
+        var CheckBox = $("#MessageSelectAll").prop("checked");
+        if (CheckBox) {
+            $(".MessageDebitGrid").prop('checked', true);
+        } else {
+            $(".MessageDebitGrid").prop('checked', false);
+        }
+    });
+    function ActionclickRefreshNoti() {
+        if ($("#AcType").val() == null || $("#AcType").val() == "" || $("#AcType").val() == "0") {
+            alert("Please Select Action And Document...!");
+            return;
+        }
+        var url = '@Url.Action("ActionNotification")';
+        var ModelData = {};
+        var myTableArray = [];
+        $("#list > tbody  > tr").each(function () {
+            if ($(this).find("input[class='chkNotification']").prop("checked") == true) {
+                debugger;
+                var myDets = {
+                    Document: $(this).find('td:eq(4)').text(),
+                }
+                myTableArray.push(myDets);
+            }
+        });
+        var check = $('#list').find("input[class='chkNotification']:checked").length;
+        if (check > 0) {
+            ModelData["AcType"] = $("#AcType").val();
+            ModelData["list"] = myTableArray;
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        location.reload();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        } else {
+            alert("Atleast One Document Select...");
+        }
+    }
+    function ActionclickRefresh() {
+        debugger;
+        if ($("#AcType").val() == null || $("#AcType").val() == "" || $("#AcType").val() == "0") {
+            alert("Please Select Action And Document...!");
+            return;
+        }
+        var url = '@Url.Action("ActionMessanger")';
+        var ModelData = {};
+        var myTableArray = [];
+        $("#list > tbody  > tr").each(function () {
+            if ($(this).find("input[class='MessageDebitGrid']").prop("checked") == true) {
+                debugger;
+                var myDets = {
+                    Document: $(this).find('td:eq(5)').text(),
+                }
+                myTableArray.push(myDets);
+            }
+        });
+        var check = $('#list').find("input[class='MessageDebitGrid']:checked").length;
+        if (check > 0) {
+            ModelData["AcType"] = $("#AcType").val();
+            ModelData["list"] = myTableArray;
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        location.reload();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        } else {
+            alert("Atleast One Document Select...");
+        }
+    }
+    function clickRefresh() {
+        $('#list').jqGrid('clearGridData');
+        $("#list").jqGrid("GridUnload");
+        $('#list').trigger('reloadGrid');
+        gridreload();
+    }
+     function AddNewEntry() {
+          window.location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Add&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+    }
+
+    function EditEntry() {
+        var GetLR = $('#GetCurrentRow').val();
+        if (GetLR == "" || GetLR == null) {
+            alert("Please Select");
+        } else {
+
+            location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Edit&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+
+        }
+    }
+
+    function DeleteEntry() {
+        var GetLR = $('#GetCurrentRow').val();
+        if (GetLR == "" || GetLR == null) {
+            alert("Please Select");
+        } else {
+
+            location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+
+        }
+    }
+
+    function DeleteMultiEntry()
+    {
+        var url =  '/Logistics/MultiDelivery/DeleteMultiDelivery';
+        var myTableArray = [];
+        $("#list > tbody  > tr").each(function () {
+            if ($(this).find("input[class='DebitGrid']").prop("checked") == true) {
+                debugger;
+                var myDets =
+                {
+                    Document: $(this).find('td:eq(6)').text(),
+                }
+                myTableArray.push(myDets);
+            }
+        });
+        var check = $('#list').find("input[class='DebitGrid']:checked").length;
+        if (check > 0) {
+            var ModelData = {};
+            ModelData["GridDetails"] = myTableArray;
+            ModelData["Mode"] = 'Delete';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success')
+                    {
+                        alert("Documents Delete Sucessfully...!");
+                        if (data.Message != "")
+                        {
+                            alert(data.Message);
+                        }
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else
+                    {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        }
+        else {
+            alert("Atleast One Delivery Required For Delete...");
+        }
+    }
+    function Print() {
+
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+
+
+        var sUrlpath = window.open('@Url.Action("GetMasterGridData")?Date=' + mDate + '&ViewDataId=' + '@ViewBag.id' + '&mWhat=PDL', '_blank');
+
+        //location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+
+    }
+    //$('#btnListPrint').click(function () {
+    //    });
+     @*function clickPrint(mwhat) {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val() + '&mWhat=' + mwhat, '_blank');
+    };
+
+    function PrintReport() {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var murl="/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=" + mformat + "&mopening="+ $('#openb').val()+"&mRunning=true&mParaString=Code^" + $('#Account').val()+ '&Code=' + $('#Account').val();
+        window.open(murl,'_blank');
+    };*@
+
+
+    function SetSessionNull()
+    {
+        var DTO = {  };
+        var url = '@Url.Action("SetAttach_SessionNull")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+
+            },
+            error: function () {
+                alert("Error occured while processing your request.");
+            }
+        });
+    }
+
+    function gridreload() {
+        //event.preventDefault();
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        if ('@Model.ViewDataId' == "Notification" && SetActive == '') {
+            SetActive = "Clear = 'false'";
+        }
+        var sPathUrl = "/Logistics/MasterGrid/GetGridStructureRecords/?Date=" + mDate + "&id=" + '@ViewBag.ViewDataId' + '&TableName=' + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Logistics/MasterGrid/GetMasterGridData/?Date=" + mDate + "&ViewDataId=" + '@ViewBag.ViewDataId' + '&TableName=' + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked') + '&searchString=' + $('#hdnDataSearchString').val() + '&Code=' + SetActive;
+        $('#hdnDataSearchString').val("");
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                debugger;
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:400,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#GetCurrentRow').val($('#list').jqGrid('getCell', id, 'Document'));
+                    if ("@Model.ViewDataId" == "Delivery") {
+                        SetSessionNull();
+                        $('#GetCurrentRowA').val($('#list').jqGrid('getCell', id, 'ParentKey'));
+                    }
+                    if ("@Model.ViewDataId" == "Notification") {
+                        SetSessionNull();
+                        $('#GetCurrentRowA').val($('#list').jqGrid('getCell', id, 'Tablekey'));
+                        $('#GetCurrentRowDocNo').val($('#list').jqGrid('getCell', id, 'DocNo'));
+                        $('#GetCurrentRowDocNoExist').val($('#list').jqGrid('getCell', id, 'Exist'));
+                    }
+                    if ("@Model.ViewDataId" == "PickUp / Order Request") {
+                        SetSessionNull();
+                        $('#GetCurrentRowA').val($('#list').jqGrid('getCell', id, 'OrderNo'));
+                    }
+                    if ("@Model.ViewDataId" == "Opening Consignment") {
+                        SetSessionNull();
+                        $('#GetCurrentRowA').val($('#list').jqGrid('getCell', id, 'LrNo'));
+                    }
+                    $('#EditFlag').val($('#list').jqGrid('getCell', id, 'EditUpto'));
+                    $('#DeleteFlag').val($('#list').jqGrid('getCell', id, 'DeleteUpto'));
+                    $('.spinner').hide();
+
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#list');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=View&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                },
+
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+
+                    
+                    if ('@Model.ViewDataId' == "Messenger")
+                    {
+                        var ids = jQuery("#list").jqGrid('getDataIDs');
+                        for (var i = 0; i < ids.length; i++)
+                        {
+                            var rowId = ids[i];
+                            var beChecked = "<input type ='checkbox' id='" + rowId + "'  class='MessageDebitGrid' name='MessageDebitGrid'  style='height: 22px;width: 19px;' />";
+                            if (jQuery("#list").getCell(rowId, "Read") == "No")
+                            {
+                                $("#list").jqGrid('setCell', rowId, 'Delete', '0');
+                                var btn = "<button type='button' id='btnRead" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Read' , title='Read' , attr='" + rowId + "'>Read</button>";
+                                jQuery("#list").jqGrid('setRowData', rowId, { Read: btn });
+                            }
+                            else
+                            {
+                                $("#list").jqGrid('setCell', rowId, 'Delete', '1');
+                                var btn = "<button type='button' id='btnunRead" + rowId + "' value='" + rowId + "' style='padding:3px 8px;border-radius:15px;' class='btn btn-danger' tooltip='UnRead' , title='UnRead' , attr='" + rowId + "'>Un-Read</button>";
+                                jQuery("#list").jqGrid('setRowData', rowId, { Read: btn });
+                            }
+                            jQuery("#list").jqGrid('setRowData', rowId, { Select: beChecked });
+
+                        }
+
+                        // Construct HTML for checkbox header
+                        var checkboxHeader = '<input type="checkbox" id="headerCheckbox" style="height: 20px;width: 20px;">';
+
+                        // Set the header as checkbox
+                        $("#list").jqGrid('setLabel', 'Select', checkboxHeader);
+
+                        // Add click event handler for header checkbox
+                        $(document).on('click', '#headerCheckbox', function () {
+                            debugger;
+                            var isChecked = $(this).prop('checked');
+                            $("#list").find('input[type="checkbox"]').prop('checked', isChecked);
+                        });
+                        debugger;
+                        // Remove class from the div element
+                        $("#jqgh_list_Select").removeClass("ui-jqgrid-sortable");
+
+
+                        $("button").click(function (event) {
+
+                            event.preventDefault();
+                            var btnname = this.id;
+                            var curRowId = this.value;
+                            var btntype = btnname.replace(/[0-9]/g, "");
+                            var myGrid = $('#list');
+                            selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                            var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+
+                            switch (btntype) {
+                                case "btnRead":
+                                    btnRead(cellVal);
+                                    break;
+                                case "btnunRead":
+                                    btnunRead(cellVal);
+                                    break;
+                                case "btnUnClear":
+                                    btnUnClear(cellVal);
+                                    break;
+                                case "btnClear":
+                                    btnClear(cellVal);
+                                    break;
+                            }
+                        });
+
+                        SVGActive();
+                    }
+                    else if ('@Model.ViewDataId' == "Notification")
+                    {
+                        var ids = jQuery("#list").jqGrid('getDataIDs');
+                        for (var i = 0; i < ids.length; i++)
+                        {
+                            var rowId = ids[i];
+                            var beChecked = "<input type ='checkbox' id='" + rowId + "'  class='chkNotification' name='chkNotification'  style='height: 22px;width: 19px;' />";
+                            jQuery("#list").jqGrid('setRowData', rowId, { Priority: '', Clear: beChecked });
+                            if (jQuery("#list").getCell(rowId, "Exist") == "true") {
+                                var Zoombtn = "<button type='button' id='btnZoom" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Zoom Document' , title='Zoom Document' , attr='" + rowId + "'><span class='glyphicon glyphicon-zoom-in'></span></button>";
+                                jQuery("#list").jqGrid('setRowData', rowId, { Zoom: Zoombtn });
+                            }
+                            if (jQuery("#list").getCell(rowId, "Status") == "Yes") {
+                                jQuery("#list").jqGrid('setCell', rowId, 'Status', '', { 'color': 'rgb(211, 38, 86)' });
+
+                            } else {
+                                jQuery("#list").jqGrid('setCell', rowId, 'Status', '', { 'color': 'rgb(163,228,180)' });
+                            }
+
+                        }
+
+                        //// Update the column properties to display checkboxes
+                        //$("#list").jqGrid('setColProp', 'Clear', {
+                        //    formatter: 'checkbox',
+                        //    formatoptions: { disabled: false }
+                        //});
+
+                        // Construct HTML for checkbox header
+                        var checkboxHeader = '<input type="checkbox" id="headerCheckbox" style="height: 20px;width: 20px;">';
+                       
+                        // Set the header as checkbox
+                        $("#list").jqGrid('setLabel', 'Clear', checkboxHeader);
+
+                        // Add click event handler for header checkbox
+                        $(document).on('click', '#headerCheckbox', function () {
+                            debugger;
+                            var isChecked = $(this).prop('checked');
+                            $("#list").find('input[type="checkbox"]').prop('checked', isChecked);
+                        });
+                        // Remove class from the div element
+                        $("#jqgh_list_Clear").removeClass("ui-jqgrid-sortable");
+                        
+
+                        $("button").click(function (event) {
+
+                            event.preventDefault();
+                            var btnname = this.id;
+                            var curRowId = this.value;
+                            var btntype = btnname.replace(/[0-9]/g, "");
+                            var myGrid = $('#list');
+                            selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                            var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                            var cellkey = myGrid.jqGrid('getCell', curRowId, 'Tablekey');
+
+                            switch (btntype) {
+                                case "btClearNotifn":
+                                    btnClearNot(cellVal);
+                                    break;
+                                case "btUnClearNotifn":
+                                    btnUnClearNot(cellVal);
+                                    break;
+                                case "btnZoom":
+                                    ZoomURL(cellkey);
+                                    break;
+                            }
+                        });
+                    }
+                    else if ("@Model.ViewDataId" == "BroadcastMaster")
+                    {
+                        jQuery("#list").jqGrid('setRowData', 1, false, { background: 'rgb(163 228 180)' });
+                    }
+                    else if ("@Model.ViewDataId" == "MultiDelivery")
+                    {
+                        var ids = jQuery("#list").jqGrid('getDataIDs');
+                        for (var i = 0; i < ids.length; i++) {
+                            var rowId = ids[i];
+                            var beChecked = "<input type ='checkbox' id='" + rowId + "' value='" + jQuery("#list").getCell(rowId, "Document") + "'  class='DebitGrid' name='DebitGrid'  style='height: 22px;width: 19px;' />";
+                            jQuery("#list").jqGrid('setRowData', rowId, { 'Select': beChecked });
+                        }
+                    }
+                    else if ("@Model.ViewDataId" == "EmergencyMail") {
+                        var ids = jQuery("#list").jqGrid('getDataIDs');
+                        debugger;
+                        for (var i = 0; i < ids.length; i++) {
+                            var rowId = ids[i];
+                            var btnc = "<button id='SendMail" + rowId + "' value='" + rowId + "' style='border: none;cursor: pointer;appearance: none;background-color: inherit;' Class='SendMail' tooltip='Send Mail' , title='Send Mail' , attr='" + rowId + "' />";
+                            jQuery("#list").jqGrid('setRowData', rowId, { 'Send': btnc });
+                        }
+                        $('.SendMail').html('<img src="/Content/images/Mail.ico" height="22" />');
+                        $("button").click(function (event) {
+                            event.preventDefault();
+                            var btnname = this.id;
+                            var curRowId = this.value;
+                            var btntype = btnname.replace(/[0-9]/g, "");
+                            var myGrid = $('#list');
+                            selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                            var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                            var cellType = myGrid.jqGrid('getCell', curRowId, 'Type');
+
+                            switch (btntype) {
+                                case "SendMail":
+                                    SendMail(cellVal, cellType);
+                                    break;
+                            }
+                        });
+
+                    }
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+            $('#pg_pager').append($("<div class=\"col-sm-offset-2 col-md-6\" style=\"display: flex;margin-top:-40px; \">" +
+                "<label style = \"color:black;margin-top:auto;width:inherit;\" > Grid Doc No:</label>" +
+                " <div class=\"col-md-10\" style=\"padding: 0px 5px 0px 0px;\">" +
+                " <input type=\"text\" class=\"form-control\" id=\"btnSearchDocNo\" style=\"margin-top:5px;\" placeholder=\"Search Doc. No\">" +
+                " </div>" +
+                " <label style=\"color:black;margin-top:auto;width:inherit;\">Grid General:</label>" +
+                " <div class=\"col-md-10\" style=\"padding: 0px 5px 0px 0px;\">" +
+                " <input type=\"text\" class=\"form-control\" id=\"btnSearchAny\" style=\"margin-top:5px;\" placeholder=\"Search By Any\">" +
+                " </div>" +
+                "  <label style=\"color:black;margin-top:auto;width:inherit;\">Global Search:</label>" +
+                " <div class=\"col-md-10\" style=\"display:flex;padding: 0px 5px 0px 0px;\">" +
+                "   <input type=\"text\" class=\"form-control\" id=\"txtDataSearch\" style=\"margin-top:5px;width: -webkit-fill-available;\" placeholder=\"Search Doc. NO\">" +
+                "  <button class=\"btn btn-danger\" style=\"height: 28px;margin-top:5px;width: fit-content;\" id=\"btnDataSearch\" data-toggle=\"tooltip\" data-placement=\"top\" ><i class=\"glyphicon glyphicon-search\"></i></button>" +
+                " </div>" + " </div>"));
+
+
+            $("#btnSearchDocNo").keyup(function (event)
+            {
+                $("#btnSearchAny").val("");
+                var value = $(this).val();
+                event.preventDefault();
+                if ('@ViewBag.ViewDataId' == "Delivery")
+                {
+                    var myGrid = $('#list');
+                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++)
+                    {
+                        var rowId = ids[i];
+                        var Row = jQuery("#list").getCell(rowId, "DeliveryNo");
+                        if (Row.toLowerCase().indexOf(value.toLowerCase()) >= 0)
+                        {
+                            $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+                        }
+                        else
+                        {
+                            $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+                        }
+                    }
+                } else {
+                    var myGrid = $('#list');
+                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var Row = jQuery("#list").getCell(rowId, "Name");
+                        if (Row.toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                            $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+                        }
+                        else {
+                            $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+                        }
+                    }
+                }
+
+            });
+            $("#btnSearchAny").keyup(function (event)
+            {
+                $("#btnSearchDocNo").val("");
+                var value = $(this).val();
+                event.preventDefault();
+                var myGrid = $('#list');
+                var ids = jQuery("#list").jqGrid('getDataIDs');
+                for (var i = 0; i < ids.length; i++)
+                {
+                    var rowId = ids[i];
+                    var Row = $('#' + $.jgrid.jqID(rowId));
+                    if (Row.text().toLowerCase().indexOf(value.toLowerCase()) >= 0)
+                    {
+                        $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+                    }
+                    else
+                    {
+                        $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+                    }
+                }
+            });
+            $("#btnDataSearch").click(function (event) {
+                $("#hdnDataSearchString").val($("#txtDataSearch").val());
+                clickRefresh();
+            });
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+    function clickRefresh1() {
+        location.reload();
+    }
+    function SVGActive() {
+        debugger;
+        var ids = jQuery("#list").jqGrid('getDataIDs');
+        for (var i = 0; i < ids.length; i++) {
+            debugger;
+            var rowId = ids[i];
+            if (jQuery("#list").getCell(rowId, "Delete") == "0") {
+                $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+            } else {
+                $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+            }
+        }
+    }
+    function SVGClear() {
+
+        var ids = jQuery("#list").jqGrid('getDataIDs');
+        for (var i = 0; i < ids.length; i++) {
+
+            var rowId = ids[i];
+            if (jQuery("#list").getCell(rowId, "Delete") != "0") {
+                $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+            } else {
+                $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+            }
+        }
+    }
+    function SVGALL() {
+
+        var myGrid = $('#list');
+        var ids = jQuery("#list").jqGrid('getDataIDs');
+        for (var i = 0; i < ids.length; i++) {
+            var rowId = ids[i];
+            $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+        }
+    }
+
+    function SendMail(value,Type) {
+        $(".SendMail").addClass('hidden');
+
+        var url = '/Logistics/EmergencyMail/Index';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        ModelData["Type"] = Type;
+        ModelData["Header"] = '@Model.Header';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    alert("Mail Send Sucessfully...");
+                    location.reload();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function btnRead(value) {
+        var url = '@Url.Action("ReadMessanger")';
+
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    location.reload();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function btnunRead(value) {
+        var url = '@Url.Action("UnReadMessanger")';
+
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    location.reload();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+
+    function btnUnClear(value) {
+        var url = '@Url.Action("UnClearMessanger")';
+
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    location.reload();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function btnClearNot(value)
+    {
+        var url = '@Url.Action("ClearNotification")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    location.reload();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function ZoomURL(mdocument) {
+        GetURL1(mdocument);
+    }
+    function GetURL1(mdocument) {
+        debugger;
+        var mURL = '@Url.Action("GetURLDoc")?mdocument=' + mdocument +'&mode=View';
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $('.spinner').hide();
+                if (result.url != "") {
+                    window.open(result.url, '_blank');
+                } else {
+                    alert("Error! Can't Zoom into the Details!\n" + result.Message);
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+    function btnUnClearNot(value) {
+        var url = '@Url.Action("UnClearNotification")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    location.reload();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function btnClear(value) {
+        var url = '@Url.Action("ClearMessanger")';
+
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    location.reload();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function AlertNoteMaster() {
+        debugger;
+        event.preventDefault();
+
+        var GetLRExist = $('#GetCurrentRowDocNoExist').val();
+        if (GetLRExist == 'false') {
+            alert("Document Not Exist In Our System....!");
+            return;
+        }
+
+        var GetLR = $('#GetCurrentRowA').val();
+        if (GetLR == "" || GetLR == null) {
+            alert("Please Select Document To Alert Note....!");
+            return;
+        }
+
+        var url = '/Logistics/AlertNote/ShoWAlertNoteList';
+        var myTableArray = [];
+        myTableArray.push($('#GetCurrentRowA').val());
+        var DTO = { Type: "LR000", TypeCode: myTableArray, DocTpe: "LR000" };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                var AttachDoc = $("#AlertNoteDiv");
+                AttachDoc.html('');
+                AttachDoc.html(data.Html);
+                $('#AlertNoteModal').modal('show');
+                $("#AlertNoteDiv,#btnAddNarr").removeClass("hidden");
+                $("#AddAlertNoteDiv,#btnNarrList,#btnNarrSave").addClass("hidden");
+            },
+        });
+    }
+
+
+
+</script>
+
+
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-md-3">
+            <b class="CodeSt">@ViewBag.Header</b>
+        </div>
+        <div class="col-md-5" style="display:flex;">
+            @if (Model.ViewDataId != "Notification" && Model.ViewDataId != "AssignTasks" && Model.ViewDataId != "UserProfile" && Model.ViewDataId != "Messenger" && Model.ViewDataId != "BroadcastMaster" && Model.ViewDataId != "OpeningLR" && Model.ViewDataId != "AreaMaster" && Model.ViewDataId != "TfatCountry" && Model.ViewDataId != "TfatState" && Model.ViewDataId != "UnitofMeasurementMaster" && Model.ViewDataId != "CustomerMaster" && Model.ViewDataId != "ChargeTypeMaster" && Model.ViewDataId != "DescriptionMaster" && Model.ViewDataId != "LRTypeMaster" && Model.ViewDataId != "ItemMaster" && Model.ViewDataId != "ServiceTypeMaster" && Model.ViewDataId != "ConsignerOrConsignee" && Model.ViewDataId != "Departments")
+            {
+                <div class="col-md-offset-2 col-md-8 pull-right" style="padding-right:unset;">
+                    <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;color:black;">
+                        Period:
+                    </div>
+                    <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                        <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="padding: 2px;font-weight:bolder;text-align:center;font-size:10pt;">
+                        <span class="input-group-addon">to</span>
+                        <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="padding: 2px;font-weight:bolder;text-align:center;font-size:10pt;">
+                    </div>
+                </div>
+                <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                    <a onclick="clickRefresh()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+                </div>
+            }
+            @if (Model.ViewDataId == "Messenger")
+            {
+
+                <div class="col-sm-6" style="">
+                    <label class="col-sm-2 control-label" style="width: auto;color: black;padding-top: 5px;">Action:</label>
+                    <div class="col-sm-6">
+                        @Html.DropDownListFor(m => m.AcType, DropdownHelper.EmptyList(), new { @title = "Selected Action Perform On Selected Multiple Message checkbox when You click On Butoon.", @class = "form-control", @Name = "AcType", @Id = "AcType" })
+                    </div>
+                    <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                        <a onclick="ActionclickRefresh()" title="Action Perform On Selected Meassage." class="btn btn-success" style="padding: 1px 4px;font-size:15px;cursor:pointer"><i class="fa fa-spinner"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="control-label" style="width:auto;color:black;padding-top: 1px;">Read :</label>
+                    <svg width="20" height="20">
+                        <title>UnClear</title>
+                        <a onclick="SVGClear();">
+                            <rect width="20" height="20" style="fill:rgb(157,210,218);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;">
+                    <label class="control-label" style="width:auto;color:black;padding-top: 1px;padding-top: 1px;">UnRead :</label>
+                    <svg width="20" height="20">
+                        <title>UnRead</title>
+                        <a onclick="SVGActive();">
+                            <rect width="20" height="20" style="fill:rgb(163,228,180);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="control-label" style="width:auto;color:black;padding-left: 5px;padding-top: 1px;">All :</label>
+                    <svg width="20" height="20">
+                        <title>All</title>
+                        <a onclick="SVGALL();">
+                            <rect width="20" height="20" style="fill:rgb(201,201,199);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+                <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                    <a onclick="clickRefresh1()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+                </div>
+            }
+            @if (Model.ViewDataId == "UserProfile")
+            {
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Active :</label>
+                    <svg width="20" height="20">
+                        <title>UnLock</title>
+                        <a onclick="SetFlag('Active');">
+                            <rect width="20" height="20" style="fill:rgb(163,228,180);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Lock :</label>
+                    <svg width="20" height="20">
+                        <title>Lock</title>
+                        <a onclick="SetFlag('Lock');">
+                            <rect width="20" height="20" style="fill:rgb(211 38 86);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">All :</label>
+                    <svg width="20" height="20">
+                        <title>All</title>
+                        <a onclick="SetFlag('All');">
+                            <rect width="20" height="20" style="fill:rgb(201,201,199);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+            }
+            @if (Model.ViewDataId == "Notification")
+            {
+                <div class="col-sm-6" style="">
+                    <label class="col-sm-2 control-label" style="width: auto;color: black;padding-top: 5px;">Action:</label>
+                    <div class="col-sm-6">
+                        @Html.DropDownListFor(m => m.AcType, DropdownHelper.EmptyList(), new { @title = "Selected Action Perform On Selected Multiple Notification checkbox when You click On Butoon.", @class = "form-control", @Name = "AcType", @Id = "AcType" })
+                    </div>
+                    <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                        <a onclick="ActionclickRefreshNoti()" title="Action Perform On Selected Meassage." class="btn btn-success" style="padding: 1px 4px;font-size:15px;cursor:pointer"><i class="fa fa-spinner"></i></a>
+                    </div>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Active :</label>
+                    <svg width="20" height="20">
+                        <title>Active</title>
+                        <a onclick="SetNotification('Active');">
+                            <rect width="20" height="20" style="fill:rgb(163,228,180);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Cleared :</label>
+                    <svg width="20" height="20">
+                        <title>Clear</title>
+                        <a onclick="SetNotification('Clear');">
+                            <rect width="20" height="20" style="fill:rgb(211 38 86);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">All :</label>
+                    <svg width="20" height="20">
+                        <title>All</title>
+                        <a onclick="SetNotification('All');">
+                            <rect width="20" height="20" style="fill:rgb(201,201,199);stroke-width:3;stroke:rgb(0,0,0)" />
+                        </a>
+                    </svg>
+                </div>
+            }
+
+        </div>
+        @if (Model.ViewDataId != "EmergencyMail")
+        {
+            <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnopnFormat" data-toggle="tooltip" data-placement="top" title="Which Column U Want In The List Page.">View</button>
+            </div>
+            <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnShare" data-toggle="tooltip" data-placement="top" title="Share">Share</button>
+            </div>
+            if (Model.xPrint)
+            {
+                <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                    <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnListPrint" onclick="Print();" data-toggle="tooltip" data-placement="top" title="Print">Print</button>
+                </div>
+            }
+            if (Model.xDelete)
+            {
+                <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                    @if (Model.ViewDataId == "MultiDelivery")
+                    {
+                        <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete" onclick="DeleteMultiEntry();" data-toggle="tooltip" data-placement="top" title="Delete">Delete</button>
+                    }
+                    else if (Model.ViewDataId != "ChangeCompanyDetails")
+                    {
+                        <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete" onclick="DeleteEntry();" data-toggle="tooltip" data-placement="top" title="Delete">Delete</button>
+                    }
+
+                </div>
+            }
+            if (Model.xEdit)
+            {
+                <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                    <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Edit" onclick="EditEntry();" data-toggle="tooltip" data-placement="top" title="Edit">Edit</button>
+                </div>
+            }
+            if (Model.xAdd)
+            {
+                <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                    @if (Model.ViewDataId != "ChangeCompanyDetails")
+                    {
+                        <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" data-toggle="tooltip" data-placement="top" title="Add" onclick=AddNewEntry();>Add</button>
+                    }
+                </div>
+            }
+        }
+    </div>
+</header>
+
+<section class="panel">
+
+    <div class="panel-body" style="margin-top:2%;height:auto;padding-left:0px;padding-right:0px;">
+        <div id="page-contentgrid">
+            <div class="jqGrid">
+                <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                <div id="pager" style="height:34px;"></div>
+            </div>
+        </div>
+    </div>
+
+</section>
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+
+            @if (Model.ViewDataId == "Notification" || Model.ViewDataId == "Delivery" || Model.ViewDataId == "Opening Consignment" || Model.ViewDataId == "PickUp / Order Request")
+            {
+                if (Model.ViewDataId == "Notification")
+                {
+                    <button class="btn btn-warning" style="color:black;" id="AddLAertNote" onclick="AlertNoteMaster();">Add Alert Note</button>
+                }
+                <button class="btn btn-warning" style="color:black;" id="btnMasterAddDoc">Attachment</button>
+            }
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+            </div>
+        </div>
+    </div>
+</footer>
+<div class="example-modal">
+    <div id="updTfatsearch" class="modal modal-default">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="updTfatsearchDiv">
+                @Html.Partial("TfatSearchUpdate")
+            </div>
+        </div>
+    </div>
+</div>
+@*Suchan Attachment*@
+
+@*Suchan Attachment*@
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="attachdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="AttachDoc">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="ShareModel" style="width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="margin: auto;margin-top: 4%;">
+        @*width: auto;*@
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-10">
+                        <h4 class="modal-title">
+                            <b>Share The Document</b>
+                        </h4>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div class="grid" id="FormatTable" style="overflow: auto;width: 100%;display: grid;min-height:450px;max-height:450px;">
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">Template:<span class="red">*</span></label>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.TemplateCode, new { @class = "input-large-query", @Name = "TemplateCode", @Id = "TemplateCode", @style = "text-align:right;width:100%;" })
+                        </div>
+                        <label class="col-sm-7 control-label"></label>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">Mobile NO:<span class="red">*</span></label>
+                        <div class="col-sm-8">
+                            <textarea maxlength="21" id="txtMobileNo"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">Email ID:<span class="red">*</span></label>
+                        <div class="col-sm-8">
+                            <textarea maxlength="150" id="txtMobileNo"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnSend">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--AlertNote Modal -->
+<div class="example-modal">
+    <div id="AlertNoteModal" class="modal modal-primary" style="margin-top:1%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+
+            <div class="modal-body">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title"><b>Alert Note System</b></h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group" id="AlertNoteDiv" style="min-height:430px;max-height:430px;overflow:auto;">
+
+                        </div>
+                        <div class="form-group hidden" id="AddAlertNoteDiv" style="min-height:430px;max-height:430px;overflow:auto;">
+
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                        <button class="btn btn-success" type="button" id="btnAddNarr">Add Note</button>
+                        <button class="btn btn-info hidden" type="button" id="btnNarrList">Show List</button>
+                        <button class="btn btn-success hidden" type="button" id="btnNarrSave">Save</button>
+                        <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<div class="example-modal">
+        <div id="ShareModel" class="modal modal-primary" style="z-index:2500;">
+            <div class="modal-dialog" style="width:650px;">
+                <div id="ShareDiV">
+
+                </div>
+            </div>
+        </div>
+    </div>*@
+
+
+<input type="hidden" name="action" id="GetCurrentRow" />
+<input type="hidden" name="action" id="GetCurrentRowA" />
+<input type="hidden" name="action" id="GetCurrentRowDocNo" />
+<input type="hidden" name="action" id="GetCurrentRowDocNoExist" />
+<input type="hidden" name="action" id="EditFlag" />
+<input type="hidden" name="action" id="DeleteFlag" />
+<input type="hidden" name="action" id="hdnDataSearchString" />
+@Html.HiddenFor(x => x.StartDate, new { @id = "hdnStartDate" })
+@Html.HiddenFor(x => x.EndDate, new { @id = "hdnEndDate" })

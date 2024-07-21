@@ -1,0 +1,899 @@
+﻿
+@model ALT_ERP3.GridOption
+@using Common;
+
+<style>
+    .disabled-link {
+        pointer-events: none;
+    }
+</style>
+<script src="~/Scripts/jquery.jstree.js"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+
+        GetFormat('@Model.ViewDataId');
+        debugger;
+
+
+        if ('@Model.ReportTypeL'!='') {
+            if ('@Model.ReportTypeL' == "New Outstanding Report" || '@Model.ReportTypeL' == "Party Ageing Summary") {
+                $("#defaulttab").addClass("hidden,active");
+                $("#Summarytab").removeClass("hidden,active");
+                document.getElementById("tabOutstanding").style.display = "block";
+                document.getElementById("tabacledger").style.display = "none";
+
+                $("#ViewCode,#FormatViewCode").val('@Model.ReportTypeL');
+
+            }
+            else
+            {
+                if ('@Model.ReportTypeL' == "Payment Reminder Letter") {
+                    $("#ViewCode").prop("disabled", false);
+                } else {
+                    $("#ViewCode").prop("disabled", true);
+                }
+
+                $("#ViewCode,#FormatViewCode").val('@Model.ReportTypeL');
+
+                $("#defaulttab").removeClass("hidden,active");
+                $("#Summarytab").addClass("hidden,active");
+                document.getElementById("tabacledger").style.display = "block";
+                document.getElementById("tabOutstanding").style.display = "none";
+            }
+
+            if ('@Model.ReportTypeL' =="Payment Reminder Letter") {
+                $("#defaulttab,#Summarytab").html("Party-Invoice Outstanding");
+            }
+            else if ('@Model.ReportTypeL' == "UnAdjust Report") {
+                $("#defaulttab,#Summarytab").html("Only Un-Adjust");
+            }
+            else if ('@Model.ReportTypeL' == "OS Ageing") {
+                $("#defaulttab,#Summarytab").html("Ageing Analysis");
+            }
+            else if ('@Model.ReportTypeL' == "Party Ageing Summary") {
+                $("#defaulttab,#Summarytab").html("Party Ageing Summary Total");
+            }
+            else if ('@Model.ReportTypeL' == "Invoice wise Outstanding") {
+                $("#defaulttab,#Summarytab").html("Invoice wise Outstanding");
+            }
+            else if ('@Model.ReportTypeL' == "New Outstanding Report") {
+                $("#defaulttab,#Summarytab").html("Outstanding");
+            }
+            else if ('@Model.ReportTypeL' == "Outstanding Report With LR") {
+                $("#defaulttab,#Summarytab").html("Party-Invoice Outstanding With LR");
+            }
+            else if ('@Model.ReportTypeL' == "OS With Reference-2") {
+                $("#defaulttab,#Summarytab").html("Party-Invoice O/S (with Ref)");
+            }
+            else if ('@Model.ReportTypeL' == "OS Ageing with Ref") {
+                $("#defaulttab,#Summarytab").html("Ageing (with Ref)");
+            }
+
+
+        }
+
+
+
+        $('#ToDate').val('@Model.ToDate');
+
+        $(".CustomerMaster").addClass("hidden");
+        $('#StartDate').val('@Model.StartDate');
+        $('#EndDate').val('@Model.EndDate');
+        $('#StartDate').prop("disabled", true);
+        $('#EndDate').prop("disabled", true);
+
+        $('#StartDate,#EndDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        $("#txtReportName").val("");
+        if ('@Model.ReportName' != "") {
+            $("#txtReportName").val('@Model.ReportName');
+        }
+
+        if ('@Model.Branch' != "") {
+            $("#Branch").val('@Model.Branch');
+        }
+
+        FillTreeView();
+        $(".DivForCreditors,.DivARAPReq").addClass("hidden");
+        if ('@Model.MainType'!="SL") {
+            $("#Customer").prop("disabled", true);
+            $("#Para15").prop("disabled", true);
+            $("#Para15").prop("checked", false);
+            $(".DivForCreditors,.DivARAPReq").removeClass("hidden");
+        }
+
+        if ('@Model.BillDetails'=="True" || '@Model.BillDetails'=="true") {
+            $("#Para15").prop("checked", true);
+        } else {
+            $("#Para15").prop("checked", false);
+        }
+
+        $('#CustomerCodes').val('');
+        $('#Document').val('');
+        var CommonValue = "";
+        if ('@Model.CustomerF' == "True" || '@Model.CustomerF' == "true")
+        {
+            $(".CustomerMaster").removeClass("hidden");
+            $(".Master").addClass("hidden");
+            $("#Customer").prop("checked", true);
+            $("#CustomerNo").prop("checked", false);
+
+            if ('@Model.Code' != "")
+            {
+                $.each('@Model.Code'.split(','), function (idx, val) {
+                    $("#CustomerLCD option[value='" + val + "']").attr("selected", true);
+                    CommonValue +=  val + ",";
+                });
+                CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+                $('#CustomerCodes').val(CommonValue);
+            }
+        }
+        else
+        {
+            $(".CustomerMaster").addClass("hidden");
+            $(".Master").removeClass("hidden");
+            $("#Customer").prop("checked", false);
+            $("#CustomerNo").prop("checked", true);
+
+            if ('@Model.Code' != "")
+            {
+                $.each('@Model.Code'.split(','), function (idx, val) {
+                    $("#AccountCD option[value='" + val + "']").attr("selected", true);
+                    CommonValue +=  val + ",";
+                });
+                CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+                $('#Document').val(CommonValue);
+            }
+        }
+
+        if ('@Model.Age1' != "")
+        {
+            $("#Para9").val('@Model.Age1');
+        }
+
+        if ('@Model.Age2' != "")
+        {
+            $("#Para10").val('@Model.Age2');
+        }
+
+        if ('@Model.Age3' != "")
+        {
+            $("#Para11").val('@Model.Age3');
+        }
+
+        if ('@Model.Age4' != "")
+        {
+            $("#Para12").val('@Model.Age4');
+        }
+
+        if ('@Model.Age5' != "")
+        {
+            $("#Para13").val('@Model.Age5');
+        }
+
+        if ('@Model.Age6' != "")
+        {
+            $("#Para14").val('@Model.Age6');
+        }
+        if ('@Model.MainType' != "SL") {
+
+            if ('@Model.ARAPReqOnly' == "True" || '@Model.ARAPReqOnly' == "true") {
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("checked", false);
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("disabled", true);
+                //$('#AccountCD option').each(function () {
+                //    var input = $('input[value="' + $(this).val() + '"]');
+                //    input.prop('selected', false);
+                //    input.prop('disabled', true);
+                //    input.parent('li').addClass('disabled');
+                //});
+                //$("#AccountCD").multiselect('clearSelection');
+                //$("#AccountCD").multiselect('updateButtonText');
+                $('#Document').val('');
+            } else {
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("checked", false);
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("disabled", false);
+                //$('#AccountCD option').each(function () {
+                //    var input = $('input[value="' + $(this).val() + '"]');
+                //    input.prop('selected', false);
+                //    input.prop('disabled', false);
+                //    input.parent('li').removeClass('disabled');
+                //});
+                //$("#AccountCD").multiselect('clearSelection');
+                //$("#AccountCD").multiselect('updateButtonText');
+                //$('#Document').val('');
+            }
+            var Filters = '@Model.SundryCreditorsFilterGroups';
+            var Arr = [];
+            Arr = Filters.split("^");
+            for (x = 0; x < Arr.length; x++) {
+                if (Arr[x] == "V") {
+                    $(".chkVendorFilter").prop("checked", true);
+                    $("#ARAPReqOnly").prop("disabled", true);
+                } else if (Arr[x] == "B") {
+                    $(".chkBrokerFilter").prop("checked", true);
+                    $("#ARAPReqOnly").prop("disabled", true);
+                }
+                else if (Arr[x] == "H") {
+                    $(".chkVehicleFilter").prop("checked", true);
+                    $("#ARAPReqOnly").prop("disabled", true);
+                }
+                else if (Arr[x] == "M") {
+                    $(".chkMasterFilter").prop("checked", true);
+                    $(".chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter,#ARAPReqOnly").prop("checked", false);
+                    $(".chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter,#ARAPReqOnly").prop("disabled", true);
+                    //$('#AccountCD option').each(function () {
+                    //    var input = $('input[value="' + $(this).val() + '"]');
+                    //    input.prop('selected', false);
+                    //    input.prop('disabled', true);
+                    //    input.parent('li').addClass('disabled');
+                    //});
+                    //$("#AccountCD").multiselect('clearSelection');
+                    //$("#AccountCD").multiselect('updateButtonText');
+                    $('#Document').val('');
+                } else if (Arr[x] == "D") {
+                    $(".chkDriverFilter").prop("checked", true);
+                    $("#ARAPReqOnly").prop("disabled", true);
+                }
+            }
+        }
+
+
+        $('.chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter').change(function () {
+            if (this.checked)
+            {
+                debugger;
+                var CheckValue = this.value;
+                if (CheckValue=="M") {
+                    $(".chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("checked", false);
+                    $(".chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("disabled", true);
+                    //$('#AccountCD option').each(function () {
+                    //    var input = $('input[value="' + $(this).val() + '"]');
+                    //    input.prop('selected', false);
+                    //    input.prop('disabled', true);
+                    //    input.parent('li').addClass('disabled');
+                    //});
+                    //$("#AccountCD").multiselect('clearSelection');
+                    //$("#AccountCD").multiselect('updateButtonText');
+                    $('#Document').val('');
+                }
+            }
+            else
+            {
+                var CheckValue = this.value;
+                if (CheckValue == "M") {
+                    $(".chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("checked", false);
+                    $(".chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("disabled", false);
+                    //$('#AccountCD option').each(function () {
+                    //    var input = $('input[value="' + $(this).val() + '"]');
+                    //    input.prop('selected', false);
+                    //    input.prop('disabled', false);
+                    //    input.parent('li').removeClass('disabled');
+                    //});
+                    //$("#AccountCD").multiselect('clearSelection');
+                    //$("#AccountCD").multiselect('updateButtonText');
+                    $('#Document').val('');
+                }
+            }
+            if ($('.chkVendorFilter').is(':checked') == true || $('.chkBrokerFilter').is(':checked') == true || $('.chkVehicleFilter').is(':checked') == true || $('.chkDriverFilter').is(':checked') == true || $('.chkMasterFilter').is(':checked')==true ) {
+                $("#ARAPReqOnly").prop("checked", false);
+                $("#ARAPReqOnly").prop("disabled", true);
+            } else {
+                $("#ARAPReqOnly").prop("checked", false);
+                $("#ARAPReqOnly").prop("disabled", false);
+            }
+        });
+        $("#ARAPReqOnly").change(function () {
+            if (this.checked)
+            {
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("checked", false);
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("disabled", true);
+                //$('#AccountCD option').each(function () {
+                //    var input = $('input[value="' + $(this).val() + '"]');
+                //    input.prop('selected', false);
+                //    input.prop('disabled', true);
+                //    input.parent('li').addClass('disabled');
+                //});
+                //$("#AccountCD").multiselect('clearSelection');
+                //$("#AccountCD").multiselect('updateButtonText');
+                $('#Document').val('');
+            }
+            else
+            {
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("checked", false);
+                $(".chkMasterFilter,.chkVendorFilter,.chkBrokerFilter,.chkVehicleFilter,.chkDriverFilter").prop("disabled", false);
+                //$('#AccountCD option').each(function () {
+                //    var input = $('input[value="' + $(this).val() + '"]');
+                //    input.prop('selected', false);
+                //    input.prop('disabled', false);
+                //    input.parent('li').removeClass('disabled');
+                //});
+                //$("#AccountCD").multiselect('clearSelection');
+                //$("#AccountCD").multiselect('updateButtonText');
+                $('#Document').val('');
+            }
+        });
+        $('#chkActiveDate').click(function () {
+            if ($(this).is(':checked')) {
+                $("#xView").val(true);
+                $('#StartDate').prop("disabled", false);
+                $('#EndDate').prop("disabled", false);
+            } else {
+                $("#xView").val(false);
+                $('#StartDate').prop("disabled", true);
+                $('#EndDate').prop("disabled", true);
+            }
+        });
+
+        $('#FormatViewCode').change(function () {
+            var FormatCode = $("#FormatViewCode").val();
+            if (FormatCode == "Payment Reminder Letter") {
+                $("#ViewCode").prop("disabled", false);
+            } else {
+                $("#ViewCode").prop("disabled", true);
+            }
+
+            if (FormatCode == "OS With Reference-2" || FormatCode == "OS Ageing with Ref") {
+                $("#Supress").prop("disabled", false);
+            } else {
+                $("#Supress").prop("disabled", true);
+            }
+
+
+            $("#ViewCode").val($('#FormatViewCode').val());
+
+            if (FormatCode == "New Outstanding Report" || FormatCode == "Party Ageing Summary") {
+                $("#defaulttab").addClass("hidden,active");
+                $("#Summarytab").removeClass("hidden,active");
+                document.getElementById("tabOutstanding").style.display = "block";
+                document.getElementById("tabacledger").style.display = "none";
+            } else {
+                $("#defaulttab").removeClass("hidden,active");
+                $("#Summarytab").addClass("hidden,active");
+                document.getElementById("tabacledger").style.display = "block";
+                document.getElementById("tabOutstanding").style.display = "none";
+            }
+            $("#defaulttab,#Summarytab").html($("#FormatViewCode option:selected").text());
+        });
+
+        $('#Customer').change(function () {
+            if ($('#Customer').is(":checked")) {
+                $(".CustomerMaster").removeClass("hidden");
+                $(".Master").addClass("hidden");
+
+            }
+            else {
+                $(".CustomerMaster").addClass("hidden");
+                $(".Master").removeClass("hidden");
+            }
+        });
+        $('#CustomerNo').change(function () {
+            if ($('#Customer').is(":checked")) {
+                $(".CustomerMaster").removeClass("hidden");
+                $(".Master").addClass("hidden");
+
+            }
+            else {
+                $(".CustomerMaster").addClass("hidden");
+                $(".Master").removeClass("hidden");
+            }
+        });
+
+
+
+        $("#CustomerLCD").change(function () {
+
+            $('#CustomerCodes').val('');
+            var selected = "";
+            $("#CustomerLCD :selected").each(function () {
+                //selected += ("'" + $(this).val() + "',");
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#CustomerCodes').val(selected)
+            return false;
+        });
+
+        $("#AccountCD").change(function () {
+
+            $('#Document').val('');
+            var selected = "";
+            $("#AccountCD :selected").each(function () {
+                //selected += ("'" + $(this).val() + "',");
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Document').val(selected)
+            return false;
+        });
+
+
+        $('.CustomerLCD,.AccountCD,#AccountCD').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '200',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Account',
+        });
+
+
+        $('#chkSelectAll').change(function () {
+            if ($('#chkSelectAll').is(":checked")) {
+                CheckUncheckTree('Check');
+            }
+            else {
+                CheckUncheckTree('UnCheck');
+            }
+        });
+        $('#search').keyup(function () {
+            $('#treeviewcontrol').jstree('search', $(this).val());
+        });
+
+        $('#SubmitSaveReport').click(function (event) {
+            event.preventDefault();
+            $('#SaveReportName').modal('show');
+        });
+
+        $('#btnReportParam').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            if ($("#txtReportName").val() == "" || $("#txtReportName").val() == null) {
+                alert("Please Enter The Report Name....!");
+                $('.spinner').hide();
+                return;
+            }
+
+            var url = '@Url.Action("SaveParameter")';
+
+            var ModelData = {};
+            ModelData["FromDate"] = $("#Fromdate").val();
+            ModelData["ToDate"] = $("#ToDate").val();
+
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["ReportTypeL"] =$("#FormatViewCode").val();
+            ModelData["MainType"] ='@Model.MainType';
+            ModelData["ReportName"] = $("#txtReportName").val();
+
+
+            var Code = "";
+            if ($("#Customer").is(":checked")) {
+                Code = $('#CustomerCodes').val();
+            } else {
+                Code = $('#Document').val();
+            }
+            ModelData["Code"] = Code;
+            ModelData["CustomerF"] = $("#Customer").is(":checked");
+
+            //Parameters
+            var BranchList = "";
+            $('#treeviewcontrol').each(function () {
+                $(this).find('li').each(function () {
+                    var current = $(this);
+                    if (current.hasClass("jstree-checked")) {
+                        BranchList = BranchList + "" + current.context.id + ","
+                        //BranchList += current.context.id + ",";
+                    }
+                });
+            });
+            if (BranchList != "") {
+                BranchList = BranchList.substr(0, BranchList.length - 1)
+            }
+            ModelData["Branch"] = BranchList;
+
+
+            var BillSubDetails = false;
+            if ($("#Para15").prop("checked")) {
+                BillSubDetails =true;
+            }
+            ModelData["BillDetails"] = BillSubDetails;
+
+            ModelData["Age1"] = $("#Para9").val();
+            ModelData["Age2"] = $("#Para10").val();
+            ModelData["Age3"] = $("#Para11").val();
+            ModelData["Age4"] = $("#Para12").val();
+            ModelData["Age5"] = $("#Para13").val();
+            ModelData["Age6"] = $("#Para14").val();
+
+
+            var SundryCreditorsFilterGroups = "";
+            if ($('#MasterFilter').is(":checked")) {
+                SundryCreditorsFilterGroups += "M^"
+            }
+            if ($('#BrokerFilter').is(":checked")) {
+                SundryCreditorsFilterGroups += "B^"
+            }
+            if ($('#VehicleFilter').is(":checked")) {
+                SundryCreditorsFilterGroups += "H^"
+            }
+            if ($('#VendorFilter').is(":checked")) {
+                SundryCreditorsFilterGroups += "V^"
+            }
+            if ($('#DriverFilter').is(":checked")) {
+                SundryCreditorsFilterGroups += "D^"
+            }
+
+            if (SundryCreditorsFilterGroups != "") {
+                SundryCreditorsFilterGroups = SundryCreditorsFilterGroups.substr(0, SundryCreditorsFilterGroups.length - 1);
+            }
+            ModelData["SundryCreditorsFilterGroups"] = SundryCreditorsFilterGroups;
+            ModelData["ARAPReqOnly"] = $('#ARAPReqOnly').is(":checked");
+
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert("Save Report Sucessfully..........");
+                    $('#SaveReportName').modal('hide');
+                    ResetParameter();
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+        $('#btnDeleteReportParam').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            if ($("#txtReportName").val() == "" || $("#txtReportName").val() == null) {
+                alert("Please Enter The Report Name....!");
+                return;
+            }
+
+            var url = '@Url.Action("SaveParameter")';
+
+            var ModelData = {};
+            ModelData["ReportTypeL"] = $("#FormatViewCode").val();
+            ModelData["ReportName"] = $("#txtReportName").val();
+
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["MainType"] = '@Model.MainType';
+            ModelData["Mode"] = "Delete";
+
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert("Delete Report Sucessfully..........");
+                    $('#SaveReportName').modal('hide');
+                    ResetParameter();
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+        $('#btnopnFormat').click(function(event){
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["ViewDataId"] = $("#FormatViewCode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    $('#updTfatsearchDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+
+    function GetFormat(mformat) {
+        $.ajax({
+            type: 'POST',
+            url: '@Url.Action("GetFormat")?Format=' + mformat,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $("#FormatViewCode").empty();
+                $.each(result, function (i, item) {
+                    $("#FormatViewCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                //$('#printformats').val($("#hdnformatname").val()).attr("selected", "selected");
+               // $("#FormatViewCode").prop("selectedIndex", 0).val();
+                $("#FormatViewCode").val('@Model.ReportTypeL');
+
+            },
+            error: function (ex) {
+                alert("Error! Connecting to Server..\n" + ex);
+            }
+        });
+        return;
+    };
+    function CheckUncheckTree(check) {
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/Accounts/ReceivableAnalysis/CheckUncheckTree?Check=" + check,
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+        });
+
+    }
+    function FillTreeView() {
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/Accounts/ReceivableAnalysis/TreeView?Branch=" + $("#Branch").val(),
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+            //const button = document.getElementById("submit");
+            //button.dispatchEvent(new Event("click"));
+        });
+
+    }
+</script>
+<div class="modal-content" style="width:100%;padding-bottom:0px;">
+    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title"><b>Report Parameters</b></h4>
+    </div>
+    <div class="modal-body" style="padding-top:-15px;padding-top:5px;">
+        <div class="form-horizontal" id="paramaindiv" style="min-height:350px;">
+            <div class="row" style="margin-top:0px;margin-left:0px;">
+                <div id="ReportAddOnDiv">
+                    <div class="form-group" style="display:flex;padding-left:10px;">
+                        <div class="col-sm-5" style="display:flex;">
+                            <label class="control-label" style="font-size: 14px;font-weight: bold;padding-right:10px;">Select All</label>
+                            <div style="padding-right:40px;"><input type="checkbox" class="checkbox" id="chkSelectAll" style="width:22px;" /></div>
+                            <input type="text" class="form-control" style="width:150px;" placeholder="Search Node ..." id="search" />
+                        </div>
+                        <div class="col-md-2" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                            <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnopnFormat" data-toggle="tooltip" data-placement="top" title="Which Column U Want In The List Page.">Column-View</button>
+                        </div>
+                        <div class="col-sm-5" style="display:flex;">
+                            <div style="padding-right:10px;"><input type="checkbox" title="Allow Date Range Only..." class="checkbox" id="chkActiveDate" style="width:22px;" /></div>
+                            <div class="col-md-1" style="color:black;padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:12px; width:unset;">
+                                Date:
+                            </div>
+                            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                                <input type="text" class="form-control dpd1" name="from" id="StartDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                                <span class="input-group-addon">to</span>
+                                <input type="text" class="form-control dpd2" name="to" id="EndDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                            </div>
+                        </div>
+
+                    </div>
+                    <hr style="height: 2px;background-color: #5e6267;" />
+                    <div class="form-group" style="padding-left:10px;">
+                        <div class="col-sm-4">
+                            <div id="treeviewcontrol" style=" min-height:334px;overflow-y:auto;max-height:334px;position: relative;"></div>
+                        </div>
+                        <div class="col-sm-8">
+                            <div class="form-group DivForCreditors">
+                                <label class="col-sm-2  control-label" style="width: auto;">Master :</label>
+                                <div class="col-sm-1" style="padding: 0px;">
+                                    <input type="checkbox" class="form-control chkMasterFilter" id="MasterFilter" value="M" style="height:20px;width:35px;" />
+                                </div>
+                                <label class="col-sm-2  control-label" style="width: auto;padding-left: 0px;">Broker :</label>
+                                <div class="col-sm-1" style="padding: 0px;">
+                                    <input type="checkbox" class="form-control chkBrokerFilter" id="BrokerFilter" value="B" style="height:20px;width:35px;" />
+                                </div>
+                                <label class="col-sm-2  control-label" style="width: auto;padding-left: 0px;">Vehicle :</label>
+                                <div class="col-sm-1" style="padding: 0px;">
+                                    <input type="checkbox" class="form-control chkVehicleFilter" id="VehicleFilter" value="H" style="height:20px;width:35px;" />
+                                </div>
+                                <label class="col-sm-2  control-label" style="width: auto;padding-left: 0px;">Driver :</label>
+                                <div class="col-sm-1" style="padding: 0px;">
+                                    <input type="checkbox" class="form-control chkDriverFilter" id="DriverFilter" value="D" style="height:20px;width:35px;" />
+                                </div>
+                                <label class="col-sm-2  control-label" style="width: auto;padding-left: 0px;">Vendors :</label>
+                                <div class="col-sm-1" style="padding: 0px;">
+                                    <input type="checkbox" class="form-control chkVendorFilter" id="VendorFilter" value="V" style="height:20px;width:35px;" />
+                                </div>
+                            </div>
+                            <div class="form-group DivARAPReq">
+                                <label class=" col-sm-3  control-label">ARAP OS List :</label>
+                                <div class="col-sm-3">
+                                    @Html.CheckBoxFor(x => x.ARAPReqOnly, new { @value = Model.ARAPReqOnly, @style = "height:20px;width:35px;", @title = "Get All Master Whos Maintain ARAP In Master." })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class=" col-sm-3  control-label">Bill Sub. Details :</label>
+                                <div class="col-sm-3">
+                                    <input type="checkbox" class="form-control chkBillSubmissionDetails" id="Para15" value="BillSubmissionDetails" style="height:20px;width:35px;" />
+                                </div>
+
+                                <label class=" col-sm-3  control-label">Supress :</label>
+                                <div class="col-sm-3">
+                                    @Html.CheckBoxFor(x => x.Supress, new { @value = Model.Supress, @style = "height:20px;width:35px;",@disabled="disabled" })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label" style="font-weight: bold;color:blue;">Format :</label>
+                                <div class="col-sm-6" style="color: black;font-weight: bold;margin-top: 0px;">
+                                    @Html.DropDownListFor(x => x.ViewCode, DropdownHelper.EmptyList(), new { @Id = "FormatViewCode", @Name = "FormatViewCode", @style = "width:100%;padding:3px 0px;" })
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class=" col-sm-2  control-label">Account :</label>
+                                <div class="col-sm-5" style="display:flex;">
+                                    <input type="radio" class="form-control " name="Chrges" id="Customer" value="Customer" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Customer</label>
+                                    <input type="radio" class="form-control " name="Chrges" id="CustomerNo" value="Master" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Master Ledger</label>
+                                </div>
+                                <div class="col-md-5 Master">
+                                    @Html.ListBoxFor(x => x.Document, Model.Accounts, new { @class = "AccountCD", @id = "AccountCD" })
+                                </div>
+                                <div class="col-md-5 CustomerMaster">
+                                    @Html.ListBoxFor(x => x.CustomerL, Model.Customers, new { @class = "CustomerLCD", @id = "CustomerLCD" })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Age-1:</label>
+                                <div class="col-sm-4">
+                                    <input type="text" class="form-control" id="Para9" value="30" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Age-2:</label>
+                                <div class="col-sm-4">
+                                    <input type="text" class="form-control" id="Para10" value="60" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Age-3:</label>
+                                <div class="col-sm-4">
+                                    <input type="text" class="form-control" id="Para11" value="90" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Age-4:</label>
+                                <div class="col-sm-4">
+                                    <input type="text" class="form-control" id="Para12" value="120" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Age-5:</label>
+                                <div class="col-sm-4">
+                                    <input type="text" class="form-control" id="Para13" value="150" />
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class="col-sm-2 control-label">Age-6:</label>
+                                <div class="col-sm-4">
+                                    <input type="text" class="form-control" id="Para14" value="180" />
+                                </div>
+                            </div>
+
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    @*<div class="modal-footer" style="color:black;background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <div class="form-group" style="margin-top:-3px;">
+                <button class="btn btn-danger" style="float:left; font-size: 13px;padding:3px 12px;" onclick="ResetParameter();" id="btnReset">Reset</button>
+                <div class="col-sm-offset-2 col-sm-5" style="display:flex;">
+
+                    @Html.DropDownListFor(m => m.ReportName, DropdownHelper.EmptyList(), new { @class = "form-control ReportName", @Name = "ReportName", @Id = "ReportName" })
+                    <a onclick="GetSaveParameter();" class="btn btn-warning" style="padding:4px 10px;">
+                        <span class="glyphicon glyphicon-refresh"></span>
+                    </a>
+                </div>
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SubmitSaveReport">Save Report</button>
+                <button type="button" class="btn btn-success" data-dismiss="modal" style="font-family:Verdana, Geneva, Tahoma, sans-serif" id="submit">Save Para</button>
+                <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+            </div>
+        </div>*@
+</div>
+<div class="example-modal">
+    <div id="SaveReportName" class="modal modal-default">
+        <div class="modal-dialog" style="width:1000px;">
+            <div id="SaveReportNameDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Save Report Format</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <div class="col-sm-2">
+                                    <label class=" ModalLabel  control-label" style="width:auto;color:black;font-weight:bold;">Report Name :</label>
+                                </div>
+                                <div class="col-sm-10">
+                                    @Html.TextBoxFor(x => x.ReportName, new { @maxlength = "100", @class = "form-control", @id = "txtReportName", @style = "display: inline-table;float: initial;" })
+                                </div>
+                            </div>
+                            <br />
+
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button id="btnDeleteReportParam" class="btn btn-danger" type="button">Delete</button>
+                            <button id="btnReportParam" class="btn btn-success" type="button">Update</button>
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<div class="example-modal">
+    <div id="updTfatsearch" class="modal modal-default" style="margin-top:-4%;">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="updTfatsearchDiv">
+                @*@Html.Partial("TfatSearchUpdate")*@
+            </div>
+        </div>
+    </div>
+</div>

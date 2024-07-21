@@ -1,0 +1,1570 @@
+﻿
+@model ActiveObjectsVM
+@using Common;
+<script src="~/Content/js/chart-js/Chart.min.js"></script>
+@*AIzaSyCOQxFxBsh-TsNWP8t8JwugX57G3lAaSrU*@
+<!--Below Script Add By Suresh (Google Map Script) 29.10.22-->
+@*<script type="text/javascript"
+            src="hhttps://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.js">
+    </script>
+    <script type="text/javascript"
+            src="hhttps://maps.googleapis.com/maps/api/js?v=3&sensor=true">
+    </script>*@
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCOQxFxBsh-TsNWP8t8JwugX57G3lAaSrU&callback=initMap" async defer></script>
+<style>
+    .box-shadow-hover {
+        box-shadow: 0 5px 10px 0 rgb(0 0 0 / 92%), 0 5px 20px 0 rgb(0 0 0);
+    }
+</style>
+<script>
+    var Vehiclemarkers = [];
+    var Branchemarkers = [];
+
+    $(document).ready(function () {
+        //var Pie = document.getElementById("DemoCanvas").getContext('2d');
+        @*var PieChart = new Chart("DemoCanvas", {
+            type: 'pie',
+            data:@Html.Raw(Json.Encode(Model.PieChart)),
+        });*@
+        //var Pie1 = document.getElementById("BarCanvas").getContext('2d');
+        @*var PieChart1 = new Chart("BarCanvas", {
+            type: 'bar',
+            data:@Html.Raw(Json.Encode(Model.BarChart)),
+        });*@
+        //var ctx1  = document.getElementById("HBarCanvas").getContext('2d');
+        @*var myChart1 = new Chart("HBarCanvas" , {
+            type: 'horizontalBar',
+            data:@Html.Raw(Json.Encode(Model.BarChart)),
+        });*@
+
+        LoadVehicles();
+        var marrCode = [];
+        var x;
+        var mstrCode = '@ViewBag.Code';
+        marrCode = mstrCode.split("|");
+        for (x = 0; x < marrCode.length; x++) {
+            if (marrCode[x] != "" && marrCode[x] != "VehicleExpDue" && marrCode[x] != "VehicleLocation" && marrCode[x] != "DriverTripBalance" && marrCode[x] !="VehicleTripDetails" )
+            {
+                Graph(marrCode[x]);
+            }
+        }
+
+
+        $("#SearchVehicle").change(function () {
+            if ($("#SearchVehicle").val() =="All Vehicles") {
+                initMap(null,null);
+            }
+            else
+            {
+                GOLocation($("#SearchVehicle").val());
+            }
+
+        });
+
+        $("#SDM1").click(function () {
+            $(".SDM1,.SDM2,.SDM3,.SDM4").removeClass("active");
+            $(".SMTab1,.SMTab2,.SMTab3,.SMTab4,#SDM1,#SDM2,#SDM3,#SDM4").css("background-color", "#d3f1ff");
+            $(".SDM1").addClass("active");
+            $(".SMTab1,#SDM1").css("background-color", "#035aa5");
+        });
+        $("#SDM2").click(function () {
+            $(".SDM1,.SDM2,.SDM3,.SDM4").removeClass("active");
+            $(".SMTab1,.SMTab2,.SMTab3,.SMTab4,#SDM1,#SDM2,#SDM3,#SDM4").css("background-color", "#d3f1ff");
+            $(".SDM2").addClass("active");
+            $(".SMTab2,#SDM2").css("background-color", "#035aa5");
+        });
+        $("#SDM3").click(function () {
+            $(".SDM1,.SDM2,.SDM3,.SDM4").removeClass("active");
+            $(".SMTab1,.SMTab2,.SMTab3,.SMTab4,#SDM1,#SDM2,#SDM3,#SDM4").css("background-color", "#d3f1ff");
+            $(".SDM3").addClass("active");
+            $(".SMTab3,#SDM3").css("background-color", "#035aa5");
+        });
+        $("#SDM4").click(function () {
+            $(".SDM1,.SDM2,.SDM3,.SDM4").removeClass("active");
+            $(".SMTab1,.SMTab2,.SMTab3,.SMTab4,#SDM1,#SDM2,#SDM3,#SDM4").css("background-color", "#d3f1ff");
+            $(".SDM4").addClass("active");
+            $(".SMTab4,#SDM4").css("background-color","#035aa5");
+        });
+
+        $("#BranchReq").change(function () {
+            debugger;
+            marker = [];
+            if ($("#BranchReq").prop("checked") == true) {
+                if ($("#SearchVehicle").val() == "All Vehicles" || $("#SearchVehicle").val() == "") {
+                    initMap(null, null);
+                }
+                else {
+                    GOLocation($("#SearchVehicle").val());
+                }
+            } else {
+                for (var i = 0; i < Branchemarkers.length; i++) {
+                    Branchemarkers[i].setMap(null);
+                }
+            }
+        });
+
+
+    });
+
+    function GetURL(mdocument) {
+        //var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var mURL = '@Url.Action("GetURLDocSideBar")?mdocument=' + mdocument;
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $('.spinner').hide();
+                if (result.url != "") {
+                    window.open(result.url, '_blank');
+                } else {
+                    alert("Error! Can't Zoom into the Transaction!\n" + result.Message);
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+
+
+    function LoadVehicles() {
+        //var url = '@Url.Action("GetBranch")'
+        var url = '/FirstPage/GetVehicleNo';
+        $('#SearchVehicle').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.SearchVehicle', text: '@Model.SearchVehicle' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function Graph(Code) {
+        var c = document.getElementById(Code +"HZ");
+        var ctx = c.getContext("2d");
+        var c1 = document.getElementById(Code +"VR");
+        var ctx1 = c1.getContext("2d");
+        var c2 = document.getElementById(Code +"PIE");
+        var ctx2 = c2.getContext("2d");
+
+        //var tData = $.getValues("/FirstPage/MultiBarChartDataEF");
+        var sPathUrl = '@Url.Action("MultiBarChartDataEF")?CODE=' + Code;
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (tData) {
+
+                var myBarChart = new Chart(ctx, {
+                    type: 'horizontalBar',
+                    data: tData
+                });
+
+                var myBarChart1 = new Chart(ctx1, {
+                    type: 'bar',
+                    data: tData
+                });
+
+                var myBarChart2 = new Chart(ctx2, {
+                    type: 'pie',
+                    data: tData
+                });
+
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+    }
+    function RefreshSideBar(Code) {
+            $('.spinner').show();
+            var ModelData = {};
+            var url = '@Url.Action("ReloadSideMenu", "FirstPage")';
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { Code: Code },
+                success: function (result) {
+                    var LoadDownLoadFiles = $("#SideBarDiv");
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(result.Html);
+                    $('.spinner').hide();
+                }
+            });
+    }
+</script>
+
+<div class="container" style="width: 100%!important;padding: 1% 1% 1% 1%!important;">
+    @if (Model != null)
+    {
+        if (Model.codes != null)
+        {
+            foreach (var item in Model.codes)
+            {
+                <div class="card col-sm-12 box-shadow-hover" id="Outstanding" style="padding: 5px!important;margin-bottom: 0%!important;">
+                    <div class="panel panel-primary" style="margin: 0px;background-color: #a0c7cb!important;">
+                        <div class="panel-heading" ondblclick="GetURL('@item.ID');" style="font-size:12PX!important;text-transform:unset;padding: 2% 2% 3% 1%;">
+                            @item.Name
+                            <div class="btn-group pull-right stat-tab">
+                                <a href="#graph_Dashboard-@item.Code" style="width:30px;height:23px;background-color:#035aa5;position:relative;" class="btn stat-btn active  SMTab1" data-toggle="tab"><i style="position: absolute;font-size: 17px;" class="ico-grid"></i></a>
+                                @if (item.Code != "VehicleLocation" && item.Code != "DriverTripBalance" && item.Code != "VehicleTripDetails" && item.Code != "VehicleExpDue")
+                                {
+                                    <a href="#HZ_Dashboard-@item.Code" style="width:30px;height:23px;background-color:#d3f1ff;color:black;position:relative;" class="btn stat-btn SMTab2" data-toggle="tab"><i style="position: absolute;font-size: 17px;" class="ico-bars5"></i></a>
+                                    <a href="#VR_Dashboard-@item.Code" style="width:30px;height:23px;background-color:#d3f1ff;color:black;position:relative;" class="btn stat-btn SMTab3" data-toggle="tab"><i style="position: absolute;font-size: 17px;" class="ico-bars"></i></a>
+                                    <a href="#PIE_Dashboard-@item.Code" style="width:30px;height:23px;background-color:#d3f1ff;color:black;position:relative;" class="btn stat-btn SMTab4" data-toggle="tab"><i style="position: absolute;font-size: 17px;" class="ico-pie3"></i></a>
+                                }
+                                <button id='@(item.Code)Refresh' onclick="RefreshSideBar('@item.Code');" style="float:right;background-color: #df249dd6;border-color: #df249dd6;padding: 2px 5px;color: white;"><span class="glyphicon glyphicon-refresh"></span></button>
+                            </div>
+                        </div>
+                        <div class="tab-content" style="">
+                            <div class="tab-pane active SDM1" style="" id="graph_Dashboard-@item.Code">
+                                @if (item.Code == "Outstanding")
+                                {
+                                    <div class="card-body" style="">
+                                        <h5 class="card-title" style="margin: 1%!important;color:#09095e;font-size: 12px;font-weight: bold;text-align: center;">Total:@Model.OSTotal.ToString("F2")</h5>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #FFA500!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>30</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #FFA500!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.OS30.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #92ad23!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>60</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #92ad23!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.OS60.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #00A36C!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>90</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #00A36C!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.OS90.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #ff8533!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>120</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #ff8533!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.OS120.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #cc99ff!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>150</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #cc99ff!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.OS150.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #0041C2!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>180</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #0041C2!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.OS180.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #ff3333!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>>180</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #ff3333!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.OS180M.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #1c8b9d!important;text-align: center;padding: 0px;margin: 0% 1% 1% 1%;">
+                                                <label><span>UnAdjusted</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #1c8b9d!important;text-align: right;margin: 0% 2% 1% 0%;">
+                                                @Model.OSUnAdj.ToString("F2")
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                }
+                                else if (item.Code == "Payable")
+                                {
+                                    <div class="card-body" style="">
+                                        <h5 class="card-title" style="margin: 1%!important;color:#09095e;font-size: 12px;font-weight: bold;text-align: center;">Total:@Model.PayOSTotal.ToString("F2")</h5>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #FFA500!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>30</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #FFA500!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.PayOS30.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #92ad23!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>60</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #92ad23!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.PayOS60.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #00A36C!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>90</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #00A36C!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.PayOS90.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #ff8533!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>120</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #ff8533!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.PayOS120.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #cc99ff!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>150</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #cc99ff!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.PayOS150.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #0041C2!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>180</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #0041C2!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.PayOS180.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #ff3333!important;text-align: center;padding: 0px;margin: 0% 1% 0% 1%;">
+                                                <label><span>>180</span> Days</label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #ff3333!important;text-align: right;margin: 0% 2% 0% 0%;">
+                                                @Model.PayOS180M.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="display: flex;">
+                                            <div class="col-sm-4" style="color: white;background-color: #1c8b9d!important;text-align: center;padding: 0px;margin: 0% 1% 1% 1%;">
+                                                <label><span>UnAdjusted</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: white;background-color: #1c8b9d!important;text-align: right;margin: 0% 2% 1% 0%;">
+                                                @Model.PayOSUnAdj.ToString("F2")
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                }
+                                else if (item.Code == "UnBillConsignmet")
+                                {
+                                    <div class="card-body" style="">
+                                        <div class="card-title" style="color:#09095e;font-size: 12px;font-weight: bold;text-align: center;">Total Consignment:@Model.UnBillTotalConsignment - Amt:@Model.UnBillTotalAmtConsignment.ToString("F2")</div>
+                                        <div class="col-sm-12" style="padding-left: 5px;font-size: 15px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                30
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                60
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                90
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                120
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                >120
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" style="padding-right: 0px;padding-left: 5px;padding-bottom: 5%;font-size: 10px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.UnBillLr30</div>
+                                                <div class="form-group">@Model.UnBillLrAmt30.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:lawngreen;padding: 5px;">
+                                                <div class="form-group">@Model.UnBillLr60</div>
+                                                <div class="form-group">@Model.UnBillLrAmt60.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:darkviolet;padding: 5px;">
+                                                <div class="form-group">@Model.UnBillLr90</div>
+                                                <div class="form-group">@Model.UnBillLrAmt90.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:gold;padding: 5px;">
+                                                <div class="form-group">@Model.UnBillLr120</div>
+                                                <div class="form-group">@Model.UnBillLrAmt120.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:crimson;padding: 5px;">
+                                                <div class="form-group">@Model.UnBillLr120M</div>
+                                                <div class="form-group">@Model.UnBillLrAmt120M.ToString("F2")</div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                }
+                                else if (item.Code == "ConsignmetStock")
+                                {
+                                    <div class="card-body" style="">
+                                        <div class="card-title" style="color:#09095e;font-size: 12px;font-weight: bold;text-align: center;">Total CONSGT:@Model.StockTotalConsignment - <span style="font-size: 9px;">Qty:@Model.StockTotalQtyConsignment - Amt:@Model.StockTotalWeightConsignment.ToString("F2")</span></div>
+                                        <div class="col-sm-12" style="padding-left: 5px;font-size: 15px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                30
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                60
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                90
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                120
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                >120
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" style="padding-right: 0px;padding-left: 5px;padding-bottom: 5%;font-size: 10px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr30</div>
+                                                <div class="form-group">@Model.StockLrQty30</div>
+                                                <div class="form-group">@Model.StockLrWT30.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:lawngreen;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr60</div>
+                                                <div class="form-group">@Model.StockLrQty60</div>
+                                                <div class="form-group">@Model.StockLrWT60.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:darkviolet;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr90</div>
+                                                <div class="form-group">@Model.StockLrQty90</div>
+                                                <div class="form-group">@Model.StockLrWT90.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:gold;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr120</div>
+                                                <div class="form-group">@Model.StockLrQty120</div>
+                                                <div class="form-group">@Model.StockLrWT120.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:crimson;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr120M</div>
+                                                <div class="form-group">@Model.StockLrQty120M</div>
+                                                <div class="form-group">@Model.StockLrWT120M.ToString("F2")</div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                }
+                                else if (item.Code == "ConsignmeTRNStock")
+                                {
+                                    <div class="card-body" style="">
+                                        <div class="card-title" style="color:#09095e;font-size: 12px;font-weight: bold;text-align: center;">Total CONSGT:@Model.StockTotalConsignmentTRN - <span style="font-size: 9px;">Qty:@Model.StockTotalQtyConsignmentTRN - Amt:@Model.StockTotalWeightConsignmentTRN.ToString("F2")</span></div>
+                                        <div class="col-sm-12" style="padding-left: 5px;font-size: 15px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                30
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                60
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                90
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                120
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;">
+                                                >120
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" style="padding-right: 0px;padding-left: 5px;padding-bottom: 5%;font-size: 10px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr30TRN</div>
+                                                <div class="form-group">@Model.StockLrQty30TRN</div>
+                                                <div class="form-group">@Model.StockLrWT30TRN.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:lawngreen;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr60TRN</div>
+                                                <div class="form-group">@Model.StockLrQty60TRN</div>
+                                                <div class="form-group">@Model.StockLrWT60TRN.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:darkviolet;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr90TRN</div>
+                                                <div class="form-group">@Model.StockLrQty90TRN</div>
+                                                <div class="form-group">@Model.StockLrWT90TRN.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:gold;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr120TRN</div>
+                                                <div class="form-group">@Model.StockLrQty120TRN</div>
+                                                <div class="form-group">@Model.StockLrWT120TRN.ToString("F2")</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:crimson;padding: 5px;">
+                                                <div class="form-group">@Model.StockLr120MTRN</div>
+                                                <div class="form-group">@Model.StockLrQty120MTRN</div>
+                                                <div class="form-group">@Model.StockLrWT120MTRN.ToString("F2")</div>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                }
+                                else if (item.Code == "ConsignmetBook")
+                                {
+                                    <div class="card-body" style="">
+                                        <div class="card-title" style="margin: 1%!important;color:#09095e;font-size: 12px;font-weight: bold;text-align: center;">Total : @Model.BKTotal.ToString("F2")</div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>April</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKApr.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>May</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKMay.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>June</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKJun.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>July</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKJuy.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>August</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKAug.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>September</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKSept.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>Octomber</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKOct.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>November</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKNov.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>December</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKDec.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>January</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKJan.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>February</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKFeb.ToString("F2")
+                                            </div>
+                                        </div>
+                                        <div class="form-group" style="border-bottom: 1px solid #89b374bd;background: linear-gradient(to left, red 50%, blue 50%) right;display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-4" style="font-size: 11px;color: #1945e5;background-color: #a0c7cb!important;">
+                                                <label><span>March</span></label>
+                                            </div>
+                                            <div class="col-sm-8" style="color: #1945e5;background-color: #a0c7cb!important;font-size: 13px;text-align: right;font-weight: bold;">
+                                                @Model.BKMar.ToString("F2")
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Code == "TopCustomers")
+                                {
+                                    <div class="card-body" style="">
+                                        @if (Model.TopCustomerName != null)
+                                        {
+                                            for (int i = 0; i < Model.TopCustomerName.Count; i++)
+                                            {
+                                                if (i == 0)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 1)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 2)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 3)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 4)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 5)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 6)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 7)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 8)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 9)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: left;font-size: 9px;margin: 1% 1% 2% 2%;">
+                                                            <label><span>@Model.TopCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 2% 0%;">
+                                                            @Model.TopCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (item.Code == "TopGroupCustomers")
+                                {
+                                    <div class="card-body" style="">
+                                        @if (Model.TopGroupCustomerName != null)
+                                        {
+                                            for (int i = 0; i < Model.TopGroupCustomerName.Count; i++)
+                                            {
+                                                if (i == 0)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 1)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 2)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 3)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 4)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 5)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 6)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 7)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 8)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 9)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: left;font-size: 9px;margin: 1% 1% 2% 2%;">
+                                                            <label><span>@Model.TopGroupCustomerName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 2% 0%;">
+                                                            @Model.TopGroupCustomerAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (item.Code == "TopVendors")
+                                {
+                                    <div class="card-body" style="">
+                                        @if (Model.TopVendorsName != null)
+                                        {
+                                            for (int i = 0; i < Model.TopVendorsName.Count; i++)
+                                            {
+                                                if (i == 0)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 1)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 2)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 3)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 4)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 5)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 6)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 7)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 8)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 9)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: left;font-size: 9px;margin: 1% 1% 2% 2%;">
+                                                            <label><span>@Model.TopVendorsName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 2% 0%;">
+                                                            @Model.TopVendorsAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (item.Code == "TopExpenses")
+                                {
+                                    <div class="card-body" style="">
+                                        @if (Model.TopExpenseName != null)
+                                        {
+                                            for (int i = 0; i < Model.TopExpenseName.Count; i++)
+                                            {
+                                                if (i == 0)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #FFA500;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 1)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #92ad23;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 2)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #00A36C;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 3)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff8533;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 4)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #cc99ff;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 5)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #0041C2;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 6)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #ff3333;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 7)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #5da7c3;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 8)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: left;font-size: 9px;margin: 1% 1% 0% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #7c5252;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 0% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                                if (i == 9)
+                                                {
+                                                    <div class="form-group" style="display: flex;">
+                                                        <div class="col-sm-8" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: left;font-size: 9px;margin: 1% 1% 2% 2%;">
+                                                            <label><span>@Model.TopExpenseName[i]</span></label>
+                                                        </div>
+                                                        <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #1c8b9d;text-align: right;font-size: 11px;font-weight: bold;margin: 1% 2% 2% 0%;">
+                                                            @Model.TopExpenseAmt[i].ToString("F2")
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (item.Code == "VehicleStatus")
+                                {
+                                    <div class="card-body" style="">
+
+                                        <div class="col-sm-12" style="padding-left: 5px;font-size: 15px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="width: 10%;padding: 5px;font-size:8px;">
+                                                TOTAL
+                                            </div>
+                                            <div class="col-sm-2" style="width: 10%;padding: 5px;font-size:8px;">
+                                                ACTIVE
+                                            </div>
+                                            <div class="col-sm-2" style="width: 15%;padding: 5px;font-size:8px;">
+                                                MAINTS
+                                            </div>
+                                            <div class="col-sm-2" style="width: 10%;padding: 5px;font-size:8px;">
+                                                NO DRIVER
+                                            </div>
+                                            <div class="col-sm-2" style="width: 16%;padding: 5px;font-size:8px;">
+                                                READY
+                                            </div>
+                                            <div class="col-sm-2" style="width: 10%;padding: 5px;font-size:8px;">
+                                                Transit
+                                            </div>
+                                            <div class="col-sm-2" style="width: 15%;padding: 5px;font-size:8px;">
+                                                Accident
+                                            </div>
+                                            <div class="col-sm-2" style="width: 14%;padding: 5px;font-size:8px;">
+                                                Sale
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" style="padding-right: 0px;padding-left: 5px;padding-bottom: 5%;font-size: 10px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 10%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VCountVehicle.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 12%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VActiveVehicle.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 10%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VMaintain.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 13%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VNoDriver.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 11%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VReady.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 13%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VTransit.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 12%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VAccident.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 13%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.VSale.ToString()</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Code == "DriverStatus")
+                                {
+                                    <div class="card-body" style="">
+
+                                        <div class="col-sm-12" style="padding-left: 5px;font-size: 15px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;font-size:10px;">
+                                                TOTAL
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;font-size:10px;">
+                                                ACTIVE
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;font-size:10px;">
+                                                VEHICLE
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;font-size:10px;">
+                                                OTHER
+                                            </div>
+                                            <div class="col-sm-2" style="width: 20%;padding: 5px;font-size:10px;">
+                                                BHATTA
+                                            </div>
+                                        </div>
+                                        <div class="col-sm-12" style="padding-right: 0px;padding-left: 5px;padding-bottom: 5%;font-size: 10px;color:white;text-align:center;background-color:#36454F;">
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.DriverCount.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.ActiverDrivers.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.ONVehicle.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.NOVehicle.ToString()</div>
+                                            </div>
+                                            <div class="col-sm-2" style="margin-right: 2px;width: 19%;background-color:chocolate;padding: 5px;">
+                                                <div class="form-group">@Model.Bhatta.ToString()</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                else if (item.Code == "VehicleLocation")
+                                {
+                                    <div class="card-body" style="">
+                                        <div class="card-title" style="color:#09095e;font-size: 12px;font-weight: bold;text-align: center;"><span id="TotalVehicleCount1" style="float: left;">&nbsp;&nbsp;&nbsp; Total Vehicles :@Model.CountVehicle</span><span id="TotalVehicleCount1">Total Branch :@Model.CountBranch</span></div>
+                                        <div class="form-group" style="margin-bottom: 30px;">
+                                            <label class="col-sm-3 control-label" style="color:#9736b7;padding: 5px 0px 0px 10px;">Vehicle:</label>
+                                            <div class="col-sm-9">
+                                                @Html.TextBoxFor(x => x.SearchVehicle, new { @class = "input-large-query", @style = "width:100%;font-size:15px;font-weight:bold;color:#9736b7; ", @Value = Model.SearchVehicle })
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="col-sm-4 control-label" style="color:#9736b7;padding: 5px 0px 0px 10px;">Show Branch:</label>
+                                            <div class="col-sm-1">
+                                                @Html.CheckBoxFor(x => x.BranchReq, new { @class = "Form-Control", @style = "height:18px;width:20px; ", @Value = Model.BranchReq })
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <div id="DashMapDiv" style="height:300px;width:100%;background-color:rebeccapurple;">
+                                            </div>
+                                            <script>
+                                        var map;
+                                        var map1;
+                                        function GOLocation(locationid) {
+                                            $.get("/FirstPage/GetAllLocationById?Vehicleno=" + locationid, function (data, status) {
+                                                debugger;
+                                                var marker = [];
+                                                var contentString = [];
+                                                var infowindow = [];
+                                                for (var i = 0; i < Vehiclemarkers.length; i++) {
+                                                    Vehiclemarkers[i].setMap(null);
+                                                }
+                                                for (var i = 0; i < Branchemarkers.length; i++) {
+                                                    Branchemarkers[i].setMap(null);
+                                                }
+                                                Branchemarkers = [];
+                                                Vehiclemarkers = [];
+                                                for (var i = 0; i < data.length; i++) {
+                                                    if (data[i].title != "All Vehicles") {
+                                                        debugger;
+                                                        if (data[i].title == locationid) {
+                                                            //initMapNew(data[i].lat, data[i].lng);
+                                                        }
+                                                        marker[i] = new google.maps.Marker({
+                                                            position: { lat: data[i].lat, lng: data[i].lng },
+                                                            map: map,
+                                                            //icon: iconName
+                                                        });
+                                                        if (data[i].description == "Branch") {
+                                                            Branchemarkers.push(marker[i]);
+                                                        }
+                                                        Vehiclemarkers.push(marker[i]);
+                                                        contentString[i] = '<p id="firstHeading" class="firstHeading" style="color:#2e52d3;font-size:10px;padding: 0px;margin: 0px;font-weight:bold;" >' + data[i].title + '</p>';
+                                                        infowindow[i] = new google.maps.InfoWindow({
+                                                            content: contentString[i]
+                                                        });
+                                                        var markerValue = marker[i];
+                                                        google.maps.event.addListener(marker[i], 'click', (function (markerValue, i) {
+                                                            return function () {
+                                                                infowindow[i].open(map, marker[i]);
+                                                            }
+                                                        })(marker[i], i));
+
+                                                        infowindow[i].open(map, marker[i]);
+                                                    }
+                                                    //var iconName = data.Rating == 1 ? "../Icons/one.png" : data.Rating == 2 ? "../Icons/two.png" : "../Icons/three.png";
+                                                }
+
+                                            });
+                                        }
+                                        function initMapNew(latDb, longDb) {
+                                            map = new google.maps.Map(document.getElementById('DashMapDiv'), {
+                                                center: { lat: latDb != null ? latDb : 21.145800, lng: longDb != null ? longDb : 79.088158 },
+                                                zoom: 18
+                                            });
+                                        }
+                                        function initMap(latDb, longDb) {
+                                            debugger;
+                                            map = new google.maps.Map(document.getElementById('DashMapDiv'), {
+                                                center: { lat: latDb != null ? latDb : 21.145800, lng: longDb != null ? longDb : 79.088158 },
+                                                zoom: 4
+                                            });
+                                            if (document.getElementById('QueryMapDiv') != null) {
+                                                map1 = new google.maps.Map(document.getElementById('QueryMapDiv'), {
+                                                    center: { lat: latDb != null ? latDb : 21.145800, lng: longDb != null ? longDb : 79.088158 },
+                                                    zoom: 4
+                                                });
+                                            }
+
+                                            $.get("@Url.Action("GetAllLocation", "FirstPage")", function (data, status) {
+                                                debugger;
+                                                var marker = [];
+                                                var contentString = [];
+                                                var infowindow = [];
+
+                                                $("#TotalVehicleCount").html("Total Vehicles :" + (parseInt(data.length) - 1));
+
+                                                for (var i = 0; i < Vehiclemarkers.length; i++) {
+                                                    Vehiclemarkers[i].setMap(null);
+                                                }
+                                                for (var i = 0; i < Branchemarkers.length; i++) {
+                                                    Branchemarkers[i].setMap(null);
+                                                }
+
+                                                Branchemarkers = [];
+                                                Vehiclemarkers = [];
+                                                for (var i = 0; i < data.length; i++)
+                                                {
+                                                    if (data[i].title != "All Vehicles")
+                                                    {
+                                                        marker[i] = new google.maps.Marker({
+                                                            position: { lat: data[i].lat, lng: data[i].lng },
+                                                            map: map,
+                                                            //icon: iconName
+                                                        });
+                                                        if (data[i].description == "Branch") {
+                                                            Branchemarkers.push(marker[i]);
+                                                        }
+                                                        Vehiclemarkers.push(marker[i]);
+                                                        contentString[i] = '<p id="firstHeading" class="firstHeading" style="color:#2e52d3;font-size:10px;padding: 0px;margin: 0px;font-weight:bold;" >' + data[i].title + '</p>';
+                                                        infowindow[i] = new google.maps.InfoWindow({
+                                                            content: contentString[i]
+                                                        });
+                                                        var markerValue = marker[i];
+                                                        google.maps.event.addListener(marker[i], 'click', (function (markerValue, i) {
+                                                            return function () {
+                                                                infowindow[i].open(map, marker[i]);
+                                                            }
+                                                        })(marker[i], i));
+
+                                                        infowindow[i].open(map, marker[i]);
+                                                    }
+                                                    //var iconName = data.Rating == 1 ? "../Icons/one.png" : data.Rating == 2 ? "../Icons/two.png" : "../Icons/three.png";
+                                                }
+                                            });
+                                        }
+
+                                            </script>
+
+                                        </div>
+                                    </div>
+                                }
+
+                                else if (item.Code == "DriverTripBalance")
+                                {
+                                    <div class="card-body" style="min-height:250px;max-height:250px;overflow-y:auto;">
+                                        @if (Model.DriverName != null)
+                                        {
+                                            <h5 class="card-title" style="margin: 1%!important;color:#09095e;font-size: 12px;font-weight: bold;text-align: center;">Total: @Model.DriverBalTotal</h5>
+                                            <div class="form-group" style="display: flex;">
+                                                <div class="col-sm-6" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    <label><span>Driver Name</span></label>
+                                                </div>
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Driver Last Trip-Date
+                                                </div>
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Driver Bal
+                                                </div>
+                                            </div>
+                                            for (int i = 0; i < Model.DriverName.Count; i++)
+                                            {
+                                                <div class="form-group" style="display: flex;">
+                                                    <div class="col-sm-6" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        <label><span>@Model.DriverName[i]</span></label>
+                                                    </div>
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.DriverLastTripDate[i]
+                                                    </div>
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: right;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.DriverBal[i]
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (item.Code == "VehicleTripDetails")
+                                {
+                                    <div class="card-body" style="min-height:250px;max-height:250px;overflow-y:auto;">
+                                        @if (Model.VehicleName != null)
+                                        {
+                                            <div class="form-group" style="display: flex;">
+                                                <div class="col-sm-6" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    <label><span>Vehicle Name</span></label>
+                                                </div>
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Vehicle Last Trip-Date
+                                                </div>
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Vehicle Last KM
+                                                </div>
+                                            </div>
+                                            for (int i = 0; i < Model.VehicleName.Count; i++)
+                                            {
+                                                <div class="form-group" style="display: flex;">
+                                                    <div class="col-sm-6" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        <label><span>@Model.VehicleName[i]</span></label>
+                                                    </div>
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.VehicleLastTripDate[i]
+                                                    </div>
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: right;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.VehicleKM[i]
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (item.Code == "VehicleExpDue")
+                                {
+                                    <div class="card-body" style="min-height:250px;max-height:250px;overflow-y:auto;">
+                                        @if (Model.VehicleExpName != null)
+                                        {
+                                            <div class="form-group" style="display: flex;">
+                                                <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    <label><span>Expenses Name</span></label>
+                                                </div>
+                                                <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Todays
+                                                </div>
+                                                <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    5 Days
+                                                </div>
+                                                <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    15 Days
+                                                </div>
+                                                <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    30 Days
+                                                </div>
+                                            </div>
+                                            for (int i = 0; i < Model.VehicleExpName.Count; i++)
+                                            {
+                                                <div class="form-group" style="display: flex;">
+                                                    <div class="col-sm-4" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        <label><span>@Model.VehicleExpName[i]</span></label>
+                                                    </div>
+                                                    <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.VehicleExpName0[i]
+                                                    </div>
+                                                    <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: right;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.VehicleExpName5[i]
+                                                    </div>
+                                                    <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: right;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.VehicleExpName15[i]
+                                                    </div>
+                                                    <div class="col-sm-2" style="padding-left: 0px;color: white;background-color: #212424;text-align: right;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                        @Model.VehicleExpName30[i]
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (item.Code == "EwayBillDetails")
+                                {
+                                    <div class="card-body" style="min-height:42px;max-height:42px;overflow-y:hidden;">
+                                        @if (Model.EWBActive != null)
+                                        {
+                                            <div class="form-group" style="display: flex;">
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Active
+                                                </div>
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Todays Exp.
+                                                </div>
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Tomorrow Exp.
+                                                </div>
+                                                <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 1% 1% 0% 1%;">
+                                                    Other
+                                                </div>
+                                            </div>
+                                            for (int i = 0; i < Model.EWBActive.Count; i++)
+                                            {
+                                                <div class="form-group" style="display: flex;">
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 0% 1% 0% 1%;">
+                                                        @Model.EWBActive[i]
+                                                    </div>
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 0% 1% 0% 1%;">
+                                                        @Model.EWBActiveToday[i]
+                                                    </div>
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 0% 1% 0% 1%;">
+                                                        @Model.EWBActiveTomorrow[i]
+                                                    </div>
+                                                    <div class="col-sm-3" style="padding-left: 0px;color: white;background-color: #212424;text-align: center;font-size: 9px;padding-top: 1%;margin: 0% 1% 0% 1%;">
+                                                        @Model.EWBActiveExpired[i]
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="card-body" style="text-align:center;">
+                                        <div class="form-group" style="display: flex;margin-bottom: 1px;">
+                                            <div class="col-sm-3" style="color: white;text-align: center;">
+
+                                            </div>
+                                            <div class="col-sm-9" style="padding-left: 1px;color: white;background-color: white;font-size: 15px;text-align: right;float:right;">
+                                                <div class="col-sm-12" style="background-color: #FFA500;">
+
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                            @if (item.Code != "VehicleLocation" && item.Code != "DriverTripBalance" && item.Code != "VehicleTripDetails" && item.Code != "VehicleExpDue")
+                            {
+                                <div class="tab-pane SDM2" style="height: auto;" id="HZ_Dashboard-@item.Code">
+                                    <canvas id='@(item.Code)HZ' width="400" height="223"></canvas>
+                                </div>
+                                <div class="tab-pane SDM3" style="height: auto;" id="VR_Dashboard-@item.Code">
+                                    <canvas id='@(item.Code)VR' width="400" height="223"></canvas>
+                                </div>
+                                <div class="tab-pane SDM4" style="height: auto;" id="PIE_Dashboard-@item.Code">
+                                    <canvas id='@(item.Code)PIE' width="400" height="223"></canvas>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+
+    }
+
+</div>
+

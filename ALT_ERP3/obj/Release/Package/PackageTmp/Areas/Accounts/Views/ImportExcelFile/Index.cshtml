@@ -1,0 +1,191 @@
+﻿
+@model ALT_ERP3.GridOption
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">Import Opening Data</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+    </div>
+</header>
+
+<div class="row" style="padding:15px;margin-top:55px;">
+    <div class="col-sm-3" id="filePathtxt">
+        <label class="Flabel">Select Opening Data File:</label>
+    </div>
+    <div class="col-sm-6" id="filePathtxt">
+        @using (Html.BeginForm("UploadFile", "ImportExcelFile", FormMethod.Post, new
+        {
+            enctype = "multipart/form-data"
+        }))
+        {
+            <input type="text" class="" id="txtfile" for="uploadXML" style="color:black;font-weight:bolder;width:600PX;" />
+            <i id="btnFileLoad" class="fileUpload fa fa-file pull-right" area-hidden="true" onclick="return fileLoad()" style="margin-top:2px;font-size:21px;position:relative;cursor:pointer;color:forestgreen;">
+            </i>
+            <input type="file" class="upload" name="Uploaded EXCEL File" id="fileLoadDoc" accept=".xls" />
+        }
+    </div>
+    <div class="col-sm-12" id="filePathInput">
+        <table class="table table-bordered table-responsive table-striped">
+            <thead class="head">
+            </thead>
+            <tbody class="body"></tbody>
+        </table>
+        <label id="message"></label>
+    </div>
+</div>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            @Html.ActionLink("Download Template", "DownloadFile", new { }, new { @Class = "btn btn-primary", @tooltip = "Download Standard Template", @action = "DownloadFile"
+       })
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT.air.3, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+    $(document).ready(function () {
+        @*$('#download').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("DownloadFile")';
+            //var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: '',
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    alert(data);
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });*@
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            $('.spinner').show();
+            event.preventDefault();
+            var url = '@Url.Action("SaveData")';
+            //var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: "",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    alert(data.Message);
+                    $('.spinner').hide();
+                    //if (data.Status == "Success") {
+                    //    $('.spinner').hide();
+                    //}
+                    //else if (data.Status=="Error")
+                    //{
+                    //    $('.spinner').hide();
+                    //    alert(data.Message);
+                    //}
+                },
+            });
+        });
+    });
+
+    $(function () {
+        $('input[type="file"]').change(function (e) {
+            $('.spinner').show();
+            var filename = e.target.files[0].name;
+            var Files = $("#fileLoadDoc").get(0);
+            $("#txtfile").val(filename);
+            formdata = new FormData();
+            for (var i = 0; i < e.target.files.length; i++) {
+                formdata.append(e.target.files[i].name, e.target.files[i]);
+            }
+            $.ajax({
+                url: '@Url.Action("UploadFile", "ImportExcelFile")',
+                type: "POST",
+                datatype: "JSON",
+                contentType: false,
+                processData: false,
+                data: formdata,
+                success: function (result) {
+                    var count = 0;
+                    if (result != null) {
+                        debugger
+                        $(".head").empty();
+                        $(".body").empty();
+                        for (var i = 0; i < result.row; i++) {
+                            if (i == 0) {
+                                $(".head").append("<tr>");
+                            }
+                            else {
+                                $(".body").append("<tr class='tr"+i+"'>");
+                            }
+                            for (var j = 0; j < result.col; j++) {
+                                if (i==0) {
+                                    $(".head tr").append("<th>" + result.data[count] + "</th>");
+                                }
+                                else
+                                {
+                                    if (result.data[count]!=null) {
+                                        $(".body .tr" + i + "").append("<td>" + result.data[count] + "</td>");
+                                    }
+                                    else
+                                    {
+                                        $(".body .tr" + i + "").append("<td></td>");
+                                    }
+                                }
+                                count++;
+                            }
+                            if (i == 0) {
+                                $(".head").append("</tr>");
+
+                            }
+                            else
+                            {
+                                $(".body .tr"+i+"").append("</tr>");
+                            }
+                        }
+                    }
+                    $('.spinner').hide();
+                }
+            })
+        });
+    });
+
+    function fileLoad() {
+        debugger
+        $('#txtfile').val("");
+        $('#fileLoadDoc').val("");
+        $('#btnFileLoad').val("");
+        $("#fileLoadDoc").trigger('click');
+    }
+</script>

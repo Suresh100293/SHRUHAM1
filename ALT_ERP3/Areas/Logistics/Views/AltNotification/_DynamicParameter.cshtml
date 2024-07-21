@@ -1,0 +1,142 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AltNotificationVM
+@using Common;
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('.Dynamiclistbox').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '220',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Item',
+        });
+
+        if ('@Model.Param1Type' == "Day" || '@Model.Param1Type' =="KG") {
+            $("#Param1").constrain({ allow: { regex: "[0-9]" } });
+        } else if ('@Model.Param1Type' == "Money") {
+            //$("#Param1").constrain({ allow: { regex: "[0-9]" } });
+            $("#Param1").blur(function () {
+                // Retrieve the value of the input field
+                var param1Value = this.value;
+
+                // Convert the value to a floating-point number
+                var floatValue = parseFloat(param1Value);
+
+                // Check if floatValue is a valid number
+                if (!isNaN(floatValue)) {
+                    // floatValue is a valid number
+                    console.log("Float value: ", floatValue);
+
+                    // Convert floatValue to a string with up to two decimal places
+                    var formattedValue = floatValue.toFixed(2);
+
+                    // Set the converted value back into the textbox
+                    $(this).val(formattedValue);
+                } else {
+                    // floatValue is not a valid number
+                    console.log("Invalid float value");
+                }
+            });
+            $("#Param1").on("input", function () {
+                // Get the current value of the input field
+                var value = $(this).val();
+
+                // Remove any non-numeric characters except dot (.)
+                value = value.replace(/[^0-9.]/g, '');
+
+                // Ensure only one dot (.) is present
+                var dotIndex = value.indexOf('.');
+                if (dotIndex !== -1) {
+                    value = value.slice(0, dotIndex + 1) + value.slice(dotIndex + 1).replace(/\./g, '');
+                }
+
+                // Limit to two decimal places
+                var parts = value.split('.');
+                if (parts[1] && parts[1].length > 2) {
+                    parts[1] = parts[1].slice(0, 2);
+                }
+
+                // Combine parts back into a single value
+                value = parts.join('.');
+
+                // Update the input field value
+                $(this).val(value);
+            });
+        }
+        else if ('@Model.Param1Type' == "Time") {
+            $("#Param1").constrain({ allow: { regex: "[0-9:]" } });
+            $("#Param1").keyup(function () {
+                debugger;
+                var OriginalContent = $(this).val();
+                var Value = colon(OriginalContent);
+                $(this).val(Value);
+            });
+            $("#Param1").blur(function (e) {
+                var OriginalContent = $(this).val();
+                if ($(this).val() == "" || $(this).val() == "0") {
+                    $(this).val("00:00");
+                } else {
+                    var Value = $(this).val();
+                    if (Value.length > 2) {
+                        var length = Value.length;
+                        if (length == 3) {
+                            Value += "00";
+                        }
+                        else if (length == 4) {
+                            Value += "0";
+                        }
+                        else {
+                            Value = Value.substring(0, 5);
+                        }
+                    }
+                    var ssnRE = new RegExp('([01]?[0-9]|2[0-3]):[0-5][0-9]');
+                    if (!ssnRE.test(Value)) {
+                        alert('Invalid Plese Enter Proper Format Eg.HH:MM');
+                        $(this).val("00:00");
+                    } else {
+                        $(this).val(Value);
+                    }
+
+                }
+            });
+        }
+        
+    });
+    function colon(x) {
+        debugger;
+        if (x.length == 2) {
+            x += ":";
+        }
+        return x;
+    }
+</script>
+
+@if (Model.NoParameter == false)
+{
+    if (Model.Param1List)
+    {
+        @Html.ListBoxFor(x => Model.Param1L, Model.Dynamiclist.Select(y => new SelectListItem { Text = y.Text, Value = y.Value, Selected = Model.Param1 == null ? false : Model.Param1.Contains(y.Value) }), new { @class = "Dynamiclistbox", @Id = "Param1" })
+    }
+    else
+    {
+        if (Model.Param1Type == "Day")
+        {
+            @Html.TextBoxFor(x => x.Param1, new { @maxlength = "2", @title = "Please Enter No Of Days.", @class = "form-control", @style = "text-align:right;", @Name = "Param1", @Id = "Param1", @Value = Model.Param1 })
+        }
+        else if (Model.Param1Type == "Money")
+        {
+            @Html.TextBoxFor(x => x.Param1, new { @title = "Please Enter Amount To Be Compared.", @class = "form-control", @style = "text-align:right;", @Name = "Param1", @Id = "Param1", @Value = Model.Param1 })
+        }
+        else if (Model.Param1Type == "Time")
+        {
+            @Html.TextBoxFor(x => x.Param1, new { @maxlength = "5", @title = "Please Enter Time In (HH:MM) Format Only.", @class = "form-control", @style = "text-align:right;", @Name = "Param1", @Id = "Param1", @Value = Model.Param1 })
+        }
+        else if (Model.Param1Type == "KG")
+        {
+            @Html.TextBoxFor(x => x.Param1, new { @maxlength = "8", @title = "Please Enter Weight In KGs Only.", @class = "form-control", @style = "text-align:right;", @Name = "Param1", @Id = "Param1", @Value = Model.Param1 })
+        }
+    }
+}
+

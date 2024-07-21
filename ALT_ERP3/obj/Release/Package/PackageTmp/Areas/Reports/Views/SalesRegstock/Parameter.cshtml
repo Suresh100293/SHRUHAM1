@@ -1,0 +1,269 @@
+@model SalesRegstockVM
+@using Common;
+
+<script src="~/Scripts/jquery.jstree.js"></script>
+
+<style>
+    .panel-heading .nav {
+        margin: -23px -15px -23px;
+    }
+
+    .table, th, td {
+        border: 0px solid;
+    }
+
+    .select2-container-multi .select2-choices {
+        width: 180px;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetReportCode();
+        $('#Name').select2();
+        // iX9: Initialise Date Control i.e. Type='Date'
+        $('#DatePicker').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        // iX9: Load List for Autocomplete/TreeViews/Multi-Select Inputs i.e. ControlType='AutoComplete or TreeView or Multi-Select'
+        loadAccount();
+        //LoadArea();
+        //LoadStoreList();
+
+        //$('#submit').click(function () {
+        //    // iX9: build Values on Submit for TreeView i.e. ControlType='TreeView'
+        //    var divText = [];
+        //    $("#StoreList").jstree("get_checked", null, true).each
+        //        (function () {
+        //            divText.push($(this).children('a').text());
+        //        });
+        //    $('#hdnStoreList').val(divText.toString());
+        //});
+
+        // iX9: build Values on Multi-Select Controls i.e. ControlType='Multi-Select'
+        var divText = [];
+        $("#Party").change(function () {
+            var selected = [];
+            $("#Party :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnParty').val(selected)
+            return false;
+        });
+
+        //$("#Area").change(function () {
+        //    var selected = [];
+        //    $("#Area :selected").each(function () {
+        //        selected.push($(this).val());
+        //    });
+        //    $('#hdnArea').val(selected)
+        //    return false;
+        //});
+    });
+
+    function GetReportCode() {
+        var url = '@Url.Action("GetViewCodes")?term=' + '@Model.ReportID';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#ViewCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+
+    // iX9: Multi-Select Load Code i.e. ControlType='Multi-Select'
+     function loadAccount() {
+        var url = '@Url.Action("GetParty")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var elementText = $(element).attr('data-init-text');
+                xcallback({ "term": elementText });
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+
+
+    @*function LoadArea() {
+        var url = '@Url.Action("GetArea")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { MultiSelect: $('#Area').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Area").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };*@
+
+    // iX9: TreeView Load Code i.e. ControlType='TreeView'
+    //function LoadStoreList() {
+    //    $("#StoreList").jstree({
+    //        json_data: {
+    //            "ajax": {
+    //                "url": "/SalesRegstock/GetStoreListTree",
+    //                "type": "POST",
+    //                "dataType": "json",
+    //                "contentType": "application/json charset=utf-8"
+    //            }
+    //        },
+    //        checkbox: {
+    //            real_checkboxes: true,
+    //            checked_parent_open: true
+    //        },
+    //        plugins: ["themes", "json_data", "ui", "checkbox"]
+    //    });
+    //};
+</script>
+
+<div class="modal-content" style="width:600px;padding-bottom:0px;">
+    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title"><b>Parameters</b></h4>
+    </div>
+
+    <div class="modal-body" style="padding-top:-15px;">
+        <div class="form-horizontal" id="fixedinfo" role="form" style="min-height:350px;">
+            <div id="ErrorMessage3" name="ErrorMessage3" class="alert alert-danger" style="display: none"></div>
+
+            <div class="form-group">
+                <label class="col-sm-2 control-label"></label>
+                <div class="col-sm-4"></div>
+                <label class="col-sm-2 control-label">Format</label>
+                <div class="col-sm-5">
+                    @Html.DropDownListFor(x => x.ViewCode, DropdownHelper.EmptyList(), new { @Id = "ViewCode", @Name = "ViewCode", @style = "width:100%" })
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-md-3 control-label">Party</label>
+                <div class="col-sm-4">
+                    <input type="text" id="Account" class="input-large search-query" style="width: 100%;" />
+                    @*@Html.DropDownListFor(x => x.Code+' '+x.Name, DropdownHelper.EmptyList(), new { multiple = "multiple", @Name = "x.Code+' '+x.Name", @Id = "Code" })*@
+                </div>
+            </div>
+
+            @*<div class="form-group">
+                <label class="col-md-3 control-label">Area</label>
+                <div class="col-sm-4">
+                    @Html.DropDownListFor(x => x.Name, DropdownHelper.EmptyList(), new { multiple = "multiple", @Name = "Area", @Id = "Area" })
+                </div>
+            </div>*@
+
+            <div class="form-group">
+                <label class="col-md-3 control-label">Simple Text</label>
+                <div class="col-sm-4">
+                    <input type="text" id="SimpleText" name="SimpleText" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-md-3 control-label">Numeric Input</label>
+                <div class="col-sm-4">
+                    <input type="number" id="NumericInput" name="NumericInput" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-md-3 control-label">Date Picker</label>
+                <div class="col-sm-4">
+                    <input type="text" id="DatePicker" name="DatePicker" value="@DateTime.Now.ToString("dd-MM-yyyy")" class="form-control" style="width:100%;" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-md-3 control-label">Logical</label>
+                <div class="col-sm-4">
+                    <input type="checkbox" id="+!ParaID+" name="+!ParaID+"/>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-md-3 control-label">Narration</label>
+                <div class="col-sm-4">
+                    <textarea id="+!ParaID+" class="form-control" style="height: 70px; width: 273px;" rows="6"></textarea>
+                </div>
+            </div>
+
+            @*<div class="form-group">
+                <label class="col-md-3 control-label">Stores</label>
+                <div class="col-sm-4">
+                <div id="StoreList" style="min-height:100px;overflow-y:scroll;max-height:100px;padding-left:10px;font-size:11px;"></div>
+                </div>
+            </div>*@
+        </div>
+    </div>
+
+    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+        <button type="button" class="btn btn-success" data-dismiss="modal" id="submit">Save</button>
+    </div>
+</div>
+
+@* -- End of Code --
+   Code Auto Generated on Sun 06-Jan-2019 11:25 PM, Engine: oorooX9Design, ver: 15.0 Revision: 0
+   by Team ooroo, ooroobooks ver. ERPiX9 *@
+

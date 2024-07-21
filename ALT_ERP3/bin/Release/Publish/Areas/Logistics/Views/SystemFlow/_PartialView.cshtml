@@ -1,0 +1,287 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.SystemFlowVM
+@using Common;
+@{
+    ViewBag.Title = "SystemFlow";
+    Layout = null;
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+
+        $("#Days").constrain({ allow: { regex: "[0-9]" } });
+
+        $("#Days").blur(function () {
+            $("#ErrorMessage").hide();
+            if (parseInt(this.value) <= 9) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Days Required Minimum 10 Days!.....');
+                return;
+            }
+        });
+        $("#MaintainasCategaory").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+                $(".CategoryMaintain").attr("checked", true);
+            } else {
+                $(".CategoryMaintain").attr("checked", false);
+            }
+        });
+        $("#ArrivalDispatchCategaory").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+                $(".CategoryArrivalDispatch").attr("checked", true);
+            } else {
+                $(".CategoryArrivalDispatch").attr("checked", false);
+            }
+        });
+        $(".CategoryMaintain").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+            } else {
+                $("#MaintainasCategaory").attr("checked", false);
+            }
+        });
+        $(".CategoryArrivalDispatch").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+            } else {
+                $("#ArrivalDispatchCategaory").attr("checked", false);
+            }
+        });
+
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if (parseInt($("#Days").val()) <= 9) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Days Required Minimum 10 Days!.....');
+                return;
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+
+            ModelData["Days"] = $("#Days").val();
+            ModelData["ScheduleFollowUp"] = $("#ScheduleFollowUp").is(':checked');
+            ModelData["FmGetVehicleBranchWise"] = $("#FmGetVehicleBranchWise").is(':checked');
+            ModelData["FmGetVehicleReadyStatus"] = $("#FmGetVehicleReadyStatus").is(':checked');
+
+            var MaintainStatus = "", ArrivalDispatchCode = "";
+            $('#ActivityTbl > tbody  > tr').each(function () {
+                var tds = $(this).find('td');
+
+                var Maintain = tds.find(".CategoryMaintain").prop("checked");
+                if (Maintain) {
+                    MaintainStatus += tds.eq(2).text() + ",";
+                }
+                var Arrival = tds.find(".CategoryArrivalDispatch").prop("checked");
+                if (Arrival) {
+                    ArrivalDispatchCode += tds.eq(5).text() + ",";
+                }
+            });
+
+            if (MaintainStatus!="") {
+                MaintainStatus = MaintainStatus.substring(0, MaintainStatus.length - 1);
+            }
+            if (ArrivalDispatchCode != "") {
+                ArrivalDispatchCode = ArrivalDispatchCode.substring(0, ArrivalDispatchCode.length - 1);
+            }
+
+
+            ModelData["Selected_FM_Vehicle_Category_Status_Maintain"] = MaintainStatus;
+            ModelData["Selected_FM_Vehicle_Category_Status_Rrival_Dispatch"] = ArrivalDispatchCode;
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/DashBoard/ControlPanel";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+</script>
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/ControlPanel" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="SystemFlowForm" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none;margin-top:30px;"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+
+            <div class="form-group">
+                <label class="col-sm-2 control-label">List (Days):</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.TextBoxFor(x => x.Days, new { @class = "form-control", @Value = Model.Days, @placeholder = "No Of Days List Shows" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Minimum 10 Days Allow.</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Sehedule Root FollowUp Route Wise:</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.ScheduleFollowUp, new { @class = "", @Value = Model.ScheduleFollowUp, style = "height: 20px;width: 35px;" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Vehicle Activity Allow Only Current Route/Branch.</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Fm Allow Vehicles (BranchWise):</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.FmGetVehicleBranchWise, new { @class = "", @Value = Model.FmGetVehicleBranchWise, style = "height: 20px;width: 35px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Fm Allow Vehicles (Ready Status Only):</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.FmGetVehicleReadyStatus, new { @class = "", @Value = Model.FmGetVehicleReadyStatus, style = "height: 20px;width: 35px;" })
+                </div>
+            </div>
+
+            <div class="form-group" style="padding-left: 15px;width: 600px;">
+                <table id="ActivityTbl" class="zui-table editableTable" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th colspan="2">FM Vehicle Category Status Maintain</th>
+                            <th colspan="2">Arrival && Dispatch Mandatory Vehicle Category</th>
+                        </tr>
+                        <tr>
+                            <th>Name</th>
+                            <th><input type="checkbox" id="MaintainasCategaory" style="height:18px;width:18px;" /></th>
+                            <th class="hidden">Code</th>
+
+                            <th>Name</th>
+                            <th><input type="checkbox" id="ArrivalDispatchCategaory" style="height:18px;width:18px;" /></th>
+                            <th class="hidden">Code</th>
+
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.FM_Vehicle_Category_Code != null)
+                        {
+                            for (int i = 0; i < Model.FM_Vehicle_Category_Code.Length; i++)
+                            {
+                                if (Model.FM_Vehicle_Category_Code[i] != null)
+                                {
+                                    <tr>
+                                        <td>@Model.FM_Vehicle_Category_Name[i]</td>
+
+                                        <td>
+                                            <center>@Html.CheckBoxFor(x => x.FM_Vehicle_Category_Status_Maintain_Flag[i], new { @class = "CategoryMaintain", @Value = Model.FM_Vehicle_Category_Status_Maintain_Flag[i], style = "height: 18px;width: 18px;" })</center>
+                                        </td>
+                                        <td class="hidden">@Model.FM_Vehicle_Category_Code[i]</td>
+
+                                        <td>@Model.FM_Vehicle_Category_Name[i]</td>
+                                        <td>
+                                            <center>@Html.CheckBoxFor(x => x.Arrival_Dispatch_Vehicle_Category_Flag[i], new { @class = "CategoryArrivalDispatch", @Value = Model.Arrival_Dispatch_Vehicle_Category_Flag[i], style = "height: 18px;width: 18px;" })</center>
+                                        </td>
+                                        <td class="hidden">@Model.FM_Vehicle_Category_Code[i]</td>
+
+                                    </tr>
+                                }
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+
+            @*<div class="form-group">
+                    <label class="col-sm-2 control-label">Follow Vehicle Status:</label>
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.VehicleReadyStatus, new { @class = "", @Value = Model.VehicleReadyStatus, style = "height: 20px;width: 35px;" })
+                    </div>
+                    <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Allow To Only This Vehicles Whos Status Is Ready.</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Sehedule Root Fplloup Route Wise:</label>
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.BranchFlow, new { @class = "", @Value = Model.BranchFlow, style = "height: 20px;width: 35px;" })
+                    </div>
+                    <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Vehicle Activity Allow Only Current Route/Branch.</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Activity Folloup:</label>
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.SystemFlow, new { @class = "", @Value = Model.SystemFlow, style = "height: 20px;width: 35px;" })
+                    </div>
+                    <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Only One Activity At A Time Of Current Route/Branch.</label>
+                    <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">FM Branch := ALUD / Route Branch := AULD</label>
+                </div>
+
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Arrival KMM:</label>
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.ArrivalKM, new { @class = "", @Value = Model.ArrivalKM, style = "height: 20px;width: 35px;" })
+                    </div>
+                    <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Mandatory</label>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Dispatch KMM:</label>
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.DispatchKM, new { @class = "", @Value = Model.DispatchKM, style = "height: 20px;width: 35px;" })
+                    </div>
+                    <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Mandatory</label>
+                </div>*@
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/DashBoard/ControlPanel" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,429 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.AreaMasterVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        if ('@Model.Mode' == "Delete" || '@Model.Mode' == "View") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        GetMyFavorites('@Model.ViewDataId');
+
+        LoadBranch();
+        LoadState();
+        LoadCountry();
+        LoadCity();
+
+        $("#Name").blur(function (event) {
+            event.preventDefault();
+            if ($("#Name").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name Required..');
+                return;
+            }
+            CheckName();
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            $("#ErrorMessage").hide();
+
+            if ($("#Name").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name Required..');
+                return;
+            }
+            if ($("#Grp").val()=='') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Parent Required..');
+                return;
+            }
+            if ($("#Country").val()=='') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Country Required..');
+                return;
+            }
+            if ($("#State").val()=='') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('State Required..');
+                return;
+            }
+            if ($("#City").val()=='') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('City Required..');
+                return;
+            }
+            
+
+
+            CheckName();
+
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Active"] = $("#Active").is(":checked");
+            ModelData["Name"] = $("#Name").val();
+            ModelData["Grp"] = $("#Grp").val();
+            ModelData["Country"] = $("#Country").val();
+            ModelData["State"] = $("#State").val();
+            ModelData["City"] = $("#City").val();
+            ModelData["Pincode"] = $("#Pincode").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                            window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+
+    });
+    function CheckName()
+    {
+        var url = '@Url.Action("CheckName")';
+        var DTO = { Name: $("#Name").val(), Document: '@Model.Document' };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+                if (data.Message == "F") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Name is Exist Please Change The Name..');
+                    return;
+                }
+            },
+        });
+    }
+    function LoadBranch() {
+        var url = '@Url.Action("BranchList")'
+        $('#Grp').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Grp', text: '@Model.Grp_Name' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadState() {
+        var url = '@Url.Action("LoadState")'
+        $('#State').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.State', text: '@Model.StateName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadCountry() {
+        var url = '@Url.Action("AutoCompleteCountry")'
+        $('#Country').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Country', text: '@Model.CountryName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadCity() {
+        var url = '@Url.Action("AutoCompleteCity")'
+        $('#City').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.City', text: '@Model.CityName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.Name, new { @*@maxlength = "10",*@@class = "form-control",
+                    @style = "text-align:left;text-transform: capitalize;",
+                    @Value = Model.Name
+                })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Parent Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Grp, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.Grp })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Country:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Country, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.Country })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">State:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.State, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.State })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">City:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.City, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.City })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Pincode:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Pincode, new { @class = "form-control",@maxlength="6", @style = "width:100%;margin-top:2px;", @Value = Model.Pincode })
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Active:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.Active, new { @class = "checkbox", @style = "width:20px;", @Value = Model.Active })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+            </div>
+        </div>
+        <div class=" col-sm-3" style="">
+                ALT AIR-3.0, Shruham Software
+            
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+
+@Html.HiddenFor(x => x.Document)

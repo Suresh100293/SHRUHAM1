@@ -1,0 +1,167 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AssetsCategoryVM
+@using Common;
+@{
+    ViewBag.Title = "Assets Category";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        @* iX9: set the selected value to fixed combos *@
+        $('#AssetCategory_DeprMethod').val('@Model.AssetCategory_DeprMethod').attr("selected", "selected");
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#AssetsCategory').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                AssetCategory_Code: {required: true,},
+                AssetCategory_Name: {required: true,},
+               },
+            messages: {
+                AssetCategory_Code: {required: 'Code is Required',},
+                AssetCategory_Name: {required: 'Name is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#AssetCategory_Code").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetCategory_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#AssetCategory_DeprRate").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetCategory_DeprRateIT").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#AssetsCategory").validate().form() == false)
+            //    return;
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["AssetCategory_Code"] = $("#AssetCategory_Code").val();
+            ModelData["AssetCategory_Name"] = $("#AssetCategory_Name").val();
+            ModelData["AssetCategory_Depreciable"] = $("#AssetCategory_Depreciable").is(':checked');
+            ModelData["AssetCategory_DeprMethod"] = $("#AssetCategory_DeprMethod").val();
+            ModelData["AssetCategory_DeprRate"] = $("#AssetCategory_DeprRate").val();
+            ModelData["AssetCategory_DeprRateIT"] = $("#AssetCategory_DeprRateIT").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="AssetsCategory" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetCategory_Code, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "AssetCategory_Code", @Id = "AssetCategory_Code" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetCategory_Name, new { @maxlength = "35", @class = "form-control", @Name = "AssetCategory_Name", @Id = "AssetCategory_Name" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Depreciable?:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.AssetCategory_Depreciable, new { @value = Model.AssetCategory_Depreciable, @id = "AssetCategory_Depreciable", @name = "AssetCategory_Depreciable", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Depr. Method:</label>
+                <div class="col-sm-3">
+                    @Html.DropDownListFor(m => m.AssetCategory_DeprMethod, Model.DeprMethodList, new { @class = "form-control", @Id = "AssetCategory_DeprMethod", @Name = "AssetCategory_DeprMethod", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Depr. Rate:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetCategory_DeprRate, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "AssetCategory_DeprRate", @Id = "AssetCategory_DeprRate" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Depr. Rate-IT:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetCategory_DeprRateIT, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "AssetCategory_DeprRateIT", @Id = "AssetCategory_DeprRateIT" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Fri 01-Mar-2019 04:58 PM
+    Engine: iX6Generator, ver: 3.7 Revision: 10
+    by Team Shruham Software *@
+

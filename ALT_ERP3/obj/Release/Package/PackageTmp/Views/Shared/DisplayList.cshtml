@@ -1,0 +1,129 @@
+﻿@{
+    ViewBag.Title = "Display List";
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#txtListSearch').change(function () {
+            //if ($('#txtListSearch').val().length > 2) {
+                $('#DisplayList').jqGrid('clearGridData');
+                $('#DisplayList').jqGrid("GridUnload");
+                $('#DisplayList').trigger('reloadGrid');
+                gridListReload();
+            //}
+        });
+    });
+
+    function gridListReload() {
+        var ColNameX, ColdataX;
+        var sPathUrl = "/DisplayList/GetGridStructure?id=" + $('#hdnViewCtrlV').val();
+        var sUrlpath = "/DisplayList/GetGridData?ViewDataId=" + $('#hdnViewCtrlV').val() + '&Document=' + $('#hdnSelectIdOnCtrlV').val() + '&textsearch=' + $('#txtListSearch').val() + '&filterfield=' + $('#colname').val();
+        var sidix = "";
+        //document.getElementById("headercaptionx").innerHTML = "xxx";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColNameX = obj[0].split(",");
+                ColdataX = obj[1];
+                CreateListGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateListGridData() {
+            $('#DisplayList').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColNameX,
+                colModel: ColdataX,
+                pager: $('#Listpager'),
+                rowNum: @Session["GridRows"],
+                rowDisplayList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: 375,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: false,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                onCellSelect: function (row, col, content, event) {
+                    var cm = jQuery("#DisplayList").jqGrid("getGridParam", "colModel");
+                    $('#colname').val(cm[col].name);
+                },
+            });
+            jQuery("#DisplayList").jqGrid('navGrid', "#Listpager",
+                { edit: false, add: false, del: false, print: false, search: false, refresh: false, searchtext: "Search" });
+            jQuery("#DisplayList").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+</script>
+
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title" id="headercaptionx" style="font-weight:bolder;padding-left:10px;">List of Doc</h4>
+        @*<label class="modal-title" id="headercaptionx" style="font-weight:bolder;padding-left:10px;">List of Doc</label>*@
+    </div>
+    <div class="modal-body" style="height:475px;padding-left:0px;padding-right:0px;padding-top:5px;">
+        <div class="col-sm-12" style="padding-left:0px;padding-right:15px;">
+            <div class="form-horizontal" id="Listselectform" style="margin-left:15px;">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Search:</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="colname" name="colname" class="form-control" style="width:100%;" />
+                    </div>
+                    <div class="col-sm-8">
+                        <input type="text" id="txtListSearch" name="txtListSearch" class="form-control" style="width:100%;" />
+                    </div>
+                    @*<div class="col-sm-1" style="padding-right:5px;padding-left:3px;font-family:Verdana;padding-top:0px;font-size:9pt; width:unset;text-align:right">
+                        <a onclick="btnrefreshlist()" class="fa fa-search" style="font-size:20px;cursor:pointer" title="Apply Search Criteria to View"></a>
+                    </div>*@
+                </div>
+                <div class="form-group">
+                    <div id="page-contentgrid">
+                        <div class="jqGrid">
+                            <div class="form-group" style="overflow:auto;height:440px;margin-left:0px;margin-right:0px;">
+                                <table id="DisplayList" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:unset;overflow:scroll;"></table>
+                            </div>
+                            <div id="Listpager" style="height:30px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc;padding-top: 6px;padding-bottom: 5px;padding-right: 10px;height: 43px;">
+        <button type="button" class="btn btn-danger" data-dismiss="modal"><i class="fa fa-arrow-left"></i>&nbsp;&nbsp;Close</button>
+    </div>
+</div>
+<input id="hdnViewCtrlV" hidden />
+<input id="hdnSelectIdOnCtrlV" hidden />

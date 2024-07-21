@@ -1,0 +1,268 @@
+﻿
+@model TFATERPWebApplication.Areas.Logistics.Models.UserRightsVM
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}
+
+<script src="~/Content/js/dynamic_table_init.js"></script>
+<script>
+    $(document).ready(function () {
+
+        loadParty();
+
+        $("#dynamic-table").on('click', 'tbody tr', function (event) {
+            event.preventDefault();
+            var PSerial = [];
+            var row = $(this);
+            var $tds = $(this).find('td');
+            psrl = $tds.eq(0).text();
+            PSerial.push(psrl);
+            var ModelData = {};
+            ModelData["TfatPass_Code"] = PSerial.toString();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("ClickLeftGrid")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#errormessage').hide();
+                    $('#UserRightsdiv').html(data.Html);
+                    $('#UserRights_Code').val(data.UserRights_Code);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while Fetching Data.");
+                }
+            });
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            var myTableArray = [];
+            $('#tabledatapick2 tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    UserRights_MenuID: tds.find("input[id='UserRights_MenuID']").val(),
+                    TfatMenu_Menu: tds.find("input[id='TfatMenu_Menu']").val(),
+                    UserRights_xCess: tds.find("input[id='UserRights_xCess']").is(':checked'),
+                    UserRights_xAdd: tds.find("input[id='UserRights_xAdd']").is(':checked'),
+                    UserRights_xEdit: tds.find("input[id='UserRights_xEdit']").is(':checked'),
+                    UserRights_xDelete: tds.find("input[id='UserRights_xDelete']").is(':checked'),
+                    UserRights_xPrint: tds.find("input[id='UserRights_xPrint']").is(':checked'),
+                    UserRights_xBackDated: tds.find("input[id='UserRights_xBackDated']").is(':checked'),
+                    UserRights_xLimit: tds.find("input[id='UserRights_xLimit']").val(),
+                    Modulename: tds.find("input[id='Modulename']").val(),
+                    ParentName: tds.find("input[id='ParentName']").val(),
+                    ZoomUrl: tds.find("input[id='ZoomUrl']").val()
+                }
+                myTableArray.push(myDets);
+            })
+            $('.spinner').show();
+            var ModelData = {};
+            ModelData["mRightList"] = myTableArray;
+            ModelData["UserRights_Code"] = $("#UserRights_Code").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveData")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    alert("Data Saved..");
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while Saving Data.");
+                }
+            });
+        });
+
+
+        $('#CopyRights').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["UserRights_Code"] = $("#UserRights_Code").val();
+            ModelData["Account"] = $("#Account").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveCopyRights")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    alert("Data Saved..");
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("Error occured while Saving Data.");
+                }
+            });
+        });
+    });
+
+    function loadParty() {
+        var url = '@Url.Action("GetPartyList")?BaseGr=' + $("#hdnMType").val();
+        $('#Account').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength: 2,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Account', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/AdminDashBoard" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <form class="form-horizontal " id="UserRightsFrm" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="panel-body" style="min-height:400px;max-height:475px;padding-top:0px;">
+                <div class="col-lg-3" style="border-right:solid;">
+                    <div class="form-group">
+                    </div>
+                    <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                        Users:
+                    </b>
+                    <table class="zui-table" id="dynamic-table" style="min-height:360px;">
+                        <thead>
+                            <tr role="row">
+                                <th style="width: 36%;vertical-align:inherit;">User ID</th>
+                                <th style="width: 63%;vertical-align:inherit;">Name</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.mLeftList != null)
+                            {
+                                foreach (var item in @Model.mLeftList)
+                                {
+                                    <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                        <td style="width: 36%;vertical-align:inherit;">@item.TfatPass_Code</td>
+                                        <td style="width: 63%;vertical-align:inherit;">@item.TfatPass_Name</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-lg-9">
+                    <div class="form-group">
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-3">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                User Rights:
+                            </b>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">User:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.UserRights_Code, new { @id = "UserRights_Code", @Name = "UserRights_Code", @style = "font-size:14px;font-weight:bolder;", @class = "form-control", @disabled = "disabled" })
+                        </div>
+                        <label class="col-sm-2 control-label">Copy From User:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Account, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "Account", @name = "Account" })
+                        </div>
+
+                        <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" id="CopyRights">Copy</button>
+                    </div>
+                    <br>
+                    @*<br>*@
+                    <div id="UserRightsdiv" style="min-height:375px;max-height:375px;overflow:scroll">
+                        @Html.Partial("UserRightsPartial")
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5"></div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9 by Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/DashBoard/AdminDashBoard" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+@*
+    Code Auto Generated on Tue 05-Mar-2019 05:37 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 12
+    by Team Suchan, T.FAT *@
+
+

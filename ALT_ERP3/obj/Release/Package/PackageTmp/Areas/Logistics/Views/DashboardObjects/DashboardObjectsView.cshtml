@@ -1,0 +1,278 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.DashboardObjectsVM
+@using Common;
+@{
+    ViewBag.Title = "Dashboard Objects";
+    Layout = null;
+}
+
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Multi-Select Controls *@
+        var values = $('#hdnUsers').val();
+        $("#hdnUsersArray").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+            $(".Userslistbox option[value='" + e + "']").prop("selected", true);
+            });
+        }
+        $(".Userslistbox").change(function () {
+            $('#hdnUsersArray').val('');
+            var selected = [];
+            $(".Userslistbox :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnUsersArray').val(selected)
+            return false;
+        });
+        $('.Userslistbox').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select User',
+        })
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#ActiveObjects_ObjectType').val('@Model.ActiveObjects_ObjectType').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#ActiveObjects_Modules').val('@Model.ActiveObjects_Modules').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#ActiveObjects_SizeType').val('@Model.ActiveObjects_SizeType').attr("selected", "selected");
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#DashboardObjects').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                ActiveObjects_Code: {required: true,},
+                ActiveObjects_Name: {required: true,},
+                ActiveObjects_ObjectType: {required: true,},
+                ActiveObjects_Modules: {required: true,},
+               },
+            messages: {
+                ActiveObjects_Code: {required: 'Code is Required',},
+                ActiveObjects_Name: {required: 'Name is Required',},
+                ActiveObjects_ObjectType: {required: 'ObjectType is Required',},
+                ActiveObjects_Modules: {required: 'Modules is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#ActiveObjects_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#ActiveObjects_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#ActiveObjects_ObjectType").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#ActiveObjects_Modules").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#ActiveObjects_Height").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#ActiveObjects_Width").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#DashboardObjects").validate().form() == false)
+            //    return;
+
+            if ($("#ActiveObjects_Code").val() == null || $("#ActiveObjects_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Code is Required..');
+                return;
+            }
+            if ($("#ActiveObjects_Name").val() == null || $("#ActiveObjects_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ($("#ActiveObjects_ObjectType").val() == null || $("#ActiveObjects_ObjectType").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('ObjectType is Required..');
+                return;
+            }
+            if ($("#ActiveObjects_Modules").val() == null || $("#ActiveObjects_Modules").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Modules is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["ActiveObjects_Code"] = $("#ActiveObjects_Code").val();
+            ModelData["ActiveObjects_Name"] = $("#ActiveObjects_Name").val();
+            ModelData["ActiveObjects_ObjectType"] = $("#ActiveObjects_ObjectType").val();
+            ModelData["ActiveObjects_Modules"] = $("#ActiveObjects_Modules").val();
+            ModelData["ActiveObjects_Height"] = $("#ActiveObjects_Height").val();
+            ModelData["ActiveObjects_Width"] = $("#ActiveObjects_Width").val();
+            ModelData["ActiveObjects_SizeType"] = $("#ActiveObjects_SizeType").val();
+            ModelData["ActiveObjects_Query"] = $("#ActiveObjects_Query").val();
+            ModelData["ActiveObjects_Users"] = $("#hdnUsersArray").val();
+            ModelData["ActiveObjects_ReportCode"] = $("#ActiveObjects_ReportCode").val();
+            ModelData["ActiveObjects_Status"] = $("#ActiveObjects_Status").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="DashboardObjects" role="form" style="margin-top:0%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.ActiveObjects_Code, new { @maxlength = "20", @readonly = "readonly", @class = "form-control", @Name = "ActiveObjects_Code", @Value = Model.ActiveObjects_Code, @Id = "ActiveObjects_Code" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.ActiveObjects_Code, new { @maxlength = "20", @class = "form-control", @Name = "ActiveObjects_Code", @Value = Model.ActiveObjects_Code, @Id = "ActiveObjects_Code" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ActiveObjects_Name, new { @maxlength = "50", @class = "form-control", @Name = "ActiveObjects_Name", @Value = Model.ActiveObjects_Name, @Id = "ActiveObjects_Name" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">ObjectType:</label>
+                <div class="col-sm-3">
+                    @Html.DropDownListFor(m => m.ActiveObjects_ObjectType, Model.ObjectTypeList, new { @class = "form-control", @Id = "ActiveObjects_ObjectType", @Name = "ActiveObjects_ObjectType", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                </div>
+                <label class="col-sm-1 control-label">Modules:</label>
+                <div class="col-sm-3">
+                    @Html.DropDownListFor(m => m.ActiveObjects_Modules, Model.ModulesList, new { @class = "form-control", @Id = "ActiveObjects_Modules", @Name = "ActiveObjects_Modules", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Height:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.ActiveObjects_Height, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "ActiveObjects_Height", @Value = Model.ActiveObjects_Height, @Id = "ActiveObjects_Height" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Width:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.ActiveObjects_Width, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "ActiveObjects_Width", @Value = Model.ActiveObjects_Width, @Id = "ActiveObjects_Width" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">SizeType:</label>
+                <div class="col-sm-3">
+                    @Html.DropDownListFor(m => m.ActiveObjects_SizeType, Model.SizeTypeList, new { @class = "form-control", @Id = "ActiveObjects_SizeType", @Name = "ActiveObjects_SizeType", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Query:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ActiveObjects_Query, new { @class = "form-control", @Name = "ActiveObjects_Query", @Value = Model.ActiveObjects_Query, @Id = "ActiveObjects_Query" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Users:</label>
+                <div class="col-sm-3">
+                    @Html.ListBoxFor(x => x.UsersItemX, Model.UsersMultiX, new { @class = "Userslistbox", @id = "ActiveObjects_Users" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">ReportCode:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.ActiveObjects_ReportCode, new { @maxlength = "50", @class = "form-control", @Name = "ActiveObjects_ReportCode", @Value = Model.ActiveObjects_ReportCode, @Id = "ActiveObjects_ReportCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Active?:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.ActiveObjects_Status, new { @value = Model.ActiveObjects_Status, @id = "ActiveObjects_Status", @name = "ActiveObjects_Status", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="hdnUsersArray" />
+@Html.HiddenFor(x => x.ActiveObjects_Users, new { @id = "hdnUsers" })
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Thu 08-Aug-2019 09:32 AM
+    Engine: iX9Generator, ver: 3.7 Revision: 49
+    by Team Suchan, T.FAT *@
+

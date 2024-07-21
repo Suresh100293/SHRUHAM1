@@ -1,0 +1,338 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.SystemFlowVM
+@using Common;
+@{
+    ViewBag.Title = "SystemFlow";
+    Layout = null;
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+      GetMyFavorites('@Model.ViewDataId');
+
+        //$("#Days").constrain({ allow: { regex: "[0-9]" } });
+
+        //$("#Days").blur(function () {
+        //    $("#ErrorMessage").hide();
+        //    if (parseInt(this.value) <= 9) {
+        //        $("#ErrorMessage").show();
+        //        $("#ErrorMessage").text('Days Required Minimum 10 Days!.....');
+        //        return;
+        //    }
+        //});
+
+
+        $("#RouteCheckMaterial").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+                $("#RouteClearReq").prop("disabled", false);
+            } else {
+                $("#RouteClearReq").attr("checked", false);
+                $("#RouteClearReq").attr("disabled", true);
+            }
+        });
+
+        $("#DestCheckMaterial").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+                $("#DestClearReq").prop("disabled", false);
+            } else {
+                $("#DestClearReq").attr("checked", false);
+                $("#DestClearReq").attr("disabled", true);
+            }
+        });
+
+
+
+
+
+
+        $("#ArrivalDispatchCategaory").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+                $(".CategoryArrivalDispatch").attr("checked", true);
+            } else {
+                $(".CategoryArrivalDispatch").attr("checked", false);
+            }
+        });
+
+        $(".CategoryArrivalDispatch").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+            } else {
+                $("#ArrivalDispatchCategaory").attr("checked", false);
+            }
+        });
+        $("#ScheduleCategaory").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+                $(".CategorySchedule").attr("checked", true);
+            } else {
+                $(".CategorySchedule").attr("checked", false);
+            }
+        });
+
+        $(".CategorySchedule").change(function (event) {
+            event.preventDefault();
+            if (this.checked) {
+            } else {
+                $("#ScheduleCategaory").attr("checked", false);
+            }
+        });
+
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            //if (parseInt($("#Days").val()) <= 9) {
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Days Required Minimum 10 Days!.....');
+            //    return;
+            //}
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+
+            ModelData["Days"] = $("#Days").val();
+            ModelData["GeneralUnloadReq"] = $("#GeneralUnloadReq").is(':checked');
+            ModelData["UnloadAllMaterialReq"] = $("#UnloadAllMaterialReq").is(':checked');
+            ModelData["ADCriteriaCheck"] = $("#ADCriteriaCheck").is(':checked');
+            ModelData["ScheduleFollowUp"] = $("#ScheduleFollowUp").is(':checked');
+            ModelData["RouteCheckMaterial"] = $("#RouteCheckMaterial").is(':checked');
+            ModelData["RouteClearReq"] = $("#RouteClearReq").is(':checked');
+            ModelData["DestCheckMaterial"] = $("#DestCheckMaterial").is(':checked');
+            ModelData["DestClearReq"] = $("#DestClearReq").is(':checked');
+            ModelData["ReworkFM"] = $("#ReworkFM").is(':checked');
+
+            var ArrivalDispatchCode = "", ScheduleCode = "";
+            $('#ActivityTbl > tbody  > tr').each(function () {
+                var tds = $(this).find('td');
+                var Arrival = tds.find(".CategoryArrivalDispatch").prop("checked");
+                if (Arrival) {
+                    ArrivalDispatchCode += tds.eq(0).text() + ",";
+                }
+                var Schedule = tds.find(".CategorySchedule").prop("checked");
+                if (Schedule) {
+                    ScheduleCode += tds.eq(0).text() + ",";
+                }
+            });
+
+
+            if (ArrivalDispatchCode != "") {
+                ArrivalDispatchCode = ArrivalDispatchCode.substring(0, ArrivalDispatchCode.length - 1);
+            }
+            if (ScheduleCode != "") {
+                ScheduleCode = ScheduleCode.substring(0, ScheduleCode.length - 1);
+            }
+
+
+            ModelData["ArrivalAndDispatchReq"] = ArrivalDispatchCode;
+            ModelData["ScheduleReq"] = ScheduleCode;
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/DashBoard/SetUP";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+</script>
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;margin-top:12px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="SystemFlowForm" role="form" style="margin-top:0%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none;margin-top:30px;"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+
+            <div class="form-group hidden">
+                <label class="col-sm-2 control-label">List (Days):</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.TextBoxFor(x => x.Days, new { @class = "form-control", @Value = Model.Days, @placeholder = "No Of Days List Shows" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Minimum 10 Days Allow.</label>
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-3 control-label">Vehicle Activity Allow As Per Route Branch Wise:</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.ScheduleFollowUp, new { @class = "", @Value = Model.ScheduleFollowUp, style = "height: 20px;width: 35px;" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Vehicle Activity Allow Only Current Route/Branch.</label>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+            <div class="form-group">
+                <label class="col-sm-3 control-label">From & Route Material :</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.RouteCheckMaterial, new { @class = "", @Value = Model.RouteCheckMaterial, style = "height: 20px;width: 35px;" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Check Vehicle Material At The Time Of Clear And Give The Message.</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label"></label>
+                @if (Model.RouteCheckMaterial)
+                {
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.RouteClearReq, new { @class = "", @Value = Model.RouteClearReq, style = "height: 20px;width: 35px;" })
+                    </div>
+                }
+                else
+                {
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.RouteClearReq, new { @class = "", @disabled = "disabled", @Value = Model.RouteClearReq, style = "height: 20px;width: 35px;" })
+                    </div>
+                }
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Not Allow TO Clear If Material Available In Vehicle.</label>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+            <div class="form-group">
+                <label class="col-sm-3 control-label">Final Destination Material :</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.DestCheckMaterial, new { @class = "", @Value = Model.DestCheckMaterial, style = "height: 20px;width: 35px;" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Check Vehicle Material At The Time Of Clear And Give The Message.</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label"></label>
+                @if (Model.DestCheckMaterial)
+                {
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.DestClearReq, new { @class = "", @Value = Model.DestClearReq, style = "height: 20px;width: 35px;" })
+                    </div>
+                }
+                else
+                {
+                    <div class="col-sm-1" style="width:auto;">
+                        @Html.CheckBoxFor(x => x.DestClearReq, new { @class = "", @disabled = "disabled", @Value = Model.DestClearReq, style = "height: 20px;width: 35px;" })
+                    </div>
+                }
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Not Allow TO Clear If Material Available In Vehicle.</label>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+            <div class="form-group">
+                <label class="col-sm-3 control-label">Rework Freight Memo :</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.ReworkFM, new { @class = "", @Value = Model.ReworkFM, style = "height: 20px;width: 35px;" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">Complete Freight Memo Get In Woring Process.</label>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+            <div class="form-group" style="padding-left: 15px;">
+                <table id="ActivityTbl" class="zui-table" style="width:35%">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                            <th style="width:1%"></th>
+                            <th style="width:1%">Arrival And Dispatch Req</th>
+                            <th style="width:1%">Schedule Req</th>
+                        </tr>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                            <th style="width:1%">Name</th>
+                            <th style="width:1%"><input type="checkbox" id="ArrivalDispatchCategaory" style="height:18px;width:18px;" /></th>
+                            <th style="width:1%"><input type="checkbox" id="ScheduleCategaory" style="height:18px;width:18px;" /></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @foreach (var item in Model.categoryLists)
+                        {
+                            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                                <td class="hidden">@item.Code</td>
+                                <td>@item.Name</td>
+                                @*<td><center><input type="checkbox" class="CategoryArrivalDispatch" style="height:18px;width:18px;" value="@item.ArrivalDispatchReq" /></center></td>*@
+                                <td><center>@Html.CheckBoxFor(x => item.ArrivalDispatchReq, new { @class = "CategoryArrivalDispatch", @style = "height: 18px;width: 18px;" })</center></td>
+                                @*<td><center><input type="checkbox" class="CategorySchedule" style="height:18px;width:18px;" value="@item.SeheduleReq" /></center></td>*@
+                                <td><center>@Html.CheckBoxFor(x => item.SeheduleReq, new { @class = "CategorySchedule", @style = "height: 18px;width: 18px;" })</center></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Check Criteria Of Arrival/Dispatch:</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.ADCriteriaCheck, new { @class = "", @Value = Model.ADCriteriaCheck, style = "height: 20px;width: 35px;" })
+                </div>
+                <label class="col-sm-1 control-label" style="width: auto;color: red;font-size: 14px;">If U Can Enter Data Then Check Data Security.</label>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Other Warehouse Unloading Req:</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.GeneralUnloadReq, new { @class = "", @Value = Model.GeneralUnloadReq, style = "height: 20px;width: 35px;" })
+                </div>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Allow Unload All Branch Material:</label>
+                <div class="col-sm-1" style="width:auto;">
+                    @Html.CheckBoxFor(x => x.UnloadAllMaterialReq, new { @class = "", @Value = Model.UnloadAllMaterialReq, style = "height: 20px;width: 35px;" })
+                </div>
+            </div>
+            <hr style="margin-top: 10px !important;margin-bottom: 10px !important;" />
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,491 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.ChangeDriverStatusVM
+@using Common;
+@{
+    ViewBag.Title = "Driver Master";
+    Layout = null;
+}
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        if ('@Model.Mode' == "Delete" || '@Model.Mode' == "View") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        else
+        {
+            $('#DocDate').prop("disabled", true);
+        }
+        GetMyFavorites('@Model.ViewDataId');
+        LoadVehicle();
+        LoadDriver();
+
+        $('#DocDate,#EffDate').datepicker({
+            format: 'dd/mm/yyyy',
+            autoclose: true,
+        });
+        
+        $('#DriverCode').change(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("GetDriverInfo")';
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { Driver: $('#DriverCode').val() },
+                success: function (result) {
+                    debugger;
+                    $('#VehicleNoCode').select2('data', { id: result.Model.VehicleNoCode, text: result.Model.VehicleNo });
+                    $("#MobileNo1").val(result.Model.MobileNo1);
+                    $("#MobileNo2").val(result.Model.MobileNo2);
+                    $("#Guaranter").val(result.Model.Guaranter);
+                    $("#LicenceNo").val(result.Model.LicenceNo);
+                    if (result.Model.LicenceExpDate != "" && result.Model.LicenceExpDate != null) {
+                        $("#LicenceExpDate").val(result.Model.LicenceExpDate);
+                    }
+                }
+            });
+        });
+        @* iX9: Executed when Save/Submit button is Pressed *@
+
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            var result = confirm("Are you sure you want to delete?");
+            if (result) {
+                var url = '@Url.Action("DeleteStateMaster")';
+                @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = '@Model.Mode';
+                ModelData["Header"] = '@Model.Header';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                            window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                            $("#ErrorMessage").hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            alert(data.Message);
+                        }
+                    },
+                });
+            }
+            else {
+                $('.spinner').hide();
+                window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                $("#ErrorMessage").hide();
+            }
+
+
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if ($("#DocDate").val() == null || $("#DocDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DocDate is Required..');
+                return;
+            }
+            if ($("#EffDate").val() == null || $("#EffDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('EffDate is Required..');
+                return;
+            }
+            if ($("#EFFTime").val() == null || $("#EFFTime").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('EFFTime is Required..');
+                return;
+            }
+
+
+            if ($("#DriverCode").val() == null || $("#DriverCode").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Driver is Required..');
+                return;
+            }
+            if ($("#VehicleNoCode").val() == null || $("#VehicleNoCode").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Vehicle is Required..');
+                return;
+            }
+
+
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["DocDate"] = $("#DocDate").val();
+            ModelData["EffDate"] = $("#EffDate").val();
+            ModelData["EFFTime"] = $("#EFFTime").val();
+            ModelData["DriverCode"] = $("#DriverCode").val();
+            ModelData["VehicleNoCode"] = $("#VehicleNoCode").val();
+            ModelData["DriverStatusChangeNarr"] = $("#DriverStatusChangeNarr").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+    function LoadVehicle() {
+        var url = '@Url.Action("GetVehicle")'
+        $('#VehicleNoCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehicleNoCode', text: '@Model.VehicleNo' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadDriver() {
+        var url = '@Url.Action("GetDriver")'
+        $('#DriverCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DriverCode', text: '@Model.Driver' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function Gridacledger() {
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=DriverHistory';
+        var sUrlpath = '@Url.Action("GetMasterGridData")?ViewDataId=DriverHistory&Code=' + $("#DriverCode").val();
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                //scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+</script>
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:1%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="tab">
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="DefaultPage" style="width:180px;">Personal Information</button>
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable3')">Driver History</button>
+            </div>
+            <div id="divLedgerTable" style="min-height:450px;max-height:450px;margin-bottom:10px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">DocDate:<span style="color:red;">*</span></label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.DocDate, new { @type = "text", @class = "form-control", @style = "height:28px;font:size:13pt;font-weight:bolder;", @Value = Model.DocDate })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Driver:<span style="color:red;">*</span></label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.DriverCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.DriverCode })
+                    </div>
+                    <label class="col-sm-1 control-label">Vehicle No:<span style="color:red;">*</span></label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.VehicleNoCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.VehicleNoCode })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Contact No1:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.MobileNo1, new { @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.MobileNo1, @disabled = "disabled" })
+                    </div>
+                    <label class="col-sm-1 control-label">Contact No2:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.MobileNo2, new { @class = "form-control", @style = "width:100%;", @Value = Model.MobileNo2, @disabled = "disabled" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">License No:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.LicenceNo, new { @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.LicenceNo, @disabled = "disabled" })
+                    </div>
+                    <label class="col-sm-1 control-label">License Exp.:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.LicenceExpDate, new { @class = "form-control", @Value = Model.LicenceExpDate, @style = "width:170px;", @disabled = "disabled" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Guaranter:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.Guaranter, new { @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.Guaranter, @disabled = "disabled" })
+                    </div>
+                </div>
+                <hr />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Eff. Date:<span style="color:red;">*</span></label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.EffDate, new { @type = "text", @class = "form-control", @style = "height:28px;font:size:13pt;font-weight:bolder;", @Value = Model.EffDate })
+                    </div>
+                    <label class="col-sm-1 control-label">Eff. Time:<span style="color:red;">*</span></label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.EFFTime, new { @class = "form-control", @type = "time", @style = "", @Value = Model.EFFTime })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-2 control-label">Status Change Narr:</label>
+                    <div class="col-sm-10">
+                        @Html.TextAreaFor(x => x.DriverStatusChangeNarr, new { @class = "form-control", @Value = Model.DriverStatusChangeNarr, @maxlength = "250", @rows = "2" })
+                    </div>
+                    <div class="col-sm-4">
+                    </div>
+                </div>
+
+            </div>
+            <div id="divLedgerTable3" style="min-height:450px;max-height:450px;margin-bottom:0px;" class="tabcontent">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager" style="height:32px;width:100%;"></div>
+                </div>
+            </div>
+            <script>
+                function openCity(evt, cityName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(cityName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                    if (cityName == "divLedgerTable3") {
+                        $('#list').jqGrid('clearGridData');
+                        $("#list").jqGrid("GridUnload");
+                        $('#list').trigger('reloadGrid');
+                        Gridacledger();
+                    }
+                }
+                document.getElementById("DefaultPage").click();
+            </script>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right" style="padding-left:5px;">
+            </div>
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@Html.HiddenFor(x => x.Document)

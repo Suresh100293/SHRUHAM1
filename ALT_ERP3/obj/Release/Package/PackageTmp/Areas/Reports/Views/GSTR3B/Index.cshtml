@@ -1,0 +1,705 @@
+﻿@model GridOption
+
+@{
+    ViewBag.Title = "GSTR-3B";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        $("#hdnformatname").val("");
+        $('#chkReverse').not(this).prop('checked', true);
+
+        $('#btnExcel').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcelGSTR")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked'), '_blank');;
+        });
+
+        $('#btnPDF').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDFGSTR")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked'), '_blank');;
+        });
+
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+            $('#outward').jqGrid('clearGridData');
+            $("#outward").jqGrid("GridUnload");
+            $('#outward').trigger('reloadGrid');
+            gridoutward();
+            $('#urd').jqGrid('clearGridData');
+            $("#urd").jqGrid("GridUnload");
+            $('#urd').trigger('reloadGrid');
+            gridurd();
+            $('#itc').jqGrid('clearGridData');
+            $("#itc").jqGrid("GridUnload");
+            $('#itc').trigger('reloadGrid');
+            griditc();
+            $('#exempted').jqGrid('clearGridData');
+            $("#exempted").jqGrid("GridUnload");
+            $('#exempted').trigger('reloadGrid');
+            gridexempted();
+            //$('#payment').jqGrid('clearGridData');
+            //$("#payment").jqGrid("GridUnload");
+            //$('#payment').trigger('reloadGrid');
+            //gridpayment();
+            //$('#tds').jqGrid('clearGridData');
+            //$("#tds").jqGrid("GridUnload");
+            //$('#tds').trigger('reloadGrid');
+            //gridtds();
+            $("#hdnformatname").val("outward");
+        });
+    });
+
+    @*chkRCM = Include Reverse Charge for Eligible ITC
+    chkAdvance = Include Advance Receipts for Output
+    chkReturnS = Treat Sales Return as Purchase (Inward)
+    chkReturnP = Treat Purchase Return as Sales (Outward)
+    chkNOITC = Dont Include 'NOT ELEGIBLE FOR ITC' transactions in 4-A table
+    chkReverse = Include Reverse Charge Transactions in 3.1-D Table*@
+    //outward
+    function gridoutward() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("outward");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'outward' +'&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked')+ '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'outward' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridoutward();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridoutward() {
+            $('#outward').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pageroutward'),
+                rowNum: 5000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pageroutward').height = 5;
+                },
+            });
+            jQuery("#outward").jqGrid('navGrid', "#pageroutward",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#outward").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //urd
+    function gridurd() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("urd");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'urd' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'urd' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridurd();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridurd() {
+            $('#urd').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerurd'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerurd').height = 5;
+                },
+            });
+            jQuery("#urd").jqGrid('navGrid', "#pagerurd",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#urd").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //itc
+    function griditc() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("itc");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'itc' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'itc' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategriditc();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategriditc() {
+            $('#itc').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pageritc'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pageritc').height = 5;
+                },
+            });
+            jQuery("#itc").jqGrid('navGrid', "#pageritc",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#itc").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //exempted
+    function gridexempted() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("exempted");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'exempted' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'exempted' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridexempted();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridexempted() {
+            $('#exempted').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerexempted'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagercdnr').height = 5;
+                },
+            });
+            jQuery("#exempted").jqGrid('navGrid', "#pagerexempted",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#exempted").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    @*//payment
+    function gridpayment() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("payment");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'payment' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'payment' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridpayment();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridcdnur() {
+            $('#payment').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerpayment'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerpayment').height = 5;
+                },
+            });
+            jQuery("#payment").jqGrid('navGrid', "#pagerpayment",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#payment").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }*@
+
+    @*//tds
+    function gridtds() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("exp");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'tds' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'tds' + '&xAdd=' + $("#chkRCM").is(':checked') + '&xEdit=' + $("#chkAdvance").is(':checked') + '&xDelete=' + $("#chkReturnS").is(':checked') + '&xView=' + $("#chkReturnP").is(':checked') + '&IsFormatSelected=' + $("#chkNOITC").is(':checked') + '&ComController=' + $("#chkReverse").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridtds();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridtds() {
+            $('#tds').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagertds'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagertds').height = 5;
+                },
+            });
+            jQuery("#tds").jqGrid('navGrid', "#pagertds",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#tds").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }*@
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-md-6" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <div class="col-md-3" style="padding-right:unset;">
+            <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                Period:
+            </div>
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                <span class="input-group-addon">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+            </div>
+        </div>
+        <div class="col-md-3 pull-right" style="padding-top:-3px;float:right;align-items:flex-end;">
+            <button class="btn btn-info" style="font-family:Tahoma;font-size:10pt;height:27px;padding-top:3px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i>&nbsp;&nbsp;Refresh</button>
+            <button class="btn btn-success" style="font-family: Tahoma; font-size: 10pt; height: 27px;padding-top:3px;" id="btnExcel" title='Excel'><i class="fa ico-file-excel"></i>&nbsp;&nbsp;Excel</button>
+            <button class="btn btn-danger" style="font-family: Tahoma; font-size: 10pt; height: 27px;padding-top:3px;" id="btnPDF" title='PDF'><i class="fa ico-file-pdf"></i>&nbsp;&nbsp;PDF</button>
+        </div>
+        @*<div class="col-md-3 pull-right" style="padding-top:-3px;float:right;align-items:flex-end;">
+                <button class="btn btn-info" style="font-size:10pt;padding:3px 3px;width:27px;height:27px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i></button>
+                <button class="btn btn-success" style="font-size:10pt;padding:3px 3px;width:27px;height:27px;" id="btnExcel" title='Excel'><i class="fa fa-file-text-o"></i></button>
+                <button class="btn btn-warning" style="font-size:10pt;padding:3px 3px;" id="btnPDF" title='PDF'>PDF</button>
+            </div>*@
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:33px;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="tab">
+            <button class="tablinks" onclick="openTab(event, 'taboptions')" id="options">Options</button>
+            <button class="tablinks" style="width:200px;" onclick="openTab(event, 'taboutward')">3.1 Outward Supply</button>
+            <button class="tablinks" style="width:200px;" onclick="openTab(event, 'taburd')">3.2 Supplies to URD</button>
+            <button class="tablinks" style="width:200px;" onclick="openTab(event, 'tabitc')">4 Eligible ITC</button>
+            <button class="tablinks" style="width:200px;" onclick="openTab(event, 'tabexempted')">5 Exempted/NIL/Non-GST</button>
+            @*<button class="tablinks" style="width:200px;" onclick="openTab(event, 'tabpayment')">6.1 Payment of Taxes</button>*@
+            @*<button class="tablinks" onclick="openTab(event, 'tabtds')">6.2 TDS / TCS</button>*@
+        </div>
+
+        <div id="taboptions" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            @*chkRCM = Include Reverse Charge for Eligible ITC
+                chkAdvance = Include Advance Receipts for Output
+                chkReturnS = Treat Sales Return as Purchase (Inward)
+                chkReturnP = Treat Purchase Return as Sales (Outward)
+                chkNOITC = Dont Include 'NOT ELEGIBLE FOR ITC' transactions in 4-A table
+                chkReverse = Include Reverse Charge Transactions in 3.1-D Table*@
+            <div class="form-horizontal" id="Rmaster" role="form" style="margin-top:0%;margin-left:15px;overflow-x:hidden; ">
+                <div class="row" style="margin-top:5px;margin-left:15px;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Include Reverse Charge for Eligible ITC:</label>
+                        <div class="col-sm-1" style="padding-left:20px;width:30px;" id="chkRCMdiv">
+                            <input type="checkbox" id="chkRCM" name="chkRCM" style="width:17px;height:17px;" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:5px;margin-left:15px;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Include Advance Receipts for Output:</label>
+                        <div class="col-sm-1" style="padding-left:20px;width:30px;" id="chkAdvancediv">
+                            <input type="checkbox" id="chkAdvance" name="chkAdvance" style="width:17px;height:17px;" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:5px;margin-left:15px;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Treat Sales Return as Purchase (Inward):</label>
+                        <div class="col-sm-1" style="padding-left:20px;width:30px;" id="chkReturnSdiv">
+                            <input type="checkbox" id="chkReturnS" name="chkReturnS" style="width:17px;height:17px;" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:5px;margin-left:15px;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Treat Purchase Return as Sales (Outward):</label>
+                        <div class="col-sm-1" style="padding-left:20px;width:30px;" id="chkReturnPdiv">
+                            <input type="checkbox" id="chkReturnP" name="chkReturnP" style="width:17px;height:17px;" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:5px;margin-left:15px;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Dont Include 'NOT ELEGIBLE FOR ITC' transactions in 4-A table:</label>
+                        <div class="col-sm-1" style="padding-left:20px;width:30px;" id="chkNOITCdiv">
+                            <input type="checkbox" id="chkNOITC" name="chkNOITC" style="width:17px;height:17px;" />
+                        </div>
+                    </div>
+                </div>
+                <div class="row" style="margin-top:5px;margin-left:15px;">
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">Include Reverse Charge Transactions in 3.1-D Table:</label>
+                        <div class="col-sm-1" style="padding-left:20px;width:30px;" id="chkReversediv">
+                            <input type="checkbox" id="chkReverse" name="chkReverse" style="width:17px;height:17px;" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="taboutward" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="outward" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pageroutward" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="taburd" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="urd" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerurd" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabitc" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="itc" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pageritc" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabexempted" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="exempted" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerexempted" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        @*<div id="tabpayment" class="tabcontent" style="height:470px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="payment" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerpayment" style="height:32px;width:100%;"></div>
+            </div>
+        </div>*@
+        @*<div id="tabtds" class="tabcontent" style="height:470px;padding:0px 0px 0px 0px;">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                    <table id="tds" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pagertds" style="height:32px;"></div>
+                </div>
+            </div>*@
+
+        <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+                if (tabName == "taboutward") {
+                    $('#outward').jqGrid('clearGridData');
+                    $("#outward").jqGrid("GridUnload");
+                    $('#outward').trigger('reloadGrid');
+                    gridoutward();
+                } else if (tabName == "taburd") {
+                    $('#urd').jqGrid('clearGridData');
+                    $("#urd").jqGrid("GridUnload");
+                    $('#urd').trigger('reloadGrid');
+                    gridurd();
+                } else if (tabName == "tabitc") {
+                    $('#itc').jqGrid('clearGridData');
+                    $("#itc").jqGrid("GridUnload");
+                    $('#itc').trigger('reloadGrid');
+                    griditc();
+                } else if (tabName == "tabexempted") {
+                    $('#exempted').jqGrid('clearGridData');
+                    $("#exempted").jqGrid("GridUnload");
+                    $('#exempted').trigger('reloadGrid');
+                    gridexempted();
+                //} else if (tabName == "tabpayment") {
+                //    $('#payment').jqGrid('clearGridData');
+                //    $("#payment").jqGrid("GridUnload");
+                //    $('#payment').trigger('reloadGrid');
+                //    gridpayment();
+                }
+            }
+            document.getElementById("options").click();
+        </script>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>
+@*<input type="hidden" id="hdnformatname" />*@

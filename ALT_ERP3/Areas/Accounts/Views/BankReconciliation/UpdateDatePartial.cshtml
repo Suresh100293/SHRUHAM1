@@ -1,0 +1,105 @@
+﻿@model GridOption
+@using Common;
+<script>
+    $(document).ready(function () {
+        $('#ClearDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        loadFlags()
+
+        $('#UpdateData').click(function (event) {
+            event.preventDefault();
+            var mDate = $('#Fromdate').val() + ':' + $('#ToDate').val();
+            var url = '@Url.Action("UpdateRecoStatus")?Date=' + mDate + '&Document=' + $('#hdnDocument').val() + '&BaseGr=' + $('#Flag').val() + '&ClearDate=' + $('#ClearDate').val();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if ($('#hdnMenuName').val() == "Payment") {
+                        $('#payments').jqGrid('clearGridData');
+                        $("#payments").jqGrid("GridUnload");
+                        $('#payments').trigger('reloadGrid');
+                        GridReloadPay();
+                    }
+                    if ($('#hdnMenuName').val() == "Receipt") {
+                        $('#receipts').jqGrid('clearGridData');
+                        $("#receipts").jqGrid("GridUnload");
+                        $('#receipts').trigger('reloadGrid');
+                        GridReloadRec();
+                    }
+
+                    $('#dateupdatediv').modal('hide');
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        function loadFlags() {
+            var url = '@Url.Action("GetFlags")'
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $.each(result, function (i, item) {
+                        $("#Flag").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+                    $('#Flag').val('@Model.BaseGr').attr("selected", "selected");
+                    $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        }
+    });
+</script>
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc;padding-top:7px;">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">Update Reco Status</h4>
+    </div>
+    <div class="modal-body">
+        <br />
+        <div class="form-horizontal" style="max-height:100px;min-height:100px; width:100%;">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">ClearDate:</label>
+                <div class="col-sm-6">
+                    @Html.TextBoxFor(x => x.ClearDate, new { @type = "text", @class = "form-control", @id = "ClearDate", @Name = "ClearDate", @Value = Model.ClearDate, })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Flag:</label>
+                <div class="col-sm-6">
+                    @Html.DropDownListFor(x => x.Flag, DropdownHelper.EmptyList(), new { @class = "form-control", @id = "Flag", @Name = "Flag", })
+                </div>
+            </div>
+        </div>
+        <br />
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;padding-right: 5px;padding-left: 5px;">
+        <button type="button" class="btn btn-success" id="UpdateData"><i class="fa fa-save"></i>&nbsp;&nbsp;Save</button>
+        <button type="button" class="btn btn-danger" data-dismiss="modal"><i class="fa fa-arrow-left"></i>&nbsp;&nbsp;Close</button>
+    </div>
+</div>
+@Html.HiddenFor(x => x.Document, new { @id = "hdnDocument" })
+@Html.HiddenFor(x => x.BaseGr, new { @id = "hdnBaseGr" })
+@Html.HiddenFor(x => x.MenuName, new { @id = "hdnMenuName" })
+

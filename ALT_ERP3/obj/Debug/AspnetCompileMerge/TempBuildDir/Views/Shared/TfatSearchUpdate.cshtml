@@ -1,0 +1,87 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.GridOption
+@using Common
+<script>
+    $(document).ready(function () {
+        $('#btnTfatSearch').click(function (event) {
+            event.preventDefault();
+            var myFormatArray = []
+            $('#formatgrid tr:not(:first)').each(function () {
+                var $tds = $(this).find('td');
+                var myDets = {
+                    IsHidden: $tds.find('input[type="checkbox"]').is(':checked'),
+                    Sno: $tds.eq(0).text(),
+                    Header: $tds.eq(2).text(),
+                }
+                myFormatArray.push(myDets);
+            });
+            var ModelData = {};
+            ModelData["list"] = myFormatArray;
+            if (($("#formats").val() == "Rate Master") || ($("#formats").val() == "Adv. Rate Master") ) {
+                ModelData["ViewDataId"] = '@Model.ViewDataId';
+            } else {
+                ModelData["ViewDataId"] = $("#formats").val();
+            }
+            
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("SaveReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('hide');
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });
+</script>
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Update Format (@Model.ViewDataId)</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" id="FormatTable" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+                <table id="formatgrid" class="zui-table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Hide</th>
+                            <th>Column Header</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.list != null)
+                        {
+                            for (int i = 0; i < Model.list.Count; i++)
+                            {
+                                <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                    <td style="width:5%;">@Html.DisplayFor(m => Model.list[i].Sno)</td>
+                                    <td style="width:5%;">@Html.CheckBoxFor(m => Model.list[i].IsHidden, new { @Style = "width:28px;heigth:28px;font-size:18pt;font-weight:bolder;" })</td>
+                                    <td style="width:90%;">@Html.DisplayFor(m => Model.list[i].Header)</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <button id="btnTfatSearch" class="btn btn-success" type="button">Update</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,550 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.TransactionAuthorisationRulesVM
+@using Common;
+@{
+    ViewBag.Title = "Transaction Authorisation Rules";
+    Layout = null;
+}
+<style>
+    /*.multiselect {
+        background-color: #ab4f4f !important;
+    }*/
+   
+</style>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        GetMyFavorites('@Model.ViewDataId');
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        var values = $('#AuthenticateBranchList').val();
+        $("#AuthenticateBranchList").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $(".AuthoriseBranch option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+
+        $("#AuthoriseReqBranch").empty();
+        $('#AuthoriseReqBranch').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '180',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Branch',
+        })
+        $(".AuthoriseBranch :selected").each(function () {
+            $('#AuthoriseReqBranch').append($('<option>').text($(this).text()).val($(this).val()));
+        });
+
+        var PreviousSelected = $('#AuthenticateReqBranchList').val();
+        $.each(PreviousSelected.split(","), function (i, e) {
+            $(".AuthoriseReqBranch option[value='" + e + "']").prop("selected", true);
+        });
+        $('#AuthoriseReqBranch').multiselect('rebuild');
+        var Newselected = [];
+        $(".AuthoriseReqBranch :selected").each(function () {
+            Newselected.push($(this).val());
+        });
+        $('#AuthenticateReqBranchList').val(Newselected);
+
+
+
+
+        //var values = $('#AuthenticateReqBranchList').val();
+        //$("#AuthenticateReqBranchList").val(values);
+
+        //if (values == "") {
+        //}
+        //else {
+        //    $.each(values.split(","), function (i, e) {
+        //        $(".AuthoriseReqBranch option[value='" + e + "']").prop("selected", true);
+        //    });
+        //}
+
+        $(".AuthoriseBranch").change(function () {
+            $('#AuthenticateBranchList').val('');
+            var selected = [],Text=[];
+            $(".AuthoriseBranch :selected").each(function () {
+                selected.push($(this).val());
+                Text.push($(this).text());
+            });
+            $('#AuthenticateBranchList').val(selected);
+
+            //Rebuild Listbox 
+            $("#AuthoriseReqBranch").empty();
+            $('#AuthoriseReqBranch').multiselect({
+                includeSelectAllOption: true,
+                enableFiltering: true,
+                enableCaseInsensitiveFiltering: true,
+                filterPlaceholder: 'Search for something...',
+                buttonWidth: '180',
+                numberDisplayed: 1,
+                nonSelectedText: 'Select Branch',
+            })
+            for (var i = 0; i < selected.length; i++)
+            {
+                $('#AuthoriseReqBranch').append($('<option>').text(Text[i]).val(selected[i]));
+            }
+            
+            var PreviousSelected = $('#AuthenticateReqBranchList').val();
+            $.each(PreviousSelected.split(","), function (i, e) {
+                $(".AuthoriseReqBranch option[value='" + e + "']").prop("selected", true);
+            });
+            $('#AuthoriseReqBranch').multiselect('rebuild');
+            selected = [];
+            $(".AuthoriseReqBranch :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#AuthenticateReqBranchList').val(selected);
+            //End Rebuild
+
+            return false;
+        });
+        
+        $(".AuthoriseReqBranch").change(function () {
+            $('#AuthenticateReqBranchList').val('');
+            var selected = [];
+            $(".AuthoriseReqBranch :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#AuthenticateReqBranchList').val(selected)
+            return false;
+        });
+
+
+
+        $('.AuthoriseBranch').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '150',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Branch',
+        })
+        $('.AuthoriseReqBranch').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '180',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Branch',
+        })
+        //$('#cars').multiselect({ includeSelectAllOption: true })
+
+
+
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadType()
+        LoadAuthNewType()
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#TransactionAuthorisationRules').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TfatUserAuditHeader_Type: {required: true,},
+               },
+            messages: {
+                TfatUserAuditHeader_Type: {required: 'Type is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#TfatUserAuditHeader_Type").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatUserAuditHeader_AuthTimeLimit").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#TransactionAuthorisationRules").validate().form() == false)
+            //    return;
+
+            if ($("#TfatUserAuditHeader_Type").val() == null || $("#TfatUserAuditHeader_Type").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Type is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["TfatUserAuditHeader_Type"] = $("#TfatUserAuditHeader_Type").val();
+            ModelData["TfatUserAuditHeader_AuthReq"] = $("#TfatUserAuditHeader_AuthReq").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthEach"] = $("#TfatUserAuditHeader_AuthEach").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthLock"] = $("#TfatUserAuditHeader_AuthLock").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthLockDelete"] = $("#TfatUserAuditHeader_AuthLockDelete").is(':checked');
+            ModelData["TfatUserAuditHeader_OptAuthLock"] = $("#TfatUserAuditHeader_OptAuthLock").is(':checked');
+            ModelData["TfatUserAuditHeader_OptAuthLockDelete"] = $("#TfatUserAuditHeader_OptAuthLockDelete").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthAgain"] = $("#TfatUserAuditHeader_AuthAgain").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthNoPrint"] = $("#TfatUserAuditHeader_AuthNoPrint").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthNewType"] = $("#TfatUserAuditHeader_AuthNewType").val();
+            ModelData["TfatUserAuditHeader_AuthNewSerial"] = $("#TfatUserAuditHeader_AuthNewSerial").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthCond"] = $("#TfatUserAuditHeader_AuthCond").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthTimeBound"] = $("#TfatUserAuditHeader_AuthTimeBound").is(':checked');
+            ModelData["TfatUserAuditHeader_AuthTimeLimit"] = $("#TfatUserAuditHeader_AuthTimeLimit").val();
+            ModelData["AuthenticateBranchList"] = $("#AuthenticateBranchList").val();
+            ModelData["AuthenticateReqBranchList"] = $("#AuthenticateReqBranchList").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadType() {
+        var url = '@Url.Action("AutoCompleteType")'
+        $('#TfatUserAuditHeader_Type').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatUserAuditHeader_Type', text: '@Model.TypeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadUserID() {
+        var url = '@Url.Action("AutoCompleteUserID")'
+        $('#TfatUserAudit_UserID').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatUserAudit_UserID', text: '@Model.UserIDName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadAuthNewType() {
+        var url = '@Url.Action("AutoCompleteAuthNewType")'
+        $('#TfatUserAuditHeader_AuthNewType').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatUserAuditHeader_AuthNewType', text: '@Model.AuthNewTypeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="TransactionAuthorisationRules" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Type:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.TfatUserAuditHeader_Type, new { @class = "input-large-query", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @id = "TfatUserAuditHeader_Type", @Value = Model.TfatUserAuditHeader_Type, @Name = "TfatUserAuditHeader_Type" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.TfatUserAuditHeader_Type, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatUserAuditHeader_Type", @Value = Model.TfatUserAuditHeader_Type, @Name = "TfatUserAuditHeader_Type" })
+                    }
+                </div>
+                <div class="col-sm-3" style="padding-left: 0px;">
+                    <label class="col-sm-7 control-label">Optional Authenticate Branch:</label>
+                    <div class="col-sm-5">
+                        @Html.ListBoxFor(x => Model.AppBranchL, Model.Branches, new { @class = "AuthoriseBranch", @id = "AuthoriseBranch", @style = "margin-left:10% !important;" })
+                    </div>
+                </div>
+                
+                <div class="col-sm-4">
+                    <label class="col-sm-7 control-label">Required Authenticate Compulsory Branch:</label>
+                    <div class="col-sm-5">
+                        @Html.ListBoxFor(x => Model.AppBranchL, Model.ReqBranches, new { @class = "AuthoriseReqBranch", @id = "AuthoriseReqBranch", @style = "margin-left:10% !important;" })
+                    </div>
+                </div>
+                
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">AuthReq :</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthReq, new { @value = Model.TfatUserAuditHeader_AuthReq, @id = "TfatUserAuditHeader_AuthReq", @name = "TfatUserAuditHeader_AuthReq", @style = "height:16px;width:16px;" })
+                </div>
+                <div class="col-sm-3" style="padding-left: 0px;">
+                    <label class="col-sm-7 control-label">Lock on Edit (Optional)?:</label>
+                    <div class="col-sm-5">
+                        @Html.CheckBoxFor(x => x.TfatUserAuditHeader_OptAuthLock, new { @value = Model.TfatUserAuditHeader_OptAuthLock, @id = "TfatUserAuditHeader_OptAuthLock", @name = "TfatUserAuditHeader_OptAuthLock", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <label class="col-sm-7 control-label">Lock on Edit?:</label>
+                    <div class="col-sm-5">
+                        @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthLock, new { @value = Model.TfatUserAuditHeader_AuthLock, @id = "TfatUserAuditHeader_AuthLock", @name = "TfatUserAuditHeader_AuthLock", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+            </div>
+         
+            <div class="form-group">
+                <label class="col-sm-1 control-label">AuthEach:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthEach, new { @value = Model.TfatUserAuditHeader_AuthEach, @id = "TfatUserAuditHeader_AuthEach", @name = "TfatUserAuditHeader_AuthEach", @style = "height:16px;width:16px;" })
+                </div>
+                <div class="col-sm-3" style="padding-left: 0px;">
+                    <label class="col-sm-7 control-label">Lock on Delete (Optional)?:</label>
+                    <div class="col-sm-5">
+                        @Html.CheckBoxFor(x => x.TfatUserAuditHeader_OptAuthLockDelete, new { @value = Model.TfatUserAuditHeader_OptAuthLockDelete, @id = "TfatUserAuditHeader_OptAuthLockDelete", @name = "TfatUserAuditHeader_OptAuthLockDelete", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <label class="col-sm-7 control-label">Lock on Delete?:</label>
+                    <div class="col-sm-5">
+                        @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthLockDelete, new { @value = Model.TfatUserAuditHeader_AuthLockDelete, @id = "TfatUserAuditHeader_AuthLockDelete", @name = "TfatUserAuditHeader_AuthLockDelete", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Reset on Edit?:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthAgain, new { @value = Model.TfatUserAuditHeader_AuthAgain, @id = "TfatUserAuditHeader_AuthAgain", @name = "TfatUserAuditHeader_AuthAgain", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Dont Print Unathorised:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthNoPrint, new { @value = Model.TfatUserAuditHeader_AuthNoPrint, @id = "TfatUserAuditHeader_AuthNoPrint", @name = "TfatUserAuditHeader_AuthNoPrint", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">New Type:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatUserAuditHeader_AuthNewType, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatUserAuditHeader_AuthNewType", @Value = Model.TfatUserAuditHeader_AuthNewType, @Name = "TfatUserAuditHeader_AuthNewType" })
+                </div>
+                <label class="col-sm-1 control-label">New Serial:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthNewSerial, new { @value = Model.TfatUserAuditHeader_AuthNewSerial, @id = "TfatUserAuditHeader_AuthNewSerial", @name = "TfatUserAuditHeader_AuthNewSerial", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Conditional?:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthCond, new { @value = Model.TfatUserAuditHeader_AuthCond, @id = "TfatUserAuditHeader_AuthCond", @name = "TfatUserAuditHeader_AuthCond", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Time Bound?:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TfatUserAuditHeader_AuthTimeBound, new { @value = Model.TfatUserAuditHeader_AuthTimeBound, @id = "TfatUserAuditHeader_AuthTimeBound", @name = "TfatUserAuditHeader_AuthTimeBound", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Time Limit:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TfatUserAuditHeader_AuthTimeLimit, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatUserAuditHeader_AuthTimeLimit", @Value = Model.TfatUserAuditHeader_AuthTimeLimit, @Id = "TfatUserAuditHeader_AuthTimeLimit" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            @* iX9: -- Code for Body Starts -- *@
+            @* iX9: Tab Body Panels *@
+            @* iX9: -- Call Grid Partial View -- *@
+            <div>
+                @Html.Partial("GridDataView")
+            </div>
+            @* iX9: -- Code for Body Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Mon 22-Apr-2019 04:49 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 32
+    by Team Shruham Software *@
+@Html.HiddenFor(x => x.AuthenticateBranchList)
+@Html.HiddenFor(x => x.AuthenticateReqBranchList) 

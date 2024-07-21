@@ -1,0 +1,625 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.ZoneBranchAreaCombineModel
+@using Common;
+@{
+    ViewBag.Title = "Account Groups";
+    Layout = null;
+}
+<script type="text/javascript">
+    var NameFlag = "False";
+    $(document).ready(function () {
+
+        $("#Name").constrain({ allow: { regex: "[a-zA-Z ]" } });
+        $("#Desc").constrain({ allow: { regex: "[a-zA-Z0-9().,- ]" } });
+        $("#ShortName").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+        $("#GstNo").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+        $("#GstState").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+        $("#MobileNo").constrain({ allow: { regex: "[0-9]" } });
+        $("#Address").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+
+        $('#Name').blur(function () {
+            CheckName();
+        });
+
+        if ('@Model.Mode'=="Edit") {
+            DisableAllControls();
+        }
+
+        if ('@Model.AllowButtons' == "btnZone")
+        {
+            $('#btnZone').prop('disabled', false);
+        }
+        else if ('@Model.AllowButtons' == "btnBranch")
+        {
+            $('#btnBranch').prop('disabled', false);
+        }
+        else if ('@Model.AllowButtons' == "btnArea-btnSubBranch")
+        {
+            $('#btnArea,#btnSubBranch').prop('disabled', false);
+        }
+        else if ('@Model.AllowButtons' == "btnArea")
+        {
+            $('#btnArea').prop('disabled', false);
+        }
+        $('#btnZone').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            $('#CreateMode').val("Zone");
+            AddChild("ZoneView");
+        });
+        $('#btnBranch').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            $('#CreateMode').val("Branch");
+            AddChild("BranchView");
+        });
+        $('#btnSubBranch').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            $('#CreateMode').val("SubBranch");
+            AddChild("BranchView");
+        });
+        $('#btnArea').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            $('#CreateMode').val("Area");
+            AddChild("AreaView");
+        });
+
+        $('#btnEdit').click(function (event) {
+            event.preventDefault();
+            $('input').attr('readonly', false);
+            $('textarea').attr('readonly', false);
+            $('select').attr('disabled', false);
+            $('#ParentId').attr('readonly', true);
+            $("input[type=radio]").attr('disabled', false);
+            $('#btnSaveChnges').prop('disabled', false);
+        });
+
+           $('#SubmitData').click(function (event) {
+            event.preventDefault();
+               //CheckName();
+            if ($("#Name").val() == null || $("#Name").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+
+            if ($("#Status").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Status is Required..');
+                return;
+            }
+
+            if ($("#viewName").val() == "BranchView") {
+
+
+                if ($("#GstNo").val() == null || $("#GstNo").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('GstNo is Required..');
+                    return;
+                }
+
+                if ($("#GstState").val() == null || $("#GstState").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('GstState is Required..');
+                    return;
+                }
+
+                if ($("#MobileNo").val() == null || $("#MobileNo").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('MobileNo is Required..');
+                    return;
+                }
+
+            }
+
+            if ($("#viewName").val() == "AreaView" || $("#viewName").val() == "BranchView") {
+
+                if ($("#ShortName").val() == null || $("#ShortName").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('ShortName is Required..');
+                    return;
+                }
+               }
+               debugger;
+            var url = '@Url.Action("SaveData")';
+
+            var ModelData = {};
+            ModelData["Name"] = $("#Name").val();
+            ModelData["Desc"] = $("#Desc").val();
+               ModelData["ParentId"] = $("#hdnParentId").val();
+            ModelData["ViewName"] = $("#viewName").val();
+               ModelData["AllowButtons"] = $("#NewCreateMode").val();
+            ModelData["ShortName"] = $("#ShortName").val();
+            ModelData["GstNo"] = $("#GstNo").val();
+            ModelData["GstState"] = $("#GstState").val();
+            ModelData["MobileNo"] = $("#MobileNo").val();
+            ModelData["Address"] = $("#Address").val();
+               ModelData["Status"] = $("#Status").val();
+               if ($("#RadioGodwn").prop("checked")) {
+                   // do something
+                   debugger;
+                   ModelData["OfficeType"] = "Office";
+               }
+               if ($("#RadioOfc").prop("checked")) {
+                   // do something
+                   debugger;
+                   ModelData["OfficeType"] = "Godown";
+               }
+               //ModelData["Id"] = $("#hdnID").val();
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").hide();
+
+                       // window.location.href = '@Url.Action("Index", "ZoneMaster")?ViewDataId=Zone&Module=Master&optioncode=Zone&Header=ZoneMaster&Controller2=ZoneMaster';
+                        FillTreeView();
+                        $('#adddiv').empty();
+                        /*FillTreeView(); */                   }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message); FillTreeView(); $('#adddiv').empty();
+                    }
+                },
+            });
+        });
+
+
+        $('#btnSaveChnges').click(function (event) {
+            event.preventDefault();
+            //CheckName();
+            if ($("#Name").val() == null || $("#Name").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+
+            if ($("#Status").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Status is Required..');
+                return;
+            }
+
+            if ($("#viewName").val() == "BranchView") {
+
+                //if ($("#ShortName").val() == null || $("#ShortName").val() == '') {
+                //    $("#ErrorMessage").show();
+                //    $("#ErrorMessage").text('ShortName is Required..');
+                //    return;
+                //}
+
+                if ($("#GstNo").val() == null || $("#GstNo").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('GstNo is Required..');
+                    return;
+                }
+
+                if ($("#GstState").val() == null || $("#GstState").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('GstState is Required..');
+                    return;
+                }
+
+                if ($("#MobileNo").val() == null || $("#MobileNo").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('MobileNo is Required..');
+                    return;
+                }
+
+            }
+
+            if ($("#viewName").val() == "AreaView" || $("#viewName").val() == "BranchView") {
+
+                if ($("#ShortName").val() == null || $("#ShortName").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('ShortName is Required..');
+                    return;
+                }
+            }
+            var url = '@Url.Action("Update")';
+
+            var ModelData = {};
+            ModelData["Name"] = $("#Name").val();
+            ModelData["Desc"] = $("#Desc").val();
+            ModelData["ParentId"] = $("#hdnParentId").val();
+            ModelData["ShortName"] = $("#ShortName").val();
+            ModelData["GstNo"] = $("#GstNo").val();
+            ModelData["GstState"] = $("#GstState").val();
+            ModelData["MobileNo"] = $("#MobileNo").val();
+            ModelData["Address"] = $("#Address").val();
+            ModelData["Status"] = $("#Status").val();
+            ModelData["Id"] = $("#hdnID").val();
+            debugger;
+            if ($("#RadioGodwn").prop("checked")) {
+                // do something
+                debugger;
+                ModelData["OfficeType"] = "Office";
+            }
+            if ($("#RadioOfc").prop("checked")) {
+                // do something
+                debugger;
+                ModelData["OfficeType"] = "Godown";
+            }
+             
+            
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").hide();
+                          window.location.href = '@Url.Action("Index", "ZoneMaster")?ViewDataId=Zone&Module=Master&optioncode=Zone&Header=ZoneMaster&Controller2=ZoneMaster';
+                        /*FillTreeView(); */                   }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+
+
+    });
+
+
+    function CheckName() {
+            NameFlag = "False";
+            var currValue = $('#Name').val()
+            var url = '@Url.Action("CheckExist")';
+            if (currValue != null || currValue != "") {
+                $.ajax({
+                    type: "POST",
+                    traditional: true,
+                    //url: "/Base/CheckExist",
+                    url: url,
+                    data: { TableName: "Treetable", Colfield: "Name", Value: $('#Name').val(), SkipColumnName: "RecordKey", PKValue: $('#hdnID').val() },
+                    success: function (result) {
+                        if (result.Message == "F") {
+                            $("#ErrorMessage").show();
+                            $("#ErrorMessage").text('Name is Exist Please Change The Name..');
+                            $('#SubmitData').prop('disabled', true);
+                            $('#btnSaveChnges').prop('disabled', true);
+                            return;
+                        } else {
+                            $("#ErrorMessage").hide();
+                            $('#SubmitData').prop('disabled', false);
+                            $('#btnSaveChnges').prop('disabled', false);
+                        }
+                    }
+                });
+            }
+    }
+    function DisableAllControls() {
+        $('input').attr('readonly', true);
+        $('textarea').attr('readonly', true);
+        $("input[type=radio]").attr('disabled', true);
+        $('select').attr('disabled', true);
+    };
+    function AddChild( Value) {
+       // var NewValue = Value;
+            var divId = [];
+            $("#treeviewcontrol").jstree("get_selected").each(function (key, value) {
+                divId.push(this.id);
+        });
+        //  var url = '@Url.Action("AddChild")?Id=' + divId.toString() + '&Mode=' + Value.toString();
+        var url = '@Url.Action("AddChild")?ParentId=' + divId.toString() + '&ViewName=' + Value + '&AllowButtons=' + $('#CreateMode').val();
+            //var url = '@Url.Action("AddChild")?Id=' + divId.toString()+'&MasterGroups_Code='+$("#MasterGroups_Code").val();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                },
+                success: function (data) {
+                    $('#adddiv').html(data.Html);
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                    }
+                    else if (data.Status == 'failure') {
+                        $('.spinner').hide();
+                        alert('No Item is Selected.');
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        }
+
+</script>
+<style>
+
+
+
+    select {
+        text-align-last: center;
+        text-align: center;
+        font-weight: bold;
+    }
+</style>
+<section class="panel" style="margin-bottom:15px;">
+    <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+    <div class="col-sm-9" style="margin-top: -6px;padding-left: 70px;padding-top: 10px;max-width: 60%;border: 3px solid #77777740;">
+
+        @if (Model.ViewName == "ZoneView")
+        {
+            <div class="row">
+                <div class="form-group">
+                    <center>
+                        <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Name:</label>
+                        <div class="col-sm-5">
+                            @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @Value = Model.Name })
+                        </div>
+                    </center>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Desc:</label>
+                    <div class="col-sm-5">
+                        @*@Html.TextBoxFor(x => x.Desc, new { @class = "form-control" })*@
+                        @Html.TextAreaFor(x => x.Desc, new { @class = "form-control", @rows = 4, @Value = Model.Desc })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Status:</label>
+                    <div class="col-sm-5">
+                        @* @Html.DropDownListFor(m => m.Status, new SelectList(Enum.GetValues(typeof(EnumStatus))), "--Select TeaType--")*@
+                        @Html.EnumDropDownListFor(m => m.Status, "---- Select Status ----", new { @class = "form-control" })
+
+                    </div>
+                </div>
+            </div>
+
+        }
+        else if (Model.ViewName == "BranchView")
+        {
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Parent ID:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(m => m.ParentId, new { @class = "form-control", @readonly = "readonly", @Value = Model.ParentName })
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Name:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(x => x.Name, new { @class = "form-control ", @Value = Model.Name })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Short Name:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(x => x.ShortName, new { @class = "form-control", @Value = Model.ShortName })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">GSTNO:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(x => x.GstNo, new { @class = "form-control", @Value = Model.GstNo })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">GST-State:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(x => x.GstState, new { @class = "form-control", @Value = Model.GstState })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Mobile-NO:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(x => x.MobileNo, new { @class = "form-control", @Value = Model.MobileNo })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Address:</label>
+                    <div class="col-sm-5">
+                        @*@Html.TextBoxFor(x => x.Desc, new { @class = "form-control" })*@
+                        @Html.TextAreaFor(x => x.Address, new { @class = "form-control", @rows = 4, @Value = Model.Address })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Status:</label>
+                    <div class="col-sm-5">
+                        @* @Html.DropDownListFor(m => m.Status, new SelectList(Enum.GetValues(typeof(EnumStatus))), "--Select TeaType--")*@
+                        @Html.EnumDropDownListFor(m => m.Status, "---- Select Status ----", new { @class = "form-control" })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 4px;width: 88px !important;">Type:</label>
+                    <div class="col-sm-5" style="display: contents;">
+                        @{
+                            int a = 1;
+                            foreach (object radiotext in Model.OfficeTypeList)
+                            {
+                                if (a == 1)
+                                {
+                                    <div class="col-sm-offset-1 col-sm-1" style="display: -webkit-inline-box;margin-left: -10px;">
+                                        @Html.RadioButtonFor(m => m.OfficeType, radiotext.ToString(), new { @class = "form-control" ,@id="RadioOfc"}) <div style="margin-top: 10px;font-weight: bold;"><span>@radiotext.ToString()</span></div>
+                                    </div>
+                                    a = a + 1;
+                                }
+                                else
+                                {
+                                    <div class="col-sm-offset-1 col-sm-1" style="display: -webkit-inline-box;margin-left: 15px;">
+                                        @Html.RadioButtonFor(m => m.OfficeType, radiotext.ToString(), new { @class = "form-control", @id = "RadioGodwn" }) <div style="margin-top: 10px;font-weight: bold;"><span>@radiotext.ToString()</span></div>
+                                    </div>
+                                    a = a + 1;
+                                }
+
+
+                            }
+                        }
+
+                    </div>
+                </div>
+            </div>
+        }
+        else if (Model.ViewName == "AreaView")
+        {
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Parent ID:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(m => m.ParentId, new { @class = "form-control", @readonly = "readonly", @Value = Model.ParentName })
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Name:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @Value = Model.Name })
+
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Short Name:</label>
+                    <div class="col-sm-5">
+                        @Html.TextBoxFor(x => x.ShortName, new { @class = "form-control", @Value = Model.ShortName })
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Desc:</label>
+                    <div class="col-sm-5">
+                        @*@Html.TextBoxFor(x => x.Desc, new { @class = "form-control" })*@
+                        @Html.TextAreaFor(x => x.Desc, new { @class = "form-control", @rows = 4, @Value = Model.Desc })
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label" style="margin-top: 1px;width: 88px !important;">Status:</label>
+                    <div class="col-sm-5">
+                        @* @Html.DropDownListFor(m => m.Status, new SelectList(Enum.GetValues(typeof(EnumStatus))), "--Select TeaType--")*@
+                        @Html.EnumDropDownListFor(m => m.Status, "---- Select Status ----", new { @class = "form-control" })
+
+                    </div>
+                </div>
+            </div>
+            @*<div class="row">
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label" style="margin-top: 4px;width: 88px !important;">Type:</label>
+                        <div class="col-sm-5" style="display: contents;">
+                            @{
+                                int a = 1;
+                                foreach (object radiotext in Model.OfficeTypeList)
+                                {
+                                    if (a == 1)
+                                    {
+                                        <div class="col-sm-offset-1 col-sm-1" style="display: -webkit-inline-box;margin-left: -10px;">
+                                            @Html.RadioButtonFor(m => m.OfficeType, radiotext.ToString(), new { @class = "form-control" }) <div style="margin-top: 10px;font-weight: bold;"><span>@radiotext.ToString()</span></div>
+                                        </div>
+                                        a = a + 1;
+                                    }
+                                    else
+                                    {
+                                        <div class="col-sm-offset-1 col-sm-1" style="display: -webkit-inline-box;margin-left: 15px;">
+                                            @Html.RadioButtonFor(m => m.OfficeType, radiotext.ToString(), new { @class = "form-control" }) <div style="margin-top: 10px;font-weight: bold;"><span>@radiotext.ToString()</span></div>
+                                        </div>
+                                        a = a + 1;
+                                    }
+
+
+                                }
+                            }
+
+                        </div>
+                    </div>
+                </div>*@
+        }
+        <div class="row">
+            <div class="form-group">
+                <div class="pull-right" style="margin: 15px 70px 0px 0px;">
+
+
+
+
+
+                    @if (Model.Mode == "Create")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SubmitData">Submit</button>
+                    }
+                    else if (Model.Mode == "Edit")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnEdit">Edit</button>
+                        <button class="btn btn-success" id="btnSaveChnges" style="font-size: 13px;padding:3px 12px;" disabled>Save Changes</button>
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-9" style="margin-top: 2px;padding: 5px 0px 5px 15%;max-width: 60%;border: 3px solid #77777740;">
+        <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="btnZone" disabled>Add Zone</button>
+        <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="btnBranch" disabled>Add Branch</button>
+        <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="btnSubBranch" disabled>Add Sub-Branch</button>
+        <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="btnArea" disabled>Add Area</button>
+    </div>
+</section>
+
+
+
+
+<input type="hidden" id="CreateMode" />
+
+@Html.HiddenFor(model => model.AllowButtons, new { id = "NewCreateMode" })
+@Html.HiddenFor(model => model.ParentId, new { id = "hdnParentId" })
+@Html.HiddenFor(model => model.Id, new { id = "hdnID" })

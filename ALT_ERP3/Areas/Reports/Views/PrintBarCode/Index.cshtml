@@ -1,0 +1,416 @@
+﻿@model GridOption
+@using Common
+@{
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<style>
+    .ui-jqgrid tr.jqgrow td {
+        word-wrap: break-word; /* IE 5.5+ and CSS3 */
+        white-space: pre-wrap; /* CSS3 */
+        overflow: hidden;
+        height: auto;
+        vertical-align: middle;
+        padding-top: 3px;
+        padding-bottom: 3px;
+    }
+</style>
+
+<script type="text/javascript">
+    var lastsel2;
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        if ("@ViewBag.PeriodType" != "S")
+        {
+            $('#Fromdate').val('@Model.FromDate');
+        }else{
+            $('#Fromdate').val('01-01-2000');
+        }
+        $('#ToDate').val('@Model.ToDate');
+        $("#viewcode").val('@Model.ViewDataId');
+        $("#hdnformatname").val('@Model.ViewDataId');
+        GetColumnsList($("#viewcode").val());
+        GridReload();
+        GetFormats()
+        $('#btnselectall').click(function (event) {
+            $("#acdisplay").find('tr').each(function () {
+                $(this).find("input[type='checkbox']").prop('checked', true);
+            });
+        });
+
+        $('#btnunselectall').click(function (event) {
+            $("#acdisplay").find('tr').each(function () {
+                $(this).find("input[type='checkbox']").prop('checked', false);
+            });
+        });
+
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+            clickRefresh();
+        });
+
+        $("#acdisplay").live("click", '.checkboxobject1', function () {
+            $("#acdisplay").find('tr').each(function () {
+                var row = $(this);
+                if (row.find('input[type="checkbox"]').is(':checked')) {
+                    var mvar = $("#hiddenvalues").val();
+                    var $tds = $(this).find('td');
+                    var mcode = mvar + "~" + $tds.eq(1).text();
+                    $("#hiddenvalues").val(mcode);
+                }
+            });
+        });
+    });
+
+    function clickRefresh() {
+        $('#acdisplay').jqGrid('clearGridData');
+        $("#acdisplay").jqGrid("GridUnload");
+        $('#acdisplay').trigger('reloadGrid');
+        GridReload();
+    }
+
+    function clickBulkPrint() {
+        var mvar = "";
+        if ($('#Format').val() == "0") {
+            alert("Select a Format..");
+            return;
+        }
+
+        $('.spinner').show();
+        $('#acdisplay tr:not(:first)').each(function () {
+            var tds = $(this).find('td');
+            if (tds.find('input[type="checkbox"]').is(':checked')) {
+                mvar = mvar + tds.eq(1).text() + "~" + tds.eq(5).text() + "^";
+            }
+        })
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $('.spinner').hide();
+        window.open("/Reports/PrintBarCode/BulkPrint?SelectContent=" + mvar + '&Date=' + mDate + '&ViewDataId=' + $("#viewcode").val() + '&Format=' + $('#Format').val() , "_blank");
+    };
+
+    function GridReload() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val();
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&MainType=' + '@Model.MainType' + '&SubType=' + '@Model.SubType' + '&Type=' + '@Model.Type' + '&ViewDataId=' + $("#viewcode").val() + '&searchField=' + $('#searchField').val() + '&searchString=' + $('#searchString').val() + '&searchOper=' + $('#searchOper').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#acdisplay').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                mtype: 'POST',
+                colNames: ColName,
+                colModel: Coldata,
+                cellEdit: true,
+                editurl: '/Reports/MultiSelect/dummyurl',
+                cellsubmit: 'clientArray',
+                pager: $('#pager1'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: $(window).height() - 111 - 85 - 23,/*38 for search panel*/
+                frozen: false,
+                //sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                },
+                onSelectRow: function (id) {
+                    alert($("#viewcode").val());
+                    if (id && id !== lastsel2) {
+                        $("#acdisplay").saveRow(lastsel2, false, "clientArray");
+                        $("#acdisplay").editRow(id, true, null, null, "clientArray");
+                        lastsel2 = id;
+                    }
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $("tr.jqgrow:odd").css("background", "#EAEAEA");
+                    $('.spinner').hide();
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#acdisplay").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var ra1 = "<input id='btnAdd" + rowId + "' type='checkbox' name='checkboxobject' Class='example2' style='margin-left: 0px;height: 27px;width: 19px;margin-top: 1px;' />";
+                        //set the checkBox
+                        jQuery("#acdisplay").jqGrid('setRowData', rowId, { 'Select': ra1 });
+                    }
+
+                    // display subgrid for first record
+                    $('#subgrid').jqGrid('clearGridData');
+                    $('#subgrid').jqGrid("GridUnload");
+                    $('#subgrid').trigger('reloadGrid');
+                    var mcode = $('#acdisplay').jqGrid('getCell', 1, 'Name');
+                    $('#accountname').html(mcode);
+                    mcode = $('#acdisplay').jqGrid('getCell', 1, 'Code');
+                    GridReloadSub(mcode);
+                },
+            });
+            jQuery("#acdisplay").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#acdisplay").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    // grid functions for slaesgrid
+    function GridReloadSub(mCode) {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        //var mDate = ('01-01-2000' + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSub")?Date=' + mDate + '&Document=' + mCode + '&ViewDataId=' + $("#viewcode").val();
+        var sUrlpath = '@Url.Action("GetGridDataSub")?Date=' + mDate + '&Document=' + mCode + '&Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&Type=' + '@Model.Type' + '&ViewDataId=' + $("#viewcode").val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                if (data.Status=='Error')
+                {
+                    document.getElementById("leftdiv").style.width = '100%';
+                    document.getElementById("rightdiv").style.width = '0%';
+                    $('#subgrid').hide();
+                    return;
+                }
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataSub();
+                $('.spinner').hide();
+            },
+            Error: function () {
+                $('.spinner').hide();
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataSub() {
+            $('#subgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager3'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 111 - 85 - 65,/*38 for search panel*/
+                //width: $(window).innerWidth() * 4 / 12,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    $('.spinner').hide();
+                },
+            });
+            //jQuery("#subgrid").jqGrid('navGrid', "#pager3",
+                //{ edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#subgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function GetFormats() {
+            var url = '@Url.Action("GetFormats")?Type=' + $("#hdnType").val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $.each(result, function (i, item) {
+                        $("#Format").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                    });
+                    $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+        }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-sm-3" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <div class="col-sm-2 pull-right" style="padding-top:-3px;float:right;align-items:flex-end;">
+            @*<button class="btn btn-info" style="font-size:14pt;font-weight:bolder;padding:0px 3px;width:27px;height:27px;" id="btnRefresh" title='Refresh'><i style="color:black;" class="fa fa-refresh"></i></button>*@
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                <a id="btnRefresh" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+            <div class="col-sm-1"></div>
+            <button class="btn btn-success" onclick="clickBulkPrint()" style="font-size:14px;padding:3px 12px;" id="btnBulkPrint">Print / Export</button>
+        </div>
+
+        @if (ViewBag.PeriodType != "S")
+        {
+            <div class="col-sm-3 pull-right" style="padding-right:unset;">
+                <div class="col-sm-1" style="color:black;padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;width:unset;">
+                    Period:
+                </div>
+                <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                    <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                    <span class="input-group-addon">to</span>
+                    <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="col-sm-3 pull-right" style="padding-right:unset;">
+                <div class="col-sm-2" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;width:unset;color:black;">
+                    Period:
+                </div>
+                <div class="col-sm-6" style="padding-right:unset;">
+                    <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                        <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                    </div>
+                </div>
+                <div class="col-sm-1" style="padding-right:unset;width:0px;">
+                    <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                        <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="width:0px;font-weight:bolder;text-align:center;visibility:hidden;">
+                    </div>
+                </div>
+            </div>
+        }
+        <div class="col-sm-3 pull-right" style="padding-right:unset;">
+            <div class="col-sm-2" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;width:unset;color:black;">
+                Format:
+            </div>
+            <div class="col-sm-10" style="padding-left:6px;font-family:Tahoma;padding-top:0px;font-size:10pt;color:black;">
+                @Html.DropDownListFor(x => x.Format, DropdownHelper.EmptyList(), new { @class = "form-control", @id = "Format", @Name = "Format", @style="font-weight:bold;" })
+            </div>
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:47px;height:auto;padding:0px;">
+        @Html.Partial("SearchGridView")
+        <div class="col-sm-8" id="leftdiv" style="padding-left:0px;padding-right:0px;">
+            @*<div class="panel-body" style="margin-top:30px;height:auto;padding-left:0px;padding-right:0px;">*@
+            <div id="page-contentgrid">
+                <div class="jqGrid">
+                    <table id="acdisplay" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                    <div id="pager1" style="height:34px;"></div>
+                </div>
+            </div>
+            @*</div>*@
+        </div>
+        <div class="col-sm-4" id="rightdiv" style="padding-left:0px;border:none;">
+            <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;width:100%;">
+                <div class="col-sm-12" style="padding-left:0px;padding-right:0px;overflow:scroll;">
+                    <div class="form-group">
+                        <label id="accountname" class="col-sm-12 control-label" style="text-wrap:none;word-wrap:unset;margin:0;margin-top:0px;border:none;font-size:12pt;font-weight:bold;"></label>
+                    </div>
+                    <span style="text-align:left;height:40px;width:250px;" class="sparkbalances"></span>
+                    <div id="page-contentgridright">
+                        <div class="jqGrid">
+                            <table id="subgrid" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;height:33px;">
+    <div class="col-sm-4" style="padding-left:1px;">
+        <button class="btn btn-primary" id="btnselectall" style="color:black; font-size:12px;height:27px;padding:3px;margin-left:0;width:100px;" name="Command">Select ALL</button>
+        <button class="btn btn-default" id="btnunselectall" style="color:black; font-size:12px;height:27px;padding:3px;margin-left:0;width:100px;" name="Command">Un-Select ALL</button>
+    </div>
+    <div class="col-sm-4" style="margin-top:4px;text-align:center;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>
+
+<div class="example-modal">
+    <div id="dialogprint" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:600px;">
+            <div id="dialogtoprint">
+                @Html.Partial("ReportPrintOptions")
+            </div>
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x => x.ViewCode, new { @Id = "viewcode" })
+@Html.HiddenFor(x => x.Type, new { @Id = "hdnType" })
+<input type="hidden" id="hiddenvalues" />

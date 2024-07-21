@@ -1,0 +1,277 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.TransactionSMSModel
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script>
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        var mheight = $(window).innerHeight() - 175;
+        $('#TransactionTypesdiv').height(mheight-30);
+        $('#dynamic-table').height(mheight - 200);
+        $('#MessageRulesdiv').height(mheight - 80);
+        loadSearchList();
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            var Error = false;
+            
+            var myTableArray = [];
+            var selected = "";
+            //$(".addontxtfvalue input:checked").each(function () {
+            //    selected = selected + $(this).val() + ",";
+            //})
+
+            $('#tabledatapick2 tbody tr').each(function () {
+                debugger;
+                var tds = $(this).find('td');
+                var Userl = "",PartyBranchl="",UserBranchl="",PartyAttach="",UserAttach="";
+                var Users = [];
+                var PartyBranch = [];
+                var UserBranch = [];
+                var UserATT = [];
+                var PartyATT = [];
+                Users = tds.find(".UsersL").val();
+                if (Users!=null) {
+                    for (var i = 0; i < Users.length; i++) {
+                        Userl += Users[i] + ",";
+                    }
+                    Userl = Userl.substr(0, Userl.length - 1);
+                }
+                PartyBranch = tds.find(".PartyBranchL").val();
+                if (PartyBranch!=null) {
+                    for (var i = 0; i < PartyBranch.length; i++) {
+                        PartyBranchl += PartyBranch[i] + ",";
+                    }
+                    PartyBranchl = PartyBranchl.substr(0, PartyBranchl.length - 1);
+                }
+                UserBranch = tds.find(".UserBranchL").val();
+                if (UserBranch!=null) {
+                    for (var i = 0; i < UserBranch.length; i++) {
+                        UserBranchl += UserBranch[i] + ",";
+                    }
+                    UserBranchl = UserBranchl.substr(0, UserBranchl.length - 1);
+                }
+                UserATT = tds.find(".UserPrintFormatL").val();
+                if (UserATT!=null) {
+                    for (var i = 0; i < UserATT.length; i++) {
+                        UserAttach += UserATT[i] + ",";
+                    }
+                    UserAttach = UserAttach.substr(0, UserAttach.length - 1);
+                }
+                PartyATT = tds.find(".PartyPrintFormatL").val();
+                if (PartyATT!=null) {
+                    for (var i = 0; i < PartyATT.length; i++) {
+                        PartyAttach += PartyATT[i] + ",";
+                    }
+                    PartyAttach = PartyAttach.substr(0, PartyAttach.length - 1);
+                }
+
+                if (tds.find("input[id='PartySendSMS']").is(':checked') || tds.find("input[id='UserSendSMS']").is(':checked')) {
+                    if (tds.find("#SMSTemplate").val() == "" || tds.find("#SMSTemplate").val() == null) {
+                        Error = true;
+                        alert("Please Select SMSTemplate For " + tds.eq(0).find("input").val());
+                    }
+                }
+                var myDets = {
+                    PartyId: tds.eq(1).find("input").val(),
+                    PartyBranchL: PartyBranchl,
+                    PartySendEmail: tds.find("input[id='PartySendEmail']").is(':checked'),
+                    SMSTemplate: tds.find("#SMSTemplate").val(),
+                    PartySendSMS: tds.find("input[id='PartySendSMS']").is(':checked'),
+                    UsersL: Userl,
+                    UserBranchL: UserBranchl,
+                    UserPrintFormatL: UserAttach,
+                    PartyPrintFormatL: PartyAttach,
+                    UserSendEmail: tds.find("input[id='UserSendEmail']").is(':checked'),
+                    UserSendSMS: tds.find("input[id='UserSendSMS']").is(':checked'),
+                    UserSendMSG: tds.find("input[id='UserSendMSG']").is(':checked'),
+                }
+                myTableArray.push(myDets);
+            })
+            if (Error == false)
+            {
+                $('.spinner').show();
+                var ModelData = {};
+                ModelData["mRightList"] = myTableArray;
+                ModelData["Type"] = $("#Type").val();
+                ModelData["SMSTemplate"] = $("#SMSTemplate").val();
+                ModelData["EmailTemplate"] = $("#EmailTemplate").val();
+                ModelData["Users"] = selected;
+                                ModelData["Mode"] = '@Model.Mode';
+
+                var DTO = { mModel: ModelData };
+                var url = '@Url.Action("SaveData")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "Success") {
+                            alert("Data Save Sucessfully...!");
+                        } else {
+                            alert("error occured while processing your request.");
+                        }
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+            }
+        });
+
+       
+        $('#SearchAny').keyup(function () {
+            debugger;
+            var value = $(this).val().toLowerCase();
+            $("#tabledatapick2 tbody tr").filter(function () {
+                debugger;
+                $(this).toggle($(this).find("#PartyName").val().toLowerCase().indexOf(value) > -1)
+            });
+        });
+    });
+
+    function myFunction() {
+        var ModelData = {};
+        ModelData["SearchContent"] = $('#myInput').val();
+        //ModelData["SearchBy"] = $('#SearchBy').val();
+        var DTO = { mModel: ModelData };
+        var url = '@Url.Action("GetLeftGrid")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#TransactionTypesdiv').html(data.Html);
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("error occured while processing your request.");
+            }
+        });
+    }
+
+    function loadSearchList() {
+        var url = '@Url.Action("GetSearchList")'
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#SearchBy").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+
+</script>
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt" id="headercaption">  Partywise Transaction Rules for SMS/E-mail</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/ControlPanel" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="padding-left:0px;">
+        <form class="form-horizontal" id="MessageRulesFrm" role="form" style="margin-top:0%;margin-left:0px">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="panel-body" style="min-height:375px;max-height:375px;">
+                <div class="col-sm-4" style="border-right:solid;overflow:scroll;">
+                    <div class="form-group">
+                        @*<label class="col-sm-2 control-label" style="font-size: 15px;font-weight:bolder;">Types:</label>
+                        <label class="col-sm-1 control-label">Search:</label>*@
+                        @*<div class="col-sm-3">
+                            @Html.DropDownListFor(m => m.SearchBy, DropdownHelper.EmptyList(), new { @class = "form-control", @Id = "SearchBy", @Name = "SearchBy" })
+                        </div>*@
+                        <div class="col-sm-3">
+                            <input type="text" style="height:28px;font-weight:bolder;" id="myInput" onkeyup="myFunction()" placeholder="Search..">
+                        </div>
+                    </div>
+                    <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                        Transaction Types:
+                    </b>
+                    <div id="TransactionTypesdiv" style="min-height:400px;overflow:scroll">
+                        @Html.Partial("PartialTypeView")
+                    </div>
+                </div>
+                <div class="col-sm-8" style="overflow:scroll;">
+                    <div class="form-group">
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                Rules:
+                            </b>
+                        </div>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Type, new { @id = "Type", @Name = "Type", @style = "font-size:14px;font-weight:bolder;", @class = "form-control", @disabled = "disabled" })
+                        </div>
+                        <div class="col-sm-2">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                Search:
+                            </b>
+                        </div>
+                        <div class="col-sm-3">
+                            <input name="Type" class="form-control" id="SearchAny" style="font-size:14px;font-weight:bolder;" type="text" value="">
+                        </div>
+                    </div>
+                    <div id="MessageRulesdiv" style="min-height:438px;">
+                        @Html.Partial("TransactionMessageRulesPartial")
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4" style="text-align:center;margin-top:4px;color:white;font-family:Tahoma;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4" style="padding-right:15px;">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/DashBoard/ControlPanel" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>

@@ -1,0 +1,239 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.PurchaseReportVM
+<style>
+    .ModalLabel {
+        font-weight: bold !important;
+        color: black !important;
+        padding: 3px !important;
+    }
+
+    .multiselect-container {
+        width: 215px !important;
+    }
+
+    .td1 {
+        width: 500px !important;
+    }
+
+    .td2 {
+        width: 500px !important;
+    }
+
+    .td3 {
+        width: 500px !important;
+    }
+</style>
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        if ('@Model.BillType' != "")
+        {
+            $("#BillType").val('@Model.BillType');
+        }
+        else
+        {
+            $("#BillType").val("PUR00");
+        }
+
+        $("#txtBillNo").val("");
+        if ('@Model.BillNo' != "")
+        {
+            $("#txtBillNo").val('@Model.BillNo');
+        }
+
+        $("#txtReportName").val("");
+        if ('@Model.ReportName' != "") {
+            $("#txtReportName").val('@Model.ReportName');
+        }
+
+        $("#FormatCode").val("");
+        if ('@Model.ReportTypeL' != "") {
+            $("#FormatCode").val('@Model.ReportTypeL');
+            $("#ReportTypeL").val('@Model.ReportTypeL');
+            $("#Ledger").html($(".ReportTypeL option:selected").text());
+        }
+        debugger;
+        $('#Branch').val('');
+        var CommonValue = "";
+        if ('@Model.Branch' != "") {
+            $.each('@Model.Branch'.split(','), function (idx, val) {
+                $(".BranchL option[value='" + val + "']").attr("selected", true);
+                CommonValue +=  val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#Branch').val(CommonValue);
+        }
+
+        $('#Customer').val('');
+        CommonValue = "";
+        if ('@Model.Customer' != "") {
+            $.each('@Model.Customer'.split(','), function (idx, val) {
+                $(".CustomerL option[value='" + val + "']").attr("selected", true);
+                CommonValue +=  val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#Customer').val(CommonValue);
+        }
+        $('#Master').val('');
+        CommonValue = "";
+        if ('@Model.Master' != "") {
+            $.each('@Model.Master'.split(','), function (idx, val) {
+                $(".MasterL option[value='" + val + "']").attr("selected", true);
+                CommonValue +=  val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#Master').val(CommonValue);
+        }
+        @*$("#PaymentPaidDetails").val(false);
+        if ('@Model.PaymentPaidDetails'=="True" || '@Model.PaymentPaidDetails'=="true") {
+            $("#PaymentPaidDetails").val(true);
+            $(".chkPaymentPaidDetails").prop("checked", true);
+        }*@
+        $(".BillTypes").change(function () {
+            $("#BillType").val(this.value);
+        });
+        $(".ReportTypeL").change(function () {
+            debugger;
+            $("#FormatCode").val(this.value);
+            $("#Ledger").html($(".ReportTypeL option:selected").text());
+            $("#PaymentPaidDetails").val(false);
+            //ChangeFormatCoumnsList();
+        });
+
+        $(".BranchL").change(function () {
+            debugger;
+            $('#Branch').val('');
+            var selected = "";
+            $(".BranchL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Branch').val(selected)
+            return false;
+        });
+        $(".CustomerL").change(function () {
+
+            $('#Customer').val('');
+            var selected = "";
+            $(".CustomerL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Customer').val(selected)
+            return false;
+        });
+
+        $(".MasterL").change(function () {
+            $('#Master').val('');
+            var selected = "";
+            $(".MasterL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Master').val(selected)
+            return false;
+        });
+
+
+        //$(".chkPaymentPaidDetails").change(function () {
+        //    if (this.checked) {
+        //        $('#PaymentPaidDetails').val(true);
+        //        PaymentPaidDetailsColumns(true, $("#ReportTypeL").val());
+        //    } else {
+        //        $('#PaymentPaidDetails').val(false);
+        //        PaymentPaidDetailsColumns(false, $("#ReportTypeL").val());
+        //    }
+        //});
+        $('#SubmitSaveReport').click(function (event) {
+            event.preventDefault();
+            $('#SaveReportName').modal('show');
+        });
+        $('#btnopnFormat').click(function(event){
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["ViewDataId"] = $("#FormatCode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    $('#updTfatsearchDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('.BranchL,.CustomerL,.MasterL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Item',
+        })
+    });
+</script>
+<table class="table table-striped table-bordered">
+    <thead>
+    </thead>
+    <tbody>
+        <tr>
+            <td class="td1">
+                <label class=" ModalLabel  control-label" style="width:auto;">Bill Type :</label>
+                @Html.DropDownListFor(x => x.BillType, Model.BillTypes, new { @class = "form-control BillTypes", @style = "float: right;width:auto;display: inline-table;" })
+            </td>
+            <td class="td2">
+                <label class=" ModalLabel  control-label" style="width:auto;">Serial No :</label>
+                @Html.TextBoxFor(x => x.BillNo, new { @class = "form-control txtBillNo", @id = "txtBillNo", @style = "width:100px;display: inline-table;float: initial;" })
+            </td>
+            <td class="td3">
+                <label class=" ModalLabel  control-label" style="width:auto;">Report Type :</label>
+                @Html.DropDownListFor(x => x.ReportTypeL, Model.ReportsType, new { @class = "form-control ReportTypeL", @style = "float: right;width:163px;display: inline-table;" })
+            </td>
+        </tr>
+        <tr>
+            <td class="td1">
+                <label class=" ModalLabel  control-label" style="width:auto;"> Branch :</label>
+                @Html.ListBoxFor(x => x.BranchL, Model.BranchesOnly, new { @class = "BranchL", @id = "BranchL" })
+            </td>
+            <td class="td2">
+                <label class=" ModalLabel  control-label" style="width:auto;">Master :</label>
+                @Html.ListBoxFor(x => x.MasterL, Model.Masters, new { @class = "MasterL", @id = "MasterL" })
+            </td>
+            <td class="td3">
+                <label class=" ModalLabel  control-label" style="width:auto;">Vendors(CPH00) :</label>
+                @Html.ListBoxFor(x => x.CustomerL, Model.Customers, new { @class = "CustomerL", @id = "CustomerL" })
+            </td>
+        </tr>
+        <tr class="hidden">
+            <td class="td1">
+                <label class=" ModalLabel  control-label" style="width:auto;">Show Payment Details :</label>
+                <div style="display:flex;float:right;">
+                    <input type="checkbox" class="form-control chkPaymentPaidDetails" id="PaymentPaidDetails" value="PaymentPaidDetails" style="height:20px;width:35px;" />
+                </div>
+            </td>
+            <td class="td2">
+                
+            </td>
+            <td class="td3">
+               
+            </td>
+        </tr>
+    </tbody>
+</table>

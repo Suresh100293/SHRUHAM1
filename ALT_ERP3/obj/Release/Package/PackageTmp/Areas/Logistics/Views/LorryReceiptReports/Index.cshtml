@@ -1,0 +1,1221 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.LorryReceiptReportsVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<style>
+    .disabled-link {
+        pointer-events: none;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        LoadSavedParamentersType();
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        $("#hdnformatname").val("");
+        //$("#LrGenetate").val("");
+
+        $('#Fromdate,#ToDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+
+        $("#Submit").click(function () {
+
+
+            if ($("#FromBranch").val() == "" || $("#FromBranch").val() == null) {
+                alert("Please Select From Branch...!");
+                return;
+            } else {
+                GridReload();
+            }
+
+
+
+        });
+
+        $(".ReportName").change(function () {
+            debugger;
+            if ($(".ReportName").val() != "" && $(".ReportName").val() != null) {
+                $("#txtReportName").val($(".ReportName option:selected").text());
+            } else {
+                $("#txtReportName").val("");
+                $("#btnReset").trigger("click");
+            }
+
+        });
+
+
+        $('#btnReportParam').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            if ($("#txtReportName").val() == "" || $("#txtReportName").val() == null) {
+                alert("Please Enter The Report Name....!");
+                $('.spinner').hide();
+                return;
+            }
+
+            var url = '@Url.Action("SaveParameter")';
+
+            var ModelData = {};
+
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["ReportTypeL"] = $("#ReportTypeL").val();
+            ModelData["ReportName"] = $("#txtReportName").val();
+
+            ModelData["FromDate"] = $("#Fromdate").val();
+            ModelData["ToDate"] = $("#ToDate").val();
+
+            ModelData["ConsignmentNo"] = $("#ConsignmentNo").val();
+            ModelData["LrMode"] = $("#LrMode").val();
+            ModelData["DeliverdConsignmentStatus"] = $("#DeliverdConsignmentStatus").val();
+
+            ModelData["FromBranch"] = $("#FromBranch").val();
+            ModelData["ToBranch"] = $("#ToBranch").val();
+            ModelData["LrType"] = $("#LrType").val();
+
+            ModelData["FromDestination"] = $("#FromDestination").val();
+            ModelData["ToDestination"] = $("#ToDestination").val();
+            ModelData["BillingBranch"] = $("#BillingBranch").val();
+
+            ModelData["Consignor"] = $("#Consignor").val();
+            ModelData["Consignee"] = $("#Consignee").val();
+            ModelData["BillingParty"] = $("#BillingParty").val();
+
+            ModelData["Delivery"] = $("#Delivery").val();
+            ModelData["Collection"] = $("#Collection").val();
+            ModelData["ChargeType"] = $("#ChargeType").val();
+
+            ModelData["Particular"] = $("#Particular").val();
+            ModelData["Unit"] = $("#Unit").val();
+            var LrGenetate = "";
+            if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == true) {
+                LrGenetate = "'A'" + ",'M'";
+            } else if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == false) {
+                LrGenetate = "'A'";
+            } else if ($(".LrGenerateA").is(":checked") == false && $(".LrGenerateM").is(":checked") == true) {
+                LrGenetate = "'M'";
+            }
+            ModelData["LrGenetate"] = LrGenetate;
+
+
+            ModelData["ChargeShow"] = $("#ChargeShow").val();
+            ModelData["BillChargeShow"] = $("#BillChargeShow").val();
+
+            ModelData["TripDetails"] = $("#TripDetails").val();
+            ModelData["PLAccount"] = $("#PLAccount").val();
+            ModelData["AdvBalDetails"] = $("#AdvBalDetails").val();
+            ModelData["SkipDuplicateFM"] = $("#SkipDuplicateFM").val();
+            ModelData["BillRelationDetails"] = $("#BillRelationDetails").val();
+            ModelData["DispatchDetails"] = $("#DispatchDetails").val();
+            ModelData["DeliveryDetails"] = $("#DeliveryDetails").val();
+            ModelData["ExpensesDetails"] = $("#ExpensesDetails").val();
+            ModelData["StockBranch"] = $("#StockBranch").val();
+            ModelData["StockType"] = $("#StockType").val();
+
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert("Save Report Sucessfully..........");
+                    $('#SaveReportName').modal('hide');
+                    $("#btnReset").trigger("click");
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+        $('#btnDeleteReportParam').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            if ($("#txtReportName").val() == "" || $("#txtReportName").val() == null) {
+                alert("Please Enter The Report Name....!");
+                return;
+            }
+
+            var url = '@Url.Action("SaveParameter")';
+
+            var ModelData = {};
+            ModelData["ReportTypeL"] = $("#ReportTypeL").val();
+            ModelData["ReportName"] = $("#txtReportName").val();
+
+
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["Mode"] = "Delete";
+
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert("Delete Report Sucessfully..........");
+                    $('#SaveReportName').modal('hide');
+                    $("#btnReset").trigger("click");
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+
+
+
+        $("#btnReset").click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            $("#Submit").prop("disabled", true);
+            $("#GetReportParameter").val(false);
+
+            var url = '@Url.Action("ParameterReset")';
+
+            var ModelData = {};
+            ModelData["FromBranch"] = '@Model.FromBranch';
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["ReportTypeL"] = '@Model.ViewDataId';
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#Submit").prop("disabled", false);
+
+                    if (data.Status == "Success") {
+                        var LoadDownLoadFiles = $("#ParameterDiv");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $('#Optionsmodal').modal('show');
+                        LoadSavedParamentersType();
+                    }
+                    else {
+                        alert("Some Error Occured...!");
+                    }
+                },
+            });
+        });
+
+
+
+        $('#acledger').jqGrid('clearGridData');
+        $("#acledger").jqGrid("GridUnload");
+        $('#acledger').trigger('reloadGrid');
+        //GridReload();
+    });
+
+    function BillCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("BillDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function TripCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("TripDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function DispatchCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("DispatchDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function DeliveryCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("DeliveryDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function ExpensesCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("ExpensesDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function ChargesCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("ChargesDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function ChangeFormatCoumnsList()
+    {
+
+
+        var url = '@Url.Action("SetColumnsReset")';
+        var ModelData = {};
+
+        ModelData["ViewDataId"] = $("#ReportTypeL").val();
+        ModelData["ChargeShow"] = $("#ChargeShow").val();
+        ModelData["BillChargeShow"] = $("#BillChargeShow").val();
+        ModelData["TripDetails"] = $("#TripDetails").val();
+        ModelData["PLAccount"] = $("#PLAccount").val();
+        ModelData["AdvBalDetails"] = $("#AdvBalDetails").val();
+        ModelData["SkipDuplicateFM"] = $("#SkipDuplicateFM").val();
+        ModelData["BillRelationDetails"] = $("#BillRelationDetails").val();
+        ModelData["DispatchDetails"] = $("#DispatchDetails").val();
+        ModelData["DeliveryDetails"] = $("#DeliveryDetails").val();
+        ModelData["ExpensesDetails"] = $("#ExpensesDetails").val();
+
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function PLCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("PLAccountColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function ADVBALCoumnsList(flag,code)
+    {
+        var url = '@Url.Action("ADVBALDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: code };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function LoadSavedParamentersType() {
+        event.preventDefault();
+        var url = '@Url.Action("PopulateSaveReports")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { ViewDataId:'@Model.ViewDataId'},
+            success: function (result) {
+                $('#ReportName').empty();
+                $('#ReportName').append($("<option></option>").attr("value", "").text(" -- Select Saved Reports -- "));
+                $.each(result, function (i, item) {
+                    $("#ReportName").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function SetDates(value)
+    {
+        if (value == 1)
+        {
+            $('#Fromdate').datepicker("setDate", '@Session["StartDate"].ToString().Trim()');
+            $('#ToDate').datepicker("setDate", '@Session["LastDate"].ToString().Trim()');
+        }
+        else if (value == 2)
+        {
+            var d = new Date();
+            var Month = d.getMonth() + 1;
+            var LastDate = "";
+            var days = daysInMonth();
+            if (days < 9) {
+                LastDate = "0" + days.toString().trim() + "/";
+            } else {
+                LastDate = days.toString().trim() + "/";
+            }
+
+            var SDD = "01/" + Month + "/" + d.getFullYear();
+            var LDD = LastDate + Month + "/" + d.getFullYear();
+
+            $('#Fromdate').datepicker("setDate", SDD);
+            $('#ToDate').datepicker("setDate", LDD);
+        }
+        else if (value == 3)
+        {
+            var d = new Date();
+            var Month = d.getMonth() + 1;
+            var day = d.getDate();
+            var LastDate = "";
+            if (day < 9) {
+                LastDate = "0" + day.toString().trim() + "/";
+            } else {
+                LastDate = day.toString().trim() + "/";
+            }
+            var SDD = LastDate + Month + "/" + d.getFullYear();
+
+
+            $('#Fromdate').prop("disabled", false);
+            $('#ToDate').prop("disabled", false);
+            $('#Fromdate').datepicker("setDate", SDD);
+            $('#ToDate').datepicker("setDate", SDD);
+        }
+    }
+    function daysInMonth() {
+
+        var d = new Date();
+        var month = d.getMonth() + 1;
+        var year = d.getFullYear();
+
+        return new Date(year, month, 0).getDate();
+    }
+    function clickPrint(mwhat) {
+
+        var LrGenetate = "";
+        if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'A'" + ",'M'";
+        } else if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == false) {
+            LrGenetate = "'A'";
+        } else if ($(".LrGenerateA").is(":checked") == false && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'M'";
+        }
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        //var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val() + '&mWhat=' + mwhat, '_blank');
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Fromdate=' + $("#Fromdate").val() + '&page=' + $('#pager1') + '&rows= @Session["GridRows"]' + '&ViewDataId=' + $("#ReportTypeL").val() + '&ToDate=' + $("#ToDate").val() + '&FromBranch=' + $("#FromBranch").val() + '&ToBranch=' + $("#ToBranch").val() + '&FromDestination=' + $("#FromDestination").val() + '&ToDestination=' + $("#ToDestination").val() + '&BillingBranch=' + $("#BillingBranch").val() + '&LrType=' + $("#LrType").val() + '&Consignor=' + $("#Consignor").val() + '&Consignee=' + $("#Consignee").val() + '&BillingParty=' + $("#BillingParty").val() + '&ChargeType=' + $("#ChargeType").val() + '&Particular=' + $("#Particular").val() + '&Unit=' + $("#Unit").val() + '&ReportTypeL=' + $("#ReportTypeL").val() + '&Collection=' + $("#Collection").val() + '&Delivery=' + $("#Delivery").val() + '&LrGenetate=' + LrGenetate + '&ConsignmentNo=' + $("#ConsignmentNo").val() + '&ChargeShow=' + $("#ChargeShow").val() + '&BillChargeShow=' + $("#BillChargeShow").val() + '&BillRelationDetails=' + $("#BillRelationDetails").val() + '&TripDetails=' + $("#TripDetails").val() + '&PLAccount=' + $("#PLAccount").val() + '&AdvBalDetails=' + $("#AdvBalDetails").val() + '&SkipDuplicateFM=' + $("#SkipDuplicateFM").val() + '&DispatchDetails=' + $("#DispatchDetails").val() + '&DeliveryDetails=' + $("#DeliveryDetails").val() + '&ExpensesDetails=' + $("#ExpensesDetails").val() + '&mWhat=' + mwhat, '_blank');
+
+    };
+
+    function PrintReport() {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var murl="/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=" + $("#ReportTypeL").val()+ "&mopening="+ $('#openb').val()+"&mRunning=true&mParaString=Code^" + $('#Account').val()+ '&Code=' + $('#Account').val();
+        window.open(murl,'_blank');
+    };
+
+    @*$('#btnPDF').click(function () {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val()+'&mWhat='+'EPDF', '_blank');
+    });
+
+    $('#btnPDL').click(function () {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val()+'&mWhat='+'PDL', '_blank');
+    });*@
+
+    function clickRefresh() {
+
+        $('#acledger').jqGrid('clearGridData');
+        $("#acledger").jqGrid("GridUnload");
+        $('#acledger').trigger('reloadGrid');
+        if ($("#FromBranch").val() == "" || $("#FromBranch").val() == null) {
+            alert("Please Select From Branch...!");
+            return;
+        } else {
+            GridReload();
+        }
+
+    }
+
+    function GetURL(mdocument) {
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var mURL = '@Url.Action("GetURL")?mDate=' + mDate + '&mdocument=' + mdocument;
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                //mURL = encodeURIComponent(result.url);
+                $('.spinner').hide();
+                if (result.url != "") {
+                    //var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val(), '_blank');
+                    window.open(result.url, '_blank');
+                    //window.location.href = result.url;
+                } else {
+                    alert("Error! Can't Zoom into the Transaction!");
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+
+    function GridReload() {
+
+        $('#acledger').jqGrid('clearGridData');
+        $("#acledger").jqGrid("GridUnload");
+        $('#acledger').trigger('reloadGrid');
+
+        $('.spinner').show();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val($("#viewcode").val());
+
+
+
+
+
+        var LrGenetate = "";
+        if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'A'" + ",'M'";
+        } else if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == false) {
+            LrGenetate = "'A'";
+        } else if ($(".LrGenerateA").is(":checked") == false && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'M'";
+        }
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#ReportTypeL").val() + '&ChargeShow=' + $("#ChargeShow").val() + '&BillChargeShow=' + $("#BillChargeShow").val() + '&BillRelationDetails=' + $("#BillRelationDetails").val() + '&TripDetails=' + $("#TripDetails").val() + '&PLAccount=' + $("#PLAccount").val() + '&AdvBalDetails=' + $("#AdvBalDetails").val() + '&SkipDuplicateFM=' + $("#SkipDuplicateFM").val() + '&DispatchDetails=' + $("#DispatchDetails").val() + '&DeliveryDetails=' + $("#DeliveryDetails").val() + '&ExpensesDetails=' + $("#ExpensesDetails").val() + '&GetReportParameter=' + $("#GetReportParameter").val();
+        var sUrlpath = '@Url.Action("GetGridData")?Fromdate=' + $("#Fromdate").val() + '&ViewDataId=' + $("#ReportTypeL").val() + '&ToDate=' + $("#ToDate").val() + '&FromBranch=' + $("#FromBranch").val() + '&ToBranch=' + $("#ToBranch").val() + '&FromDestination=' + $("#FromDestination").val() + '&ToDestination=' + $("#ToDestination").val() + '&BillingBranch=' + $("#BillingBranch").val() + '&LrType=' + $("#LrType").val() + '&Consignor=' + $("#Consignor").val() + '&Consignee=' + $("#Consignee").val() + '&BillingParty=' + $("#BillingParty").val() + '&ChargeType=' + $("#ChargeType").val() + '&Particular=' + $("#Particular").val() + '&Unit=' + $("#Unit").val() + '&ReportTypeL=' + $("#ReportTypeL").val() + '&Collection=' + $("#Collection").val() + '&Delivery=' + $("#Delivery").val() + '&LrGenetate=' + LrGenetate + '&ConsignmentNo=' + $("#ConsignmentNo").val() + '&ChargeShow=' + $("#ChargeShow").val() + '&BillChargeShow=' + $("#BillChargeShow").val() + '&BillRelationDetails=' + $("#BillRelationDetails").val() + '&TripDetails=' + $("#TripDetails").val() + '&PLAccount=' + $("#PLAccount").val() + '&AdvBalDetails=' + $("#AdvBalDetails").val() + '&SkipDuplicateFM=' + $("#SkipDuplicateFM").val() + '&DispatchDetails=' + $("#DispatchDetails").val() + '&DeliveryDetails=' + $("#DeliveryDetails").val() + '&ExpensesDetails=' + $("#ExpensesDetails").val() + '&LrMode=' + $("#LrMode").val() + '&DeliverdConsignmentStatus=' + $("#DeliverdConsignmentStatus").val() + '&StockBranch=' + $("#StockBranch").val() + '&StockType=' + $("#StockType").val() ;
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                $('#openb').val(obj[2]);
+                $('#closeb').val(obj[3]);
+                $('#tcredit').val(obj[4]);
+                $('#tdebit').val(obj[5]);
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#acledger').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+               // rowNum: @Session["GridRows"],
+                rowNum: 5000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 265,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                footerrow: true,
+                userDataOnFooter: false,
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#acledger');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'LrNo');
+                    GetURL(cellVal);
+                    //location.href = "Ledgers/Index?Document=" + cellVal + "&ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    //window.location.href = "/Transactions/CashBank/Index?Document=" & cellVal + "&Mode=Edit&ChangeLog=Edit&ViewDataId=ViewData-Ledger&Header=Bank%20Payments&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankPayments&Controller2=CashBank";
+                    //http://localhost:52070/Transactions/CashBank/Index?Document=HO0000BRC0018000003&Mode=View&ChangeLog=View&ViewDataId=ViewData-Ledger&Header=Bank%20Receipts&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankReceipts&Controller2=CashBank
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    debugger;
+
+                    var Count = 0;
+                    var ids = jQuery("#acledger").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var Value = jQuery("#acledger").getCell(rowId, "LrNo");
+                        if (Value != "" && Value != "0") {
+                            Count += 1;
+                        }
+                    }
+
+
+
+                    jQuery("#acledger").jqGrid('footerData', 'set', {
+                        'LrNo': 'Total: ' + Count,
+                        'Qty':  $("#acledger").jqGrid('getCol', 'Qty', false, 'sum'),
+                        'ActWt':  $("#acledger").jqGrid('getCol', 'ActWt', false, 'sum'),
+                        'ChgWt':  $("#acledger").jqGrid('getCol', 'ChgWt', false, 'sum'),
+                        'Amt':  $("#acledger").jqGrid('getCol', 'Amt', false, 'sum'),
+
+                        'F001': $("#acledger").jqGrid('getCol', 'F001', false, 'sum'),
+                        'F002': $("#acledger").jqGrid('getCol', 'F002', false, 'sum'),
+                        'F003': $("#acledger").jqGrid('getCol', 'F003', false, 'sum'),
+                        'F004': $("#acledger").jqGrid('getCol', 'F004', false, 'sum'),
+                        'F005': $("#acledger").jqGrid('getCol', 'F005', false, 'sum'),
+                        'F006': $("#acledger").jqGrid('getCol', 'F006', false, 'sum'),
+                        'F007': $("#acledger").jqGrid('getCol', 'F007', false, 'sum'),
+                        'F008': $("#acledger").jqGrid('getCol', 'F008', false, 'sum'),
+                        'F009': $("#acledger").jqGrid('getCol', 'F009', false, 'sum'),
+                        'F010': $("#acledger").jqGrid('getCol', 'F010', false, 'sum'),
+                        'F011': $("#acledger").jqGrid('getCol', 'F011', false, 'sum'),
+                        'F012': $("#acledger").jqGrid('getCol', 'F012', false, 'sum'),
+                        'F013': $("#acledger").jqGrid('getCol', 'F013', false, 'sum'),
+                        'F014': $("#acledger").jqGrid('getCol', 'F014', false, 'sum'),
+                        'F015': $("#acledger").jqGrid('getCol', 'F015', false, 'sum'),
+                        'F016': $("#acledger").jqGrid('getCol', 'F016', false, 'sum'),
+                        'F017': $("#acledger").jqGrid('getCol', 'F017', false, 'sum'),
+                        'F018': $("#acledger").jqGrid('getCol', 'F018', false, 'sum'),
+                        'F019': $("#acledger").jqGrid('getCol', 'F019', false, 'sum'),
+                        'F020': $("#acledger").jqGrid('getCol', 'F020', false, 'sum'),
+                        'F021': $("#acledger").jqGrid('getCol', 'F021', false, 'sum'),
+                        'F022': $("#acledger").jqGrid('getCol', 'F022', false, 'sum'),
+                        'F023': $("#acledger").jqGrid('getCol', 'F023', false, 'sum'),
+                        'F024': $("#acledger").jqGrid('getCol', 'F024', false, 'sum'),
+                        'F025': $("#acledger").jqGrid('getCol', 'F025', false, 'sum'),
+
+                        'LCQty':  $("#acledger").jqGrid('getCol', 'LCQty', false, 'sum'),
+                        'Fm Freight':  $("#acledger").jqGrid('getCol', 'Fm Freight', false, 'sum'),
+                        'FMF001': $("#acledger").jqGrid('getCol', 'FMF001', false, 'sum'),
+                        'FMF002': $("#acledger").jqGrid('getCol', 'FMF002', false, 'sum'),
+                        'FMF003': $("#acledger").jqGrid('getCol', 'FMF003', false, 'sum'),
+                        'FMF004': $("#acledger").jqGrid('getCol', 'FMF004', false, 'sum'),
+                        'FMF005': $("#acledger").jqGrid('getCol', 'FMF005', false, 'sum'),
+                        'FMF006': $("#acledger").jqGrid('getCol', 'FMF006', false, 'sum'),
+                        'FMF007': $("#acledger").jqGrid('getCol', 'FMF007', false, 'sum'),
+                        'FMF008': $("#acledger").jqGrid('getCol', 'FMF008', false, 'sum'),
+                        'FMF009': $("#acledger").jqGrid('getCol', 'FMF009', false, 'sum'),
+                        'FMF010': $("#acledger").jqGrid('getCol', 'FMF010', false, 'sum'),
+                        'FMPF001': $("#acledger").jqGrid('getCol', 'FMPF001', false, 'sum'),
+                        'FMPF002': $("#acledger").jqGrid('getCol', 'FMPF002', false, 'sum'),
+                        'FMPF003': $("#acledger").jqGrid('getCol', 'FMPF003', false, 'sum'),
+                        'FMPF004': $("#acledger").jqGrid('getCol', 'FMPF004', false, 'sum'),
+                        'FMPF005': $("#acledger").jqGrid('getCol', 'FMPF005', false, 'sum'),
+                        'FMPF006': $("#acledger").jqGrid('getCol', 'FMPF006', false, 'sum'),
+                        'FMPF007': $("#acledger").jqGrid('getCol', 'FMPF007', false, 'sum'),
+                        'FMPF008': $("#acledger").jqGrid('getCol', 'FMPF008', false, 'sum'),
+                        'FMPF009': $("#acledger").jqGrid('getCol', 'FMPF009', false, 'sum'),
+                        'FMPF010': $("#acledger").jqGrid('getCol', 'FMPF010', false, 'sum'),
+
+                        'DelQty':  $("#acledger").jqGrid('getCol', 'DelQty', false, 'sum'),
+
+                        'BillAmt':  $("#acledger").jqGrid('getCol', 'BillAmt', false, 'sum'),
+                        'BillQty':  $("#acledger").jqGrid('getCol', 'BillQty', false, 'sum'),
+
+                        'ExpAmount':  $("#acledger").jqGrid('getCol', 'ExpAmount', false, 'sum'),
+                        'IncAmount': $("#acledger").jqGrid('getCol', 'IncAmount', false, 'sum'),
+
+                        'StockQty': $("#acledger").jqGrid('getCol', 'StockQty', false, 'sum'),
+
+                        'BillBalQty': $("#acledger").jqGrid('getCol', 'BillBalQty', false, 'sum'),
+
+                        'BalQty': $("#acledger").jqGrid('getCol', 'BalQty', false, 'sum'),
+
+                        'P/L AC': $("#acledger").jqGrid('getCol', 'P/L AC', false, 'sum')
+
+                    }, false);
+
+                    $("#acledger").jqGrid('setLabel', 'LCBranch', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'LCDate', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'LCno', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'LCFrom', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'LCTo', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'LCQty', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMBranch', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMDate', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMNo', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'Broker', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FM Driver', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'Fm Freight', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'Vehicle NO', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'Vehicle Type', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF001', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF002', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF003', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF004', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF005', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF006', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF007', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF008', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF009', '', { 'background': 'rgb(255 247 0)' });
+                    $("#acledger").jqGrid('setLabel', 'FMF010', '', { 'background': 'rgb(255 247 0)' });
+
+                    $("#acledger").jqGrid('setLabel', 'FMPF001', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF002', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF003', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF004', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF005', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF006', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF007', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF008', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF009', '', { 'background': 'rgb(120 203 184)' });
+                    $("#acledger").jqGrid('setLabel', 'FMPF010', '', { 'background': 'rgb(120 203 184)' });
+
+
+                    $("#acledger").jqGrid('setLabel', 'DelBranch', '', { 'background': 'rgb(255 69 0)' });
+                    $("#acledger").jqGrid('setLabel', 'DelDate', '', { 'background': 'rgb(255 69 0)' });
+                    $("#acledger").jqGrid('setLabel', 'DeliveryNo', '', { 'background': 'rgb(255 69 0)' });
+                    $("#acledger").jqGrid('setLabel', 'DelQty', '', { 'background': 'rgb(255 69 0)' });
+                    $("#acledger").jqGrid('setLabel', 'BillType', '', { 'background': 'rgb(41 187 14)' });
+                    $("#acledger").jqGrid('setLabel', 'SaleBillBranch', '', { 'background': 'rgb(41 187 14)' });
+                    $("#acledger").jqGrid('setLabel', 'BillDate', '', { 'background': 'rgb(41 187 14)' });
+                    $("#acledger").jqGrid('setLabel', 'BillNumber', '', { 'background': 'rgb(41 187 14)' });
+                    $("#acledger").jqGrid('setLabel', 'BillAmt', '', { 'background': 'rgb(41 187 14)' });
+                    $("#acledger").jqGrid('setLabel', 'SaleBillParty', '', { 'background': 'rgb(41 187 14)' });
+                    $("#acledger").jqGrid('setLabel', 'BillQty', '', { 'background': 'rgb(41 187 14)' });
+                    $("#acledger").jqGrid('setLabel', 'ExpBranch', '', { 'background': 'rgb(31 181 173)' });
+                    $("#acledger").jqGrid('setLabel', 'ExpDate', '', { 'background': 'rgb(31 181 173)' });
+                    $("#acledger").jqGrid('setLabel', 'Recordkey', '', { 'background': 'rgb(31 181 173)' });
+                    $("#acledger").jqGrid('setLabel', 'ExpAccount', '', { 'background': 'rgb(31 181 173)' });
+                    $("#acledger").jqGrid('setLabel', 'ExpAmount', '', { 'background': 'rgb(31 181 173)' });
+                    $("#acledger").jqGrid('setLabel', 'IncAmount', '', { 'background': 'rgb(31 181 173)' });
+                    $("#acledger").jqGrid('setLabel', 'P&L Summary', '', { 'background': 'rgb(136 181 213)' });
+                    $("#acledger").jqGrid('setLabel', 'Branch Head', '', { 'background': 'rgb(195 155 211)' });
+                    $("#acledger").jqGrid('setLabel', 'StockBranch', '', { 'background': 'rgb(195 155 211)' });
+                    $("#acledger").jqGrid('setLabel', 'StockQty', '', { 'background': 'rgb(195 155 211)' });
+                    $("#acledger").jqGrid('setLabel', 'StockType', '', { 'background': 'rgb(195 155 211)' });
+                    $("#acledger").jqGrid('setLabel', 'BillBalQty', '', { 'background': 'rgb(40 102 195)' });
+                    $("#acledger").jqGrid('setLabel', 'BalQty', '', { 'background': 'rgb(40 102 195)' });
+                    $("#acledger").jqGrid('setLabel', 'Note Date', '', { 'background': 'rgb(181 86 187)' });
+                    $("#acledger").jqGrid('setLabel', 'Note', '', { 'background': 'rgb(181 86 187)' });
+                    $("#acledger").jqGrid('setLabel', 'Note CreateBy', '', { 'background': 'rgb(181 86 187)' });
+                    $("#acledger").jqGrid('setLabel', 'TripNo', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'TripBranch', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'TripDate', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'Driver', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'TripCharge', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'LocalCharge', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'ViaCharge', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'TripTotal', '', { 'background': 'rgb(193 195 81)' });
+                    $("#acledger").jqGrid('setLabel', 'P/L AC', '', { 'background': 'rgb(233 143 193)' });
+                    debugger;
+                    $("#acledger").jqGrid('setLabel', 'F001', '@Model.AllHeaderList[0]');
+                    $("#acledger").jqGrid('setLabel', 'F002', '@Model.AllHeaderList[1]');
+                    $("#acledger").jqGrid('setLabel', 'F003', '@Model.AllHeaderList[2]');
+                    $("#acledger").jqGrid('setLabel', 'F004', '@Model.AllHeaderList[3]');
+                    $("#acledger").jqGrid('setLabel', 'F005', '@Model.AllHeaderList[4]');
+                    $("#acledger").jqGrid('setLabel', 'F006', '@Model.AllHeaderList[5]');
+                    $("#acledger").jqGrid('setLabel', 'F007', '@Model.AllHeaderList[6]');
+                    $("#acledger").jqGrid('setLabel', 'F008', '@Model.AllHeaderList[7]');
+                    $("#acledger").jqGrid('setLabel', 'F009', '@Model.AllHeaderList[8]');
+                    $("#acledger").jqGrid('setLabel', 'F010', '@Model.AllHeaderList[9]');
+                    $("#acledger").jqGrid('setLabel', 'F011', '@Model.AllHeaderList[10]');
+                    $("#acledger").jqGrid('setLabel', 'F012', '@Model.AllHeaderList[11]');
+                    $("#acledger").jqGrid('setLabel', 'F013', '@Model.AllHeaderList[12]');
+                    $("#acledger").jqGrid('setLabel', 'F014', '@Model.AllHeaderList[13]');
+                    $("#acledger").jqGrid('setLabel', 'F015', '@Model.AllHeaderList[14]');
+                    $("#acledger").jqGrid('setLabel', 'F016', '@Model.AllHeaderList[15]');
+                    $("#acledger").jqGrid('setLabel', 'F017', '@Model.AllHeaderList[16]');
+                    $("#acledger").jqGrid('setLabel', 'F018', '@Model.AllHeaderList[17]');
+                    $("#acledger").jqGrid('setLabel', 'F019', '@Model.AllHeaderList[18]');
+                    $("#acledger").jqGrid('setLabel', 'F020', '@Model.AllHeaderList[19]');
+                    $("#acledger").jqGrid('setLabel', 'F021', '@Model.AllHeaderList[20]');
+                    $("#acledger").jqGrid('setLabel', 'F022', '@Model.AllHeaderList[21]');
+                    $("#acledger").jqGrid('setLabel', 'F023', '@Model.AllHeaderList[22]');
+                    $("#acledger").jqGrid('setLabel', 'F024', '@Model.AllHeaderList[23]');
+                    $("#acledger").jqGrid('setLabel', 'F025', '@Model.AllHeaderList[24]');
+
+                    $("#acledger").jqGrid('setLabel', 'FMF001', '@Model.AllFMHeaderList[0]');
+                    $("#acledger").jqGrid('setLabel', 'FMF002', '@Model.AllFMHeaderList[1]');
+                    $("#acledger").jqGrid('setLabel', 'FMF003', '@Model.AllFMHeaderList[2]');
+                    $("#acledger").jqGrid('setLabel', 'FMF004', '@Model.AllFMHeaderList[3]');
+                    $("#acledger").jqGrid('setLabel', 'FMF005', '@Model.AllFMHeaderList[4]');
+                    $("#acledger").jqGrid('setLabel', 'FMF006', '@Model.AllFMHeaderList[5]');
+                    $("#acledger").jqGrid('setLabel', 'FMF007', '@Model.AllFMHeaderList[6]');
+                    $("#acledger").jqGrid('setLabel', 'FMF008', '@Model.AllFMHeaderList[7]');
+                    $("#acledger").jqGrid('setLabel', 'FMF009', '@Model.AllFMHeaderList[8]');
+                    $("#acledger").jqGrid('setLabel', 'FMF010', '@Model.AllFMHeaderList[9]');
+
+                    $("#acledger").jqGrid('setLabel', 'FMPF001', '@Model.AllFMPHeaderList[0]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF002', '@Model.AllFMPHeaderList[1]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF003', '@Model.AllFMPHeaderList[2]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF004', '@Model.AllFMPHeaderList[3]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF005', '@Model.AllFMPHeaderList[4]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF006', '@Model.AllFMPHeaderList[5]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF007', '@Model.AllFMPHeaderList[6]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF008', '@Model.AllFMPHeaderList[7]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF009', '@Model.AllFMPHeaderList[8]');
+                    $("#acledger").jqGrid('setLabel', 'FMPF010', '@Model.AllFMPHeaderList[9]');
+
+                    $('.spinner').hide();
+                    $('#pager1').height = 5;
+                },
+            });
+            jQuery("#acledger").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#acledger").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function ClickPara() {
+        $('#Optionsmodal').modal('show');
+    }
+</script>
+
+<header class="header fixed-top" id="infofooter" style="position:fixed;background-color:lightgray;padding:5px;width:100%;margin-top:0%;height:41px;">
+    <div class="fixhead">
+        <div class="col-md-2" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt">@Model.Header</b>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <div class="col-md-2 pull-right" style="padding-right:0px; padding-top:-3px;float:right;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="clickRefresh()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;padding-right:15px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="ClickPara()" class="fa fa-cogs" style="font-size:20px;cursor:pointer" title="Parameters"></a>
+            </div>
+            <div class="btn-group" style="float:left;">
+                <button data-toggle="dropdown" class="btn btn-primary dropdown-toggle" type="button">Report  <span class="caret"></span></button>
+                <ul class="dropdown-menu" style="font-family:Tahoma; border-left:1px thin;box-shadow:3px 3px 15px 1px rgba(0,0,0,0.2) !important; margin-top:2px;min-height:322px;padding-top:10px; max-height:322px;width:205px;left:-75px;background-color:whitesmoke;">
+                    <li><a onclick="PrintReport()">&nbsp;&nbsp;&nbsp;Report Viewer</a></li>
+                    <li><a onclick="clickPrint('RPDF')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to PDF-Portrait</a></li>
+                    <li><a onclick="clickPrint('RPDL')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to PDF-Landscape</a></li>
+                    <li><a onclick="clickPrint('RXLS')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to Excel</a></li>
+                    <li><a onclick="clickPrint('RWRD')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to Word</a></li>
+                    <li><a onclick="clickPrint('CRPDF')" class="disabled-link">&nbsp;&nbsp;&nbsp;Report to PDF-Crystal</a></li>
+                    <li class="divider"></li>
+                    <li><a onclick="clickPrint('PDF')">&nbsp;&nbsp;&nbsp;Export Data to PDF-Portrait</a></li>
+                    <li><a onclick="clickPrint('PDL')">&nbsp;&nbsp;&nbsp;Export Data to PDF-Landscape</a></li>
+                    <li><a onclick="clickPrint('XLS')">&nbsp;&nbsp;&nbsp;Export Data to Excel</a></li>
+                    <li class="divider"></li>
+                    <li><a onclick="clickPrint('EPDF')">&nbsp;&nbsp;&nbsp;Send PDF in Email</a></li>
+                    <li><a onclick="clickPrint('EXLS')">&nbsp;&nbsp;&nbsp;Send Excel in Email</a></li>
+                    <li><a onclick="clickPrint('EWRD')">&nbsp;&nbsp;&nbsp;Send Word in Email</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnopnFormat" data-toggle="tooltip" data-placement="top" title="Which Column U Want In The List Page.">Column-View</button>
+        </div>
+        <div class="col-md-3 pull-right" style="padding-right:unset;">
+            <div>
+
+                <div class="col-md-10 pull-right">
+                    <div class="col-sm-1" style="padding-left:0px;padding-right:0px;padding-top:4px;">
+                        <a data-toggle="dropdown" data-hover="dropdown" class="dropdown-toggle" href=""><b style="font-size:20px;" class="fa fa-clock-o"></b></a>
+                        <ul class="dropdown-menu" style="font-family: Verdana;border-left: 1px thin;box-shadow: 3px 3px 15px 1px rgba(0,0,0,0.2) !important;margin-top: -1px;min-height: 200px;max-height: 200px;width: 220px;background-color: whitesmoke;">
+                            <li><a class="lidaterange" onclick="SetDates(1)" style="text-align:left;color:black;margin-left:20px;" href="#">Current A/C Period</a></li>
+                            <li><a onclick="SetDates(2)" style="text-align:left;color:black;margin-left:20px;" href="#">This Month</a></li>
+                            <li><a onclick="SetDates(3)" style="text-align:left;color:black;margin-left:20px;" href="#">Today</a></li>
+                            <li>@*<a onclick="SetDates(3)" style="text-align:left;color:black;margin-left:20px;" href="#">Yesterday</a>*@</li>
+                            <li>@*<a onclick="SetDates(4)" style="text-align:left;color:black;margin-left:20px;" href="#">This Week</a>*@</li>
+                            <li>@*<a onclick="SetDates(5)" style="text-align:left;color:black;margin-left:20px;" href="#">This Week to Date</a>*@</li>
+
+                            <li>@*<a onclick="SetDates(7)" style="text-align:left;color:black;margin-left:20px;" href="#">This Month to Date</a>*@</li>
+                            <li>@*<a onclick="SetDates(8)" style="text-align:left;color:black;margin-left:20px;" href="#">This Quarter</a>*@</li>
+                            <li>@*<a onclick="SetDates(9)" style="text-align:left;color:black;margin-left:20px;" href="#">This Quarter to Date</a>*@</li>
+                            <li>@*<a onclick="SetDates(10)" style="text-align:left;color:black;margin-left:20px;" href="#">This Year</a>*@</li>
+                            <li>@*<a onclick="SetDates(11)" style="text-align:left;color:black;margin-left:20px;" href="#">This Year to Date</a>*@</li>
+                            <li>@*<a onclick="SetDates(12)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Week</a>*@</li>
+                            <li>@*<a onclick="SetDates(13)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Month</a>*@</li>
+                            <li>@*<a onclick="SetDates(14)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Month to Date</a>*@</li>
+                            <li>@*<a onclick="SetDates(15)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Year</a>*@</li>
+                            <li>@*<a onclick="SetDates(16)" style="text-align:left;color:black;margin-left:20px;" href="#">Last Year to Date</a>*@</li>
+                            <li>@*<a onclick="SetDates(17)" style="text-align:left;color:black;margin-left:20px;" href="#">Next Week</a>*@</li>
+                            <li>@*<a onclick="SetDates(18)" style="text-align:left;color:black;margin-left:20px;" href="#">Next Month</a>*@</li>
+                            <li>@*<a onclick="SetDates(19)" style="text-align:left;color:black;margin-left:20px;" href="#">Next Year</a>*@</li>
+                        </ul>
+                    </div>
+                    <div class="col-sm-11" style="padding-left: 0px;">
+                        <div class="input-group input-span" data-date-format="dd/mm/yyyy" style="margin-right: 0px;">
+                            <div class="col-sm-5" style="padding-left:0px;padding-right:0px;">
+                                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                            </div>
+                            <div class="col-sm-2" style="padding-left:0px;padding-right:0px;">
+                                <span class="input-group-addon" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">to</span>
+                            </div>
+                            <div class="col-sm-5" style="padding-left:0px;padding-right:0px;">
+                                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-1 pull-right" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt;color:black; width:unset;text-align:right">
+                    Period:
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:2%;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="tab">
+            <button class="tablinks" style="width:230px;" onclick="openTab(event, 'tabLedger')" id="Ledger">Consignment Reports</button>
+        </div>
+
+        <div id="tabLedger" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="acledger" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pager1" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+
+        <script>
+
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+                //if (tabName == "tabLedger") {
+                //    $('#acledger').jqGrid('clearGridData');
+                //    $("#acledger").jqGrid("GridUnload");
+                //    $('#acledger').trigger('reloadGrid');
+                //    GridReload();
+                //} else
+                
+            }
+            document.getElementById("Ledger").click();
+            function GetSaveParameter()
+            {
+                if ($("#ReportName").val() == "" || $("#ReportName").val() == null) {
+                    alert("Please Select First Reports From The Combo....!");
+                    return;
+                }
+
+
+                var url = '@Url.Action("GetParameterAuto")';
+                var ModelData = {};
+                ModelData["ReportTypeL"] = $("#ReportTypeL").val();
+                ModelData["ReportName"] = $("#txtReportName").val();
+                ModelData["ViewDataId"] = '@Model.ViewDataId';
+
+                $("#GetReportParameter").val(false);
+                if ($(".ReportName").val() != "" && $(".ReportName").val() != null) {
+                    $("#GetReportParameter").val(true);
+                }
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        $("#Submit").prop("disabled", false);
+
+                        if (data.Status == "Success") {
+                            debugger;
+                            var LoadDownLoadFiles = $("#ParameterDiv");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                            $('#Optionsmodal').modal('show');
+                        }
+                        else {
+                            alert("Some Error Occured...!");
+                        }
+                    },
+                });
+            }
+        </script>
+    </div>
+</section>
+
+<div id="myfooter" class="footer-section" style="position:fixed;background-color:rgb(235, 235, 235);padding:2px;color:unset;height:30px;border:solid 1px black;">
+
+
+    <center><label class="col-sm-12 control-label" style="padding-top:2px;color:black;">ALT AIR-3.0, Shruham Software</label></center>
+
+</div>
+
+@*<div class="example-modal">
+        <div id="ParaDialog" class="modal modal-primary" style="z-index:2100;">
+            <div class="modal-dialog" style="width:1000px;">
+                <div id="Dialog">
+                    @Html.Partial("_OptionsView", Model)
+                </div>
+            </div>
+        </div>
+    </div>*@
+
+<div class="modal fade" id="Optionsmodal" style="z-index:auto;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: 70%;margin: auto;margin-top: 7%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-3">
+                    <h4 class="modal-title">
+                        <b>Report Query Options</b>
+                    </h4>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="grid" id="FormatTable" style="max-height:400px;min-height:400px; width:100%;overflow:auto;">
+                    <div id="" class="" style="width:100%;">
+                        <div class="col-md-12" id="ParameterDiv">
+                            @Html.Partial("_OptionsView", Model)
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                <button class="btn btn-danger" style="float:left; font-size: 13px;padding:3px 12px;" id="btnReset">Reset</button>
+                <div class="col-sm-offset-2 col-sm-6" style="display:flex;">
+
+                    @Html.DropDownListFor(m => m.ReportName, DropdownHelper.EmptyList(), new { @class = "form-control ReportName", @Name = "ReportName", @Id = "ReportName" })
+                    <a onclick="GetSaveParameter();" class="btn btn-warning" style="padding:4px 10px;">
+                        <span class="glyphicon glyphicon-refresh"></span>
+                    </a>
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SubmitSaveReport">Save Report</button>
+                </div>
+
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="Submit" data-dismiss="modal">GetReport</button>
+                <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="SaveReportName" class="modal modal-default">
+        <div class="modal-dialog" style="width:1000px;">
+            <div id="SaveReportNameDiv">
+                <div class="modal-body" style="margin-top:4%;">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Save Report Format</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <div class="col-sm-2">
+                                    <label class=" ModalLabel  control-label" style="width:auto;">Report Name :</label>
+                                </div>
+                                <div class="col-sm-10">
+                                    @Html.TextBoxFor(x => x.ReportName, new { @maxlength = "100", @class = "form-control", @id = "txtReportName", @style = "display: inline-table;float: initial;" })
+                                </div>
+                            </div>
+                            <br />
+
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button id="btnDeleteReportParam" class="btn btn-danger" type="button">Delete</button>
+                            <button id="btnReportParam" class="btn btn-success" type="button">Update</button>
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="updTfatsearch" class="modal modal-default" style="margin-top:4%;">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="updTfatsearchDiv">
+                @*@Html.Partial("TfatSearchUpdate")*@
+            </div>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="hdnformatname" />
+@Html.HiddenFor(x => x.Document)
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.FromBranch)
+@Html.HiddenFor(x => x.ToBranch)
+@Html.HiddenFor(x => x.FromDestination)
+@Html.HiddenFor(x => x.ToDestination)
+@Html.HiddenFor(x => x.BillingBranch)
+@Html.HiddenFor(x => x.LrType)
+@Html.HiddenFor(x => x.Consignor)
+@Html.HiddenFor(x => x.Consignee)
+@Html.HiddenFor(x => x.BillingParty)
+@Html.HiddenFor(x => x.ChargeType)
+@Html.HiddenFor(x => x.Particular)
+@Html.HiddenFor(x => x.Unit)
+@Html.HiddenFor(x => x.Collection)
+@Html.HiddenFor(x => x.Delivery)
+@Html.HiddenFor(x => x.ChargeShow)
+@Html.HiddenFor(x => x.LrMode)
+@Html.HiddenFor(x => x.BillChargeShow)
+@Html.HiddenFor(x => x.DispatchDetails)
+@Html.HiddenFor(x => x.DeliveryDetails)
+@Html.HiddenFor(x => x.BillRelationDetails)
+@Html.HiddenFor(x => x.TripDetails)
+@Html.HiddenFor(x => x.PLAccount)
+@Html.HiddenFor(x => x.AdvBalDetails)
+@Html.HiddenFor(x => x.SkipDuplicateFM)
+@Html.HiddenFor(x => x.ConsignmentNo)
+@Html.HiddenFor(x => x.ReportTypeL)
+@Html.HiddenFor(x => x.ExpensesDetails)
+@Html.HiddenFor(x => x.GetReportParameter)
+@Html.HiddenFor(x => x.StockBranch)
+@Html.HiddenFor(x => x.StockType)
+@Html.HiddenFor(x => x.DeliverdConsignmentStatus)

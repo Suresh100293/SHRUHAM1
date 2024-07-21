@@ -1,0 +1,228 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.LabourGradesVM
+@using Common;
+@{
+    ViewBag.Title = "Employee Labour Grades";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        if ('@Model.Mode' == 'View' || '@Model.Mode' == 'Delete') {
+            $('.form-group :input').prop('disabled', true);
+            $('.form-horizontal :input').prop('disabled', true);
+            $('#divGridDataView :input').prop('disabled', true);
+        }
+        if ('@Model.Mode' == 'Add') {
+            $('#nextbutton').hide();
+            $('#previousbutton').hide();
+        }
+
+        var mheight = $(window).innerHeight();
+        mheight = mheight /2;
+        $('#divGeneral').height(mheight);
+        @* iX9: set the selected value to fixed combos *@
+        $('#EmpGradeRates_Unit').val('@Model.EmpGradeRates_Unit').attr("selected", "selected");
+        if ($('#hdnCheckMode').val() == 'True' || $('#hdnCheckMode').val() == 'true') {
+            alert('@Model.Message');
+        }
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            SaveData('SD');
+        });
+
+        $('#btnSaveExit').click(function (event) {
+            event.preventDefault();
+            SaveData('SX')
+        });
+
+        $('#btnSaveContinue').click(function (event) {
+            event.preventDefault();
+            SaveData('SC')
+        });
+
+    });
+
+    function NextEntry(mmode)
+    {
+        var url = '@Url.Action("MoveNextPrevious")?Mode=' + mmode + '&mdocument=' + $("#hdnDocument").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                if (result.data != '') {
+                    window.location.href = "/Accounts/" + @Model.Controller2 + "/Index?Document=" + result.data + "&Mode=@Model.Mode&Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                }
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function SaveData(mpara) {
+        var url = '@Url.Action("SaveData")';
+        @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+        var ModelData = {};
+        ModelData["Grade_Code"] = $("#Grade_Code").val();
+        ModelData["Grade_Name"] = $("#Grade_Name").val();
+        ModelData["Grade_CrewSize"] = $("#Grade_CrewSize").val();
+        ModelData["Header"] = '@Model.Header';
+        ModelData["Mode"] = '@Model.Mode';
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    alert("Document Saved:\n\n" + data.NewSrl);
+                    $('#ErrorMessage').hide();
+                    $('#hdnDocument').val(data.NewSrl);
+                    if (mpara == 'SP' || mpara == 'SPE') {  // print only or saveprintemail
+                        PrintDocument();
+                    }
+                    if (mpara == 'SE' || mpara == 'SPE') {  // save,email || save , print and email
+                        $('#emailprint').modal('show');
+                        $('#hdnSendEmailDocument').val($("#hdnDocument").val());
+                        window.location.href = "/Accounts/TransactionMaintenanceGrid?Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                    }
+                    if (mpara == 'SC') {                     // save and continue
+                        window.location.href = "/Accounts/LabourGrades?Mode=@Model.Mode&Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                    }
+                    if (mpara == 'SP' ||  mpara=='SD' || mpara == 'SX') {   // exit
+                        window.location.href = "/Accounts/MasterGrid?Type=&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2";
+                    }
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    };
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt" id="headercaption">@Model.Header</b>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="background-color:orangered;color:white;border-color:none;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2"><i class="fa ico-close"></i></a>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:14pt;font-weight:bold;width:unset;">
+            <b class="CodeSt">@Model.Mode.ToLower() mode</b>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button id="nextbutton" class="btn btn-white" style="font-size:13px;border-color:black;color:black;height:26px;padding:2px 12px;" tooltip="Show Next Document" onclick="NextEntry('N')">Next >></button>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button id="previousbutton" class="btn btn-white" style="font-size:13px;border-color:black;color:black;height:26px;padding:2px 12px;" tooltip="Show Previous Document" onclick="NextEntry('P')"><< Previous</button>
+        </div>
+    </div>
+</header>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body" style="padding-left:7px;padding-right:3px;">
+        <div class="form-horizontal" id="LabourGrades" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Grade Code:</label>
+                <div class="col-sm-1">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.Grade_Code, new { @maxlength = "10", @readonly = "readonly", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "Grade_Code", @Value = Model.Grade_Code, @Id = "Grade_Code" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.Grade_Code, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "Grade_Code", @readonly = "readonly", @Value = Model.Grade_Code, @Id = "Grade_Code" })
+                    }
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Grade Description:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Grade_Name, new { @maxlength = "50", @class = "form-control", @Name = "Grade_Name", @Value = Model.Grade_Name, @Id = "Grade_Name" })
+                </div>
+                <label class="col-sm-1 control-label">Crew Size:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.Grade_CrewSize, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "Grade_CrewSize", @Value = Model.Grade_CrewSize, @Id = "Grade_CrewSize" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            @* iX9: -- Code for Body Starts -- *@
+            @* iX9: Tab Body Panels *@
+            @* iX9: -- Call Grid Partial View -- *@
+            <div>
+                @Html.Partial("GridDataView")
+            </div>
+            @* iX9: -- Code for Body Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer id="fixedbottom" class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4">
+        </div>
+        <div class="col-sm-4" style="text-align:center;margin-top:4px;color:white;font-family:Tahoma;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right" style="padding-right:10px;">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;font-family: Verdana;padding:3px 12px;" id="Submit"><i class="fa fa-trash-o"></i>&nbsp;&nbsp;Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size:13px;font-family: Verdana;padding:3px 12px;" id="Submit"><i class="fa fa-save"></i>&nbsp;&nbsp;Save Data</button>
+                    }
+                }
+                else
+                {
+                }
+                <div class="btn-group dropup">
+                    <button data-toggle="dropdown" style="font-size: 13px;padding:3px 12px;font-family: Verdana;" class="btn btn-success dropdown-toggle" type="button">More..&nbsp;&nbsp;<span class="caret"></span></button>
+                    <ul role="menu" class="dropdown-menu" style="border: 1px thin;box-shadow:3px 3px 15px 1px rgba(0,0,0,0.2) !important; background-color: whitesmoke; height: 170px; font-family: Tahoma; font-weight: bolder; color: darkgray; padding-left: 10px; padding-right: 10px; left:-100px;">
+                        <li><a id="btnSaveContinue" style="font-family:Tahoma;font-weight:bolder;" href=""><i class="fa fa-save"></i>&nbsp;&nbsp;Save & Continue</a></li>
+                        <li><a id="btnSaveExit" style="font-family:Tahoma;font-weight:bolder;" href=""><i class="fa fa-arrow-circle-left"></i>&nbsp;&nbsp;Save & Exit</a></li>
+                    </ul>
+                </div>
+                <a href="~/Accounts/LabourGrades/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@Html.HiddenFor(x => x.Document, new { @id = "hdnDocument" })
+@*
+    Code Auto Generated on Sun 05-Jul-2020 02:49 PM
+    Engine: iX9Generator, ver: 3.9 Revision: 25
+    by Team Suchan, T.FAT *@
+

@@ -1,0 +1,546 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.ChangeCompanyDetailsVM
+@using Common;
+@{
+    ViewBag.Title = "Change Company Details";
+    Layout = null;
+}
+
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadCountry()
+        LoadState()
+        LoadCity()
+
+        @* iX9: Multi-Select Controls *@
+        var values = $('#hdnUsers').val();
+        $("#hdnUsersArray").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+            $(".Userslistbox option[value='" + e + "']").prop("selected", true);
+            });
+        }
+        $(".Userslistbox").change(function () {
+            $('#hdnUsersArray').val('');
+            var selected = [];
+            $(".Userslistbox :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnUsersArray').val(selected)
+            return false;
+        });
+        $('.Userslistbox').multiselect({ includeSelectAllOption: true })
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatComp_Business').val('@Model.TfatComp_Business').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatComp_Const').val('@Model.TfatComp_Const').attr("selected", "selected");
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#ChangeCompanyDetails').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TfatComp_Name: {required: true,},
+                TfatComp_Country: {required: true,},
+                TfatComp_State: {required: true,},
+                TfatComp_City: {required: true,},
+               },
+            messages: {
+                TfatComp_Name: {required: 'Name is Required',},
+                TfatComp_Country: {required: 'Country is Required',},
+                TfatComp_State: {required: 'State is Required',},
+                TfatComp_City: {required: 'City is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#TfatComp_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatComp_Country").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatComp_AuthCap").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatComp_State").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatComp_City").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#ChangeCompanyDetails").validate().form() == false)
+            //    return;
+
+            if ($("#TfatComp_Name").val() == null || $("#TfatComp_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ($("#TfatComp_Country").val() == null || $("#TfatComp_Country").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Country is Required..');
+                return;
+            }
+            if ($("#TfatComp_State").val() == null || $("#TfatComp_State").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('State is Required..');
+                return;
+            }
+            if ($("#TfatComp_City").val() == null || $("#TfatComp_City").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('City is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["TfatComp_Code"] = $("#TfatComp_Code").val();
+            ModelData["TfatComp_CSTNo"] = $("#TfatComp_CSTNo").val();
+            ModelData["TfatComp_TINNo"] = $("#TfatComp_TINNo").val();
+            ModelData["TfatComp_LstNo"] = $("#TfatComp_LstNo").val();
+            ModelData["TfatComp_Name"] = $("#TfatComp_Name").val();
+            ModelData["TfatComp_GSTNo"] = $("#TfatComp_GSTNo").val();
+            ModelData["TfatComp_TDSReg"] = $("#TfatComp_TDSReg").val();
+            ModelData["TfatComp_VATReg"] = $("#TfatComp_VATReg").val();
+            ModelData["TfatComp_CINNumber"] = $("#TfatComp_CINNumber").val();
+            ModelData["TfatComp_Adrl1"] = $("#TfatComp_Adrl1").val();
+            ModelData["TfatComp_TDSCir"] = $("#TfatComp_TDSCir").val();
+            ModelData["TfatComp_Adrl2"] = $("#TfatComp_Adrl2").val();
+            ModelData["TfatComp_PAN"] = $("#TfatComp_PAN").val();
+            ModelData["TfatComp_Adrl3"] = $("#TfatComp_Adrl3").val();
+            ModelData["TfatComp_Business"] = $("#TfatComp_Business").val();
+            ModelData["TfatComp_Const"] = $("#TfatComp_Const").val();
+            ModelData["TfatComp_Adrl4"] = $("#TfatComp_Adrl4").val();
+            ModelData["TfatComp_Country"] = $("#TfatComp_Country").val();
+            ModelData["TfatComp_AuthCap"] = $("#TfatComp_AuthCap").val();
+            ModelData["TfatComp_State"] = $("#TfatComp_State").val();
+            ModelData["TfatComp_Users"] = $("#hdnUsersArray").val();
+            ModelData["TfatComp_City"] = $("#TfatComp_City").val();
+            ModelData["TfatComp_Pin"] = $("#TfatComp_Pin").val();
+            ModelData["TfatComp_Email"] = $("#TfatComp_Email").val();
+            ModelData["TfatComp_fax"] = $("#TfatComp_fax").val();
+            ModelData["TfatComp_Tel1"] = $("#TfatComp_Tel1").val();
+            ModelData["TfatComp_Tel2"] = $("#TfatComp_Tel2").val();
+            ModelData["TfatComp_Tel3"] = $("#TfatComp_Tel3").val();
+            ModelData["TfatComp_Tel4"] = $("#TfatComp_Tel4").val();
+            ModelData["TfatComp_www"] = $("#TfatComp_www").val();
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadCountry() {
+        var url = '@Url.Action("AutoCompleteCountry")'
+        $('#TfatComp_Country').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatComp_Country', text: '@Model.CountryName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadState() {
+        var url = '@Url.Action("AutoCompleteState")'
+        $('#TfatComp_State').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatComp_State', text: '@Model.StateName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCity() {
+        var url = '@Url.Action("AutoCompleteCity")'
+        $('#TfatComp_City').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatComp_City', text: '@Model.CityName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ChangeCompanyDetails" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Headers *@
+            <div class="tab">
+                <button class="tablinks" onclick="OpenTab(event, 'divGeneral')" id="FirstTab">General</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divMore')">More</button>
+                <button class="tablinks" onclick="OpenTab(event, 'divTDS')">TDS</button>
+            </div>
+            @* iX9: Tab Body Panels *@
+            <div id="divGeneral" style="height:500px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Code:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Code, new { @maxlength = "6", @class = "form-control", @readonly = "readonly", @Name = "TfatComp_Code", @Id = "TfatComp_Code" })
+                    </div>
+                    <label class="col-sm-1 control-label">Name:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Name, new { @maxlength = "50", @class = "form-control", @Name = "TfatComp_Name", @Id = "TfatComp_Name" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Address - 1:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Adrl1, new { @maxlength = "50", @class = "form-control", @Name = "TfatComp_Adrl1", @Id = "TfatComp_Adrl1" })
+                    </div>
+                    <label class="col-sm-1 control-label">Address - 2:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Adrl2, new { @maxlength = "50", @class = "form-control", @Name = "TfatComp_Adrl2", @Id = "TfatComp_Adrl2" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Address - 3:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Adrl3, new { @maxlength = "50", @class = "form-control", @Name = "TfatComp_Adrl3", @Id = "TfatComp_Adrl3" })
+                    </div>
+                    <label class="col-sm-1 control-label">Address - 4:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Adrl4, new { @maxlength = "35", @class = "form-control", @Name = "TfatComp_Adrl4", @Id = "TfatComp_Adrl4" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Country:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Country, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatComp_Country", @Name = "TfatComp_Country" })
+                    </div>
+                    <label class="col-sm-1 control-label">State:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_State, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatComp_State", @Name = "TfatComp_State" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">City:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_City, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatComp_City", @Name = "TfatComp_City" })
+                    </div>
+                    <label class="col-sm-1 control-label">Pin:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Pin, new { @maxlength = "10", @class = "form-control", @Name = "TfatComp_Pin", @Id = "TfatComp_Pin" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">EMail:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Email, new { @maxlength = "50", @class = "form-control", @Name = "TfatComp_Email", @Id = "TfatComp_Email" })
+                    </div>
+                    <label class="col-sm-1 control-label">Fax:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_fax, new { @maxlength = "25", @class = "form-control", @Name = "TfatComp_fax", @Id = "TfatComp_fax" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Telephone-1:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Tel1, new { @maxlength = "10", @class = "form-control", @Name = "TfatComp_Tel1", @Id = "TfatComp_Tel1" })
+                    </div>
+                    <label class="col-sm-1 control-label">Telephone-2:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Tel2, new { @maxlength = "10", @class = "form-control", @Name = "TfatComp_Tel2", @Id = "TfatComp_Tel2" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Telephone-3:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Tel3, new { @maxlength = "10", @class = "form-control", @Name = "TfatComp_Tel3", @Id = "TfatComp_Tel3" })
+                    </div>
+                    <label class="col-sm-1 control-label">Telephone-4:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_Tel4, new { @maxlength = "10", @class = "form-control", @Name = "TfatComp_Tel4", @Id = "TfatComp_Tel4" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">www:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_www, new { @maxlength = "50", @class = "form-control", @Name = "TfatComp_www", @Id = "TfatComp_www" })
+                    </div>
+                </div>
+            </div>
+            <div id="divMore" style="height:500px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">CST Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_CSTNo, new { @maxlength = "30", @class = "form-control", @Name = "TfatComp_CSTNo", @Id = "TfatComp_CSTNo" })
+                    </div>
+                    <label class="col-sm-1 control-label">LST Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_LstNo, new { @maxlength = "30", @class = "form-control", @Name = "TfatComp_LstNo", @Id = "TfatComp_LstNo" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">GST Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_GSTNo, new { @maxlength = "15", @class = "form-control", @Name = "TfatComp_GSTNo", @Id = "TfatComp_GSTNo" })
+                    </div>
+                    <label class="col-sm-1 control-label">VAT Reg. No.:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_VATReg, new { @maxlength = "30", @class = "form-control", @Name = "TfatComp_VATReg", @Id = "TfatComp_VATReg" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">CIN Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_CINNumber, new { @maxlength = "25", @class = "form-control", @Name = "TfatComp_CINNumber", @Id = "TfatComp_CINNumber" })
+                    </div>
+                    <label class="col-sm-1 control-label">PAN Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_PAN, new { @maxlength = "30", @class = "form-control", @Name = "TfatComp_PAN", @Id = "TfatComp_PAN" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Business Type:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatComp_Business, Model.BusinessList, new { @class = "form-control", @Id = "TfatComp_Business", @Name = "TfatComp_Business", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Constitution:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatComp_Const, Model.ConstList, new { @class = "form-control", @Id = "TfatComp_Const", @Name = "TfatComp_Const", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Auth. Capital:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatComp_AuthCap, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatComp_AuthCap", @Id = "TfatComp_AuthCap" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Users:</label>
+                    <div class="col-sm-3">
+                        @Html.ListBoxFor(x => x.UsersItemX, Model.UsersMultiX, new { @class = "Userslistbox", @id = "TfatComp_Users" })
+                    </div>
+                </div>
+            </div>
+            <div id="divTDS" style="height:500px;" class="tabcontent">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">TIN Number:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_TINNo, new { @maxlength = "30", @class = "form-control", @Name = "TfatComp_TINNo", @Id = "TfatComp_TINNo" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">TDS Reg.:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_TDSReg, new { @maxlength = "30", @class = "form-control", @Name = "TfatComp_TDSReg", @Id = "TfatComp_TDSReg" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">TDS Circle:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatComp_TDSCir, new { @maxlength = "30", @class = "form-control", @Name = "TfatComp_TDSCir", @Id = "TfatComp_TDSCir" })
+                    </div>
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            <script>
+            function OpenTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+            document.getElementById("FirstTab").click();
+            </script>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="hdnUsersArray" />
+@Html.HiddenFor(x => x.TfatComp_Users, new { @id = "hdnUsers" })
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Thu 07-Mar-2019 06:33 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 15
+    by Team Suchan, T.FAT *@
+

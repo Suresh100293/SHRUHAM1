@@ -1,0 +1,364 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+@if (Model.SubType == "RP" || Model.SubType == "CP" || Model.SubType == "IM" || Model.SubType == "NS" || Model.SubType == "IC" || Model.SubType == "SX")
+{
+    <script>
+        $(document).ready(function () {
+
+            $('td input').bind('paste', null, function (e) {
+                $txt = $(this);
+                setTimeout(function () {
+                    var values = $txt.val().split(/\s+/);
+                    var currentRowIndex = $txt.parent().parent().index();
+                    var currentColIndex = $txt.parent().index();
+
+                    var totalRows = $('#ItemSerialPREdt tbody tr').length;
+                    var totalCols = $('#ItemSerialPREdt thead th').length;
+                    var count = 0;
+                    for (var i = currentColIndex; i < totalCols; i++) {
+                        if (i != currentColIndex)
+                            if (i != currentColIndex)
+                                currentRowIndex = 0;
+                        for (var j = currentRowIndex; j < totalRows; j++) {
+                            var value = values[count];
+                            var inp = $('#ItemSerialPREdt tbody tr').eq(j).find('td').eq(i).find('input');
+                            inp.val(value);
+                            count++;
+
+                        }
+                    }
+
+                }, 0);
+            });
+
+
+            $('#UpdateStkSerialPR').click(function (event) {
+                event.preventDefault();
+                var DuplSerialArray = [];
+                $('#ItemSerialPREdt tr:not(:first)').each(function () {
+                    var tds = $(this).find('td');
+                    DuplSerialArray.push(tds.eq(1).find("input[class='txtserialinpedt']").val());
+                })
+                for (var i = 0; i < DuplSerialArray.length - 1; i++) {
+                    if (DuplSerialArray[i + 1] == DuplSerialArray[i]) {
+                        //reportRecipientsDuplicate.push(recipientsArray[i]);
+                        alert('Duplicate Serial Found Pls Check')
+                        return
+                    }
+                }
+                var myTableArray = [];
+                $('#ItemSerialPREdt tr:not(:first)').each(function () {
+                    var tds = $(this).find('td');
+                    var myDets = {
+                        tempId: tds.eq(0).text(),
+                        SerialNumber: tds.eq(1).find("input[class='txtserialinpedt']").val(),
+                        GrossWt: tds.eq(2).text(),
+                        NettWt: tds.eq(3).text(),
+                        Code: tds.eq(4).text(),
+                        Store: tds.eq(5).text()
+                    }
+                    myTableArray.push(myDets);
+                })
+                var ModelData = {};
+                ModelData["StockSerialList"] = myTableArray;
+                ModelData["tempId"] = $("#HdnItmSrlPREdit").val();
+                ModelData["ChangeLog"] = $("#hdnchangelog").val();
+                ModelData["SubType"] = $("#hdnSType").val();
+                ModelData["MainType"] = $("#hdnMType").val();
+                ModelData["LocationCode"] = $('#LocationCode').val();
+                ModelData["Store"] = $('#UpdateStore').val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("AddSessUpdateStkSerialPR")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforesend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "Duplicate") {
+                            alert('Duplicate Serial is' + data.Message + "Cant Save");
+                        }
+                        else if (data.Status == "Success") {
+                            $('#serialbatchaddedt').modal('hide');
+                        }
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+            });
+
+        });
+    </script>
+
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            <h4 class="modal-title">Stock Serial Details</h4>
+        </div>
+        <div class="modal-body">
+            <div class="stockedtpr" style="max-height: 250px;min-height:250px; width: auto; overflow: auto;">
+                <table id="ItemSerialPREdt" class="zui-tableww" style="width:100%;">
+                    <thead>
+                        <tr role="row">
+                            <th>Sr.</th>
+                            <th>Serial Number</th>
+                            <th>GrossWt</th>
+                            <th>NettWt</th>
+                            <th hidden="hidden"></th>
+                            <th hidden="hidden"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @if (Model.StockSerialList != null)
+                        {
+                            for (int i = 0; i < Model.StockSerialList.Count; i++)
+                            {
+                                <tr>
+                                    <td style="text-align:right">@Html.DisplayFor(m => Model.StockSerialList[i].tempId)</td>
+                                    <td>@Html.TextBoxFor(m => Model.StockSerialList[i].SerialNumber, new { @class = "txtserialinpedt", @style = "width:100%" })</td>
+                                    <td style="text-align:right">@Html.DisplayFor(m => Model.StockSerialList[i].GrossWt)</td>
+                                    <td style="text-align:right">@Html.DisplayFor(m => Model.StockSerialList[i].NettWt)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.StockSerialList[i].Code)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.StockSerialList[i].Store)</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer" style="background-color:#cccccc">
+                <button type="button" class="btn btn-success" id="UpdateStkSerialPR">OK</button>
+                <button type="button" class="btn btn-danger" id="CloseUpdStkSerial">Close</button>
+            </div>
+        </div>
+    </div>
+    @Html.HiddenFor(x => x.HdnItmSrlPREdit, new { @id = "HdnItmSrlPREdit" })
+}
+
+@if (Model.SubType == "RS" || Model.SubType == "CS" || Model.SubType == "XS" || Model.SubType == "NP" || Model.SubType == "OC" || Model.SubType == "PX" || Model.SubType == "OS")
+{
+    <script>
+        $(document).ready(function () {
+            $('#UpdateStkSerialSL').click(function (event) {
+                event.preventDefault();
+                if (CheckSerialValidationOnFirstAdd() == false) {
+                    return;
+                }
+                var myTableArray = [];
+                $('#ItemSerialSLEdt tbody tr').each(function () {
+                    if ($(this).find('input[type="checkbox"]').is(':checked')) {
+                        var tds = $(this).find('td');
+                        var myDets = {
+                            tempId: tds.eq(1).text(),
+                            SerialNumber: tds.eq(2).text(),
+                            GrossWt: tds.eq(3).text(),
+                            NettWt: tds.eq(4).text(),
+                            Code: tds.eq(5).text(),
+                            Store: tds.eq(6).text()
+                        }
+                        myTableArray.push(myDets);
+                    }
+                })
+                var ModelData = {};
+
+                ModelData["StockSerialList"] = myTableArray;
+                ModelData["ChangeLog"] = $("#hdnchangelog").val();
+                ModelData["SubType"] = $("#hdnSType").val();
+                ModelData["MainType"] = $("#hdnMType").val();
+                ModelData["tempId"] = $("#HdnItmSrlPREdit").val();
+                ModelData["LocationCode"] = $('#LocationCode').val();
+                ModelData["Store"] = $('#UpdateStore').val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("AddSessUpdateStkSerialPR")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforesend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        $('#serialbatchaddedt').modal('hide');
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+            });
+
+            $('#AllCheckEdt').click(function () {
+                var xcess = $('#AllCheckEdt').is(':checked');
+                if (xcess == true) {
+                    $('#ItemSerialSLEdt tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        tds.find("input[id='ExistData']").prop("checked", true);
+
+                    })
+                }
+                else {
+                    $('#ItemSerialSLEdt tbody tr').each(function () {
+                        var tds = $(this).find('td');
+                        tds.find("input[id='ExistData']").prop("checked", false);
+
+                    })
+                }
+            });
+
+            $('#btnsetslserialupd').click(function (event) {
+                event.preventDefault();
+                var texttocheck = $('#selectoncopyupd').val();
+                var texttocheck2 = texttocheck.split(' ');
+                var i;
+                var i1;
+                var stksrllst = [];
+                var myStockSerialArray = [];
+                var astat = '';
+                $('#ItemSerialSLEdt tbody tr').each(function () {
+                    var tds = $(this).find('td');
+                    var av = tds.eq(2).text();
+                    stksrllst.push(av);
+                    //if (texttocheck.includes(av)) {
+                    //    tds.find('input[type="checkbox"]').prop("checked", true);
+                    //}
+                    for (i = 0; i < texttocheck2.length; ++i) {
+                        if (texttocheck2[i] == av) {
+                            tds.find('input[type="checkbox"]').prop("checked", true);
+                        }
+                    }
+                })
+                for (i1 = 0; i1 < texttocheck2.length; ++i1) {
+                    if ($.inArray(texttocheck2[i1], stksrllst) == -1) {
+                        astat = astat + ',' + texttocheck2[i1];
+                    }
+                }
+                if (astat != '') {
+                    alert('Serials not found :' + astat);
+                }
+
+            });
+        });
+        function CheckSerialValidationOnFirstAdd() {
+            var adjsum1 = 0;
+            var adjsum2 = 0;
+            var rateonbool = $('#hdnEdtSrlProductRateOn2').val();
+            var batchqty2 = parseFloat($('#hdnEdtSrlProductQty2').val());
+            var batchqty1 = parseFloat($('#hdnEdtSrlProductQty').val());
+            if (rateonbool == "False") {
+                $('#ItemSerialSLEdt tbody tr').each(function () {
+                    if ($(this).find('input[type="checkbox"]').is(':checked')) {
+                        var Qty = 1;
+                        adjsum1 += (parseFloat(Qty));
+                    }
+                })
+                if (batchqty1 != adjsum1) {
+                    alert('Product Qty1 is not equal to StockSerial Qty1, Selected Serials are :' + adjsum1)
+
+                    return false;
+
+                }
+                else {
+                    return true;
+                }
+
+            }
+            else {
+                $('#ItemSerialSLEdt tbody tr').each(function () {
+                    if ($(this).find('input[type="checkbox"]').is(':checked')) {
+                        var Qty2 = 1;
+                        adjsum2 += (parseFloat(Qty2));
+                    }
+                })
+
+                if (batchqty2 != adjsum2) {
+                    alert('Product Qty2 is not equal to StockSerial Qty2, Selected Serials are :' + adjsum2)
+
+                    return false;
+                }
+                else {
+                    return true;
+                }
+
+            }
+
+        }
+
+    </script>
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            <h4 class="modal-title">Stock Serial Details</h4>
+        </div>
+        <div class="modal-body">
+            Quantity: @Html.DisplayFor(x => x.ProductQty, new { @class = "form-control", @style = "text-align:right;font-weight:bold;" })  Quantity2: @Html.DisplayFor(x => x.ProductQty2)
+            <div class="stockedtsl" style="max-height: 250px;min-height:250px; width: auto; overflow: auto;">
+                <table id="ItemSerialSLEdt" class="zui-tableww" style="width:100%;">
+                    <thead>
+                        <tr role="row">
+                            <th><input id="AllCheckEdt" name="AllCheckEdt" style="width:16px;height:16px;" type="checkbox"></th>
+                            <th>Sr. No</th>
+                            <th>Serial Number</th>
+                            <th>GrossWt</th>
+                            <th>NettWt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.StockSerialList != null)
+                        {
+                            for (int i = 0; i < Model.StockSerialList.Count; i++)
+                            {
+                                <tr>
+                                    <td style="text-align:center;">@Html.CheckBoxFor(m => Model.StockSerialList[i].ExistData, new { @value = Model.StockSerialList[i].SerialNumber, @id = "ExistData", @name = "ExistData" })</td>
+                                    <td style="text-align:right;">@Html.DisplayFor(m => Model.StockSerialList[i].tempId)</td>
+                                    <td>@Html.DisplayFor(m => Model.StockSerialList[i].SerialNumber)</td>
+                                    <td style="text-align:right;">@Html.DisplayFor(m => Model.StockSerialList[i].GrossWt)</td>
+                                    <td style="text-align:right;">@Html.DisplayFor(m => Model.StockSerialList[i].NettWt)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.StockSerialList[i].Code)</td>
+                                    <td hidden="hidden">@Html.DisplayFor(m => Model.StockSerialList[i].Store)</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="modal-footer" style="background-color:#cccccc">
+                <div class="col-sm-5">
+                    <input id="selectoncopyupd" type="text" name="selectoncopyupd" placeholder="Enter Serial" class="form-control">
+                </div>
+
+                <div class="col-sm-1">
+                    <button class="btn btn-success" id="btnsetslserialupd"><i class="fa fa-paste" style="color:black"></i></button>
+                </div>
+                <button type="button" class="btn btn-success" id="UpdateStkSerialSL">OK</button>
+                <button type="button" class="btn btn-danger" id="CloseUpdStkSerial">Close</button>
+            </div>
+        </div>
+    </div>
+    @Html.HiddenFor(x => x.HdnItmSrlPREdit, new { @id = "HdnItmSrlPREdit" })
+}
+
+<script>
+    $(document).ready(function () {
+        $('#CloseUpdStkSerial').click(function (event) {
+            event.preventDefault();
+            $('#serialbatchaddedt').modal('hide');
+        });
+    });
+</script>
+@Html.HiddenFor(x => x.ProductQty, new { @id = "hdnEdtSrlProductQty" })
+@Html.HiddenFor(x => x.ProductQty2, new { @id = "hdnEdtSrlProductQty2" })
+@Html.HiddenFor(x => x.ProductRateOn2, new { @id = "hdnEdtSrlProductRateOn2" })

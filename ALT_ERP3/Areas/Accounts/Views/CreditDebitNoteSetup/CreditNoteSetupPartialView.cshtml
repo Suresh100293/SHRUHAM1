@@ -1,0 +1,269 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.CreditDebitNoteSetupVM
+@using Common;
+@{
+    ViewBag.Title = "LrBillSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+
+    $(document).ready(function ()
+    {
+        GetMyFavorites('@Model.ViewDataId');
+        $('#PrintFormat').val('');
+        var CommonValue = "";
+        if ('@Model.PrintFormat' != "") {
+            $.each('@Model.PrintFormat'.split(','), function (idx, val) {
+                $(".PrintFormatL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#PrintFormat').val(CommonValue);
+        }
+        $(".PrintFormatL").change(function () {
+            $('#PrintFormat').val('');
+            var selected = "";
+            $(".PrintFormatL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#PrintFormat').val(selected);
+            return false;
+        });
+        debugger;
+        $('.PrintFormatL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Default Print',
+        });
+
+
+
+        
+
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["PrintFormat"] = $("#PrintFormat").val();
+            ModelData["FooterDetails1"] = $("#FooterDetails1").val();
+            ModelData["FooterDetails2"] = $("#FooterDetails2").val();
+            ModelData["FooterDetails3"] = $("#FooterDetails3").val();
+            ModelData["FooterDetails4"] = $("#FooterDetails4").val();
+            ModelData["FooterDetails5"] = $("#FooterDetails5").val();
+            ModelData["FooterDetails6"] = $("#FooterDetails6").val();
+            ModelData["FooterDetails7"] = $("#FooterDetails7").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/DashBoard/SetUP";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+</script>
+
+<style>
+
+    hr {
+        margin-top: 0%;
+        margin-bottom: 15px;
+        border: 0;
+        border-top: 2px solid #e0cbcb !important;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+</style>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">Setup Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <span class="tools pull-right" style="    margin-right: 15px;">
+
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LCSetupMaster" role="form" style="margin-top:30px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+            <fieldset class=" col-md-12" style="margin-top:0%;">
+                <legend>@Model.Header</legend>
+
+                <div class="panel panel-default" style="height:400px;overflow:auto;">
+                    <div class="panel-body">
+                        <div class="form-group ">
+                            <label class="col-sm-2 control-label" style="width:210px;font-size: 14px;font-weight: bold;">Default Print :</label>
+                            <div class="col-sm-5">
+                                <div class="col-sm-4">
+                                    @Html.ListBoxFor(x => x.PrintFormatsL, Model.PrintFormats, new { @class = "PrintFormatL", @id = "PrintFormatL" })
+                                </div>
+                            </div>
+                            <div class="col-sm-5">
+
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group">
+                            <label class="col-sm-2  control-label" style="font-size: 14px;font-weight: bold;">FooterDetails1 :</label>
+                            <div class="col-sm-6">
+                                @Html.TextBoxFor(x => x.FooterDetails1, new { @class = "form-control", @Value = Model.FooterDetails1, @maxlength = "100" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group">
+                            <label class="col-sm-2  control-label" style="font-size: 14px;font-weight: bold;">FooterDetails2 :</label>
+                            <div class="col-sm-6">
+                                @Html.TextBoxFor(x => x.FooterDetails2, new { @class = "form-control", @Value = Model.FooterDetails2, @maxlength = "100" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group">
+                            <label class="col-sm-2  control-label" style="font-size: 14px;font-weight: bold;">FooterDetails3 :</label>
+                            <div class="col-sm-6">
+                                @Html.TextBoxFor(x => x.FooterDetails3, new { @class = "form-control", @Value = Model.FooterDetails3, @maxlength = "100" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group">
+                            <label class="col-sm-2  control-label" style="font-size: 14px;font-weight: bold;">FooterDetails4 :</label>
+                            <div class="col-sm-6">
+                                @Html.TextBoxFor(x => x.FooterDetails4, new { @class = "form-control", @Value = Model.FooterDetails4, @maxlength = "100" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group">
+                            <label class="col-sm-2  control-label" style="font-size: 14px;font-weight: bold;">FooterDetails5 :</label>
+                            <div class="col-sm-6">
+                                @Html.TextBoxFor(x => x.FooterDetails5, new { @class = "form-control", @Value = Model.FooterDetails5, @maxlength = "100" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group">
+                            <label class="col-sm-2  control-label" style="font-size: 14px;font-weight: bold;">FooterDetails6 :</label>
+                            <div class="col-sm-6">
+                                @Html.TextBoxFor(x => x.FooterDetails6, new { @class = "form-control", @Value = Model.FooterDetails6, @maxlength = "100" })
+                            </div>
+                        </div>
+                        <hr />
+                        <div class="form-group">
+                            <label class="col-sm-2  control-label" style="font-size: 14px;font-weight: bold;">FooterDetails7 :</label>
+                            <div class="col-sm-6">
+                                @Html.TextBoxFor(x => x.FooterDetails7, new { @class = "form-control", @Value = Model.FooterDetails7, @maxlength = "100" })
+                            </div>
+                        </div>
+                        <hr />
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.PrintFormat)
+
+
+

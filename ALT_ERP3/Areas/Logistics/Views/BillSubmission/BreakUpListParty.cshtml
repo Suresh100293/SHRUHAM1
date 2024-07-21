@@ -1,0 +1,177 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.BillSubmissionVM
+@using Common;
+
+<div class="grid" id="SelectedledgerTable" style="max-height:375px; width:95%;margin-left:3%; overflow-y: scroll;">
+    @{
+        <table id="tabledata" class="zui-table" style="width:100%">
+            <thead>
+                <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                    <th style="width:1%">Sr.</th>
+                    <th style="width:5%">Bill No</th>
+                    <th style="width:5%">Bill Type</th>
+                    <th style="width:7%">Party</th>
+                    <th style="width:7%">Date</th>
+                    <th style="width:5%">Amount</th>
+                    <th colspan="4" style="width:6%">
+                        @if (!Model.SendBillController)
+                        {
+                            <button type="button" id="btnadddata" class="btn btn-primary btn-sm btnadddata" title="Add" onclick="PendingGridReload();" style="margin-left:10px;width:60%;height:25px;border:1px solid black"><i class="fa fa-plus" style="color:black;"></i></button>
+                        }
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody>
+                @{
+                    int i = 1;
+                    if (Model.BillDetails != null)
+                    {
+                        foreach (var item in @Model.BillDetails.ToList())
+                        {
+                            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                                <td style="width:1%">@i</td>
+                                <td style="width:1%">@item.BillNo</td>
+                                <td style="width:1%">@item.BillTypeName</td>
+                                <td class="hidden" style="width:1%">@item.BillType</td>
+                                <td style="width:1%">@item.PartyParentName</td>
+                                <td style="width:1%">@item.Date.ToShortDateString()</td>
+                                <td style="width:1%;text-align:right">@item.Amount</td>
+                                <td colspan="4" style="width:6%">
+                                    @if (item.AllowToChange)
+                                    {
+                                        <button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@item.BillNo" title="Edit" disabled><i class="fa fa-edit"></i></button>
+                                        <button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.BillNo" title="Delete" disabled><i class="fa fa-trash-o"></i></button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@item.BillNo" title="Edit"><i class="fa fa-edit"></i></button>
+                                        <button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.BillNo" title="Delete"><i class="fa fa-trash-o"></i></button>
+                                    }
+                                </td>
+                            </tr>
+                            ++i;
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<div class="example-modal">
+    <div id="addnewbill" class="modal modal-default" style="margin-top:4%;">
+        <div class="modal-dialog modal-lg" style="width:1040px;overflow:unset">
+            <div id="AddnNewBillList">
+                @Html.Partial("AddNewBill")
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+    $(document).ready(function () {
+        $('button[action|="EditLedger"]').click(function (event) {
+
+            event.preventDefault(event);
+            var BillDetail = {
+                BillNo: $(this).val()
+            }
+            var ModelData = {};
+            ModelData["BillDetail"] = BillDetail;
+            ModelData["Mode"] = "Edit";
+            ModelData["Methods"] = '@Model.Methods';
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetBreakLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addnewbill').modal('show');
+                    $('#AddnNewBillList').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('button[action|="DeleteLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var BillDetail = {
+                BillNo: $(this).val()
+            }
+            var ModelData = {};
+            ModelData["BillDetail"] = BillDetail;
+            ModelData["Methods"] = '@Model.Methods';
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#BillListDiv').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+
+
+    function AlertNoteMaster(value,BillT) {
+        debugger;
+        event.preventDefault();
+        var url = '/Logistics/AlertNote/ShoWAlertNoteList';
+        var myTableArray = [];
+        $("#example1 > tbody  > tr").each(function () {
+            if ($(this).find('input[type=checkbox]').prop("checked") == true) {
+                debugger;
+                var tds = $(this).find('td');
+                myTableArray.push(tds.eq(2).text());
+            }
+        });
+        var DTO = { Type: BillT, TypeCode: value, DocTpe: "BLSMT" };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                if (data.Status == "Success") {
+                    var AttachDoc = $("#AlertNoteDiv");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#AlertNoteModal').modal('show');
+                }
+
+            },
+        });
+    }
+
+</script>
+

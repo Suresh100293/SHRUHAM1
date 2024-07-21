@@ -1,0 +1,201 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.LedgerVM
+@using Common
+
+<script>
+    $(document).ready(function () {
+        $('button[action|="DeleteLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            ModelData["SubType"] = $("#hdnSubType").val();
+            ModelData["ConstantMode"] = $("#hdnConstantMode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("Deleteledger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#SelectedledgerTable').html(data.Html);
+                    if ($('#hdnMainType').val() == "RC") {
+                        $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                        $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                    }
+                    if ($('#hdnMainType').val() == "PM") {
+                        $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                        $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                    }
+                    if ($('#hdnMainType').val() == "JV") {
+                        $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                        $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnadddata").click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["SessionFlag"] = "Add";
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            ModelData["SubType"] = $("#hdnSubType").val();
+            ModelData["MainType"] = $("#hdnMainType").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["SumCredit"] = $('#SumCredit').val();
+            ModelData["SumDebit"] = $('#SumDebit').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetCashLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    //$('#addcashbank').modal({
+                    //    backdrop: 'static',
+                    //    keyboard: false
+                    //})
+                    $('#addcashbank').modal('show');
+                    $('#AddCashBank').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+
+        $('button[action|="EditLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["MainType"] = $("#hdnMainType").val();
+            ModelData["SubType"] = $("#hdnSubType").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["SessionFlag"] = "Edit";
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetCashLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addcashbank').modal('show');
+                    $('#AddCashBank').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+</script>
+
+<div class="grid" id="SelectedledgerTable" style="max-height:350px; width: auto; overflow: auto;">
+    <table id="tabledata" class="zui-table" style="border-color:gray;">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                <th style="width: 3%;vertical-align:inherit;">Sr.</th>
+                <th style="width: 8%;vertical-align:inherit;">Branch</th>
+                <th style="width: 0%;vertical-align:inherit;">Account</th>
+                <th style="width: 20%;vertical-align:inherit;">Account Description</th>
+                <th style="width: 8%;vertical-align:inherit;">Debit</th>
+                <th style="width: 8%;vertical-align:inherit;">Credit</th>
+                <th style="width: 30%;vertical-align:inherit;">Remark</th>
+                <th style="width: 3%;vertical-align:inherit;"></th>
+                <th style="width: 3%;vertical-align:inherit;">
+                    @if (Model.ChangeLog != "Delete")
+                    {
+                        <button type="button" id="btnadddata" class="btn btn-primary btn-sm" title="Add" style="font-size:13pt;margin-left:0px;width:100%;height:30px;border:0px solid black"><i class="fa fa-plus" style="color:black;"></i></button>
+                    }
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Selectedleger != null)
+            {
+                foreach (var item in @Model.Selectedleger.Where(x => x.tempIsDeleted == false).ToList())
+                {
+                    var btnDelete = @item.tempId;
+                    <tr style="font-family:Tahoma;font-size:9pt;">
+                        <td style="vertical-align:inherit;">@item.tempId</td>
+                        <td style="vertical-align:inherit;">@item.Branch</td>
+                        <td style="vertical-align:inherit;">@item.Code</td>
+                        <td style="vertical-align:inherit;">@item.AccountName</td>
+                        <td style="text-align:right;vertical-align:inherit;">@GetFixedTwo(@item.Debit)</td>
+                        <td style="text-align:right;vertical-align:inherit;">@GetFixedTwo(@item.Credit)</td>
+                        <td style="vertical-align:inherit;">@item.Narr</td>
+                        @if (Model.ChangeLog != "Delete")
+                        {
+                            <td style="vertical-align:inherit;">
+                                <button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@item.tempId" title="Edit"><i class="fa fa-edit"></i></button>
+                            </td>
+                            <td style="vertical-align:inherit;">
+                                <button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+        <tfoot>
+            <tr style="font-family:Tahoma;font-size:9pt;font-weight:bolder;border-top:solid 1px;background-color:lightgray">
+                <td colspan="4" style="text-align:center;vertical-align:inherit;border-top:solid 1px;">Total >></td>
+                <td style="width: 8%;vertical-align:inherit;border-top:solid 1px;">@Html.TextBoxFor(m => m.SumDebit, new { @style = "text-align:right;width:99%;margin-top:2px;height:24px;", @class = "form-control", @disabled = "disabled" })</td>
+                <td style="width: 8%;vertical-align:inherit;border-top:solid 1px;">@Html.TextBoxFor(m => m.SumCredit, new { @style = "text-align:right;width:99%;margin-top:2px;height:24px;", @class = "form-control", @disabled = "disabled" })</td>
+                <td colspan="7" style="vertical-align:inherit;border-top:solid 1px;"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="example-modal">
+    <div id="addcashbank" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog modal-lg" style="height:400px;width:1000px;">
+            <div id="AddCashBank">
+                @Html.Partial("AddCashBankList")
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="hdnseaccid" />
+<input type="hidden" id="hdnseacctext" />
+<input type="hidden" id="hdntotalpending" />
+
+@functions
+{
+    string GetFixedTwo(decimal dcb)
+    {
+        decimal d = Math.Floor(100 * dcb) / 100;
+        string s = d.ToString("N2");
+        return s;
+    }
+}

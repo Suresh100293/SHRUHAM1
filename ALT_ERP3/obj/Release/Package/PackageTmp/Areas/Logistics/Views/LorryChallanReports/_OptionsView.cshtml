@@ -1,0 +1,267 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.LorryChallanReportVM
+
+<style>
+    .ModalLabel {
+        font-weight: bold !important;
+        color: black !important;
+        padding: 3px !important;
+    }
+
+    .multiselect-container {
+        width: 215px !important;
+    }
+
+    .td1 {
+        width: 500px !important;
+    }
+
+    .td2 {
+        width: 500px !important;
+    }
+
+    .td3 {
+        width: 500px !important;
+    }
+
+    .btn-group, .btn-group-vertical {
+        float: right;
+    }
+</style>
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+@*<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+    <script src="~/Content/bootstrap-multiselect.js"></script>*@
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+
+        $("#LorryChallanNo").val("");
+        $("#txtFMNO").val("");
+        if ('@Model.LorryChallanNo' != "") {
+            $("#LorryChallanNo").val('@Model.LorryChallanNo');
+            $("#txtFMNO").val('@Model.LorryChallanNo');
+        }
+
+        $("#txtReportName").val("");
+        if ('@Model.ReportName' != "") {
+            $("#txtReportName").val('@Model.ReportName');
+        }
+
+        $("#ReportTypeL").val("");
+        if ('@Model.ReportTypeL' != "") {
+            $("#ReportTypeL").val('@Model.ReportTypeL');
+            $("#Ledger").html($(".ReportTypeL option:selected").text());
+        }
+
+        $("#LorryReceiptDetailsReq").val(false);
+        if ('@Model.LorryReceiptDetailsReq'=="True" || '@Model.LorryReceiptDetailsReq'=="true") {
+            $("#LorryReceiptDetailsReq").val(true);
+            $(".chkLorryDetails").prop("checked", true);
+        }
+
+        $('#Branch').val('');
+        var CommonValue = "";
+        if ('@Model.Branch' != "") {
+            $.each('@Model.Branch'.split(','), function (idx, val) {
+                $(".BranchL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "'" + val + "',";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#Branch').val(CommonValue);
+        }
+
+        $('#LoadFrom').val('');
+        var CommonValue = "";
+        if ('@Model.LoadFrom' != "") {
+            $.each('@Model.LoadFrom'.split(','), function (idx, val) {
+                $(".LoadFromL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "'" + val + "',";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#LoadFrom').val(CommonValue);
+        }
+
+        $('#SendTo').val('');
+        var CommonValue = "";
+        if ('@Model.SendTo' != "") {
+            $.each('@Model.SendTo'.split(','), function (idx, val) {
+                $(".SendToL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "'" + val + "',";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#SendTo').val(CommonValue);
+        }
+
+        @*$('#Branch').val('');
+        if ('@Model.Branch' != "") {
+            var selected = "";
+            $(".BranchL").find("option").each(function () {
+                if ('@Model.Branch' == $(this).val()) {
+                    $(this).attr('selected', true);
+                    selected += ("'" + $(this).val() + "',");
+                }
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Branch').val(selected);
+        }*@
+
+
+
+
+        $(".txtFMNO").blur(function () {
+            debugger;
+            $("#LorryChallanNo").val(this.value);
+        });
+        $(".ReportTypeL").change(function () {
+            $("#Ledger").html($(".ReportTypeL option:selected").text());
+            $("#ReportTypeL").val(this.value);
+            $(".chkLorryDetails").prop("checked", false);
+            $('#LorryReceiptDetailsReq').val(false);
+            ChangeFormatCoumnsList();
+        });
+        $(".chkLorryDetails").change(function () {
+            if (this.checked) {
+                $('#LorryReceiptDetailsReq').val(true);
+                LRCoumnsList(true, $("#ReportTypeL").val());
+            } else {
+                $('#LorryReceiptDetailsReq').val(false);
+                LRCoumnsList(false, $("#ReportTypeL").val());
+            }
+        });
+        $(".BranchL").change(function () {
+            debugger;
+            $('#Branch').val('');
+            var selected = "";
+            $(".BranchL :selected").each(function () {
+                selected += ("'" + $(this).val() + "',");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Branch').val(selected)
+            return false;
+        });
+
+        $(".LoadFromL").change(function () {
+
+            $('#LoadFrom').val('');
+            var selected = "";
+            $(".LoadFromL :selected").each(function () {
+                selected += ("'" + $(this).val() + "',");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#LoadFrom').val(selected)
+            return false;
+        });
+
+        $(".SendToL").change(function () {
+
+            $('#SendTo').val('');
+            var selected = "";
+            $(".SendToL :selected").each(function () {
+                selected += ("'" + $(this).val() + "',");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#SendTo').val(selected)
+            return false;
+        });
+        $('#SubmitSaveReport').click(function (event) {
+            event.preventDefault();
+            $('#SaveReportName').modal('show');
+        });
+        $('#btnopnFormat').click(function(event){
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    $('#updTfatsearchDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('.BranchL,.LoadFromL,.SendToL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Item',
+        })
+    });
+
+</script>
+
+
+<table class="table table-striped table-bordered">
+        <thead>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="td1">
+                    <label class=" ModalLabel  control-label" style="width:auto;">Lorry-Challan No :</label>
+                    @Html.TextBoxFor(x => x.LorryChallanNo, new { @class = "form-control txtFMNO", @id = "txtFMNO", @style = "width:100px;display: inline-table;float: initial;" })
+                </td>
+                <td class="td2">
+
+                </td>
+                <td class="td3">
+                    <label class=" ModalLabel  control-label" style="width:auto;">Report Type :</label>
+                    @Html.DropDownListFor(x => x.ReportTypeL, Model.ReportsType, new { @class = "form-control ReportTypeL", @style = "float: right;width:auto;display: inline-table;" })
+                </td>
+            </tr>
+            <tr>
+                <td class="td1">
+                    <label class=" ModalLabel  control-label" style="width:auto;"> Branch :</label>
+                    @Html.ListBoxFor(x => x.BranchL, Model.BranchesOnly, new { @class = "BranchL", @id = "BranchL" })
+                </td>
+                <td class="td2">
+                    <label class=" ModalLabel  control-label" style="width:auto;">From :</label>
+                    @Html.ListBoxFor(x => x.LoadFromL, Model.Branches, new { @class = "LoadFromL", @id = "LoadFromL" })
+                </td>
+                <td class="td3">
+                    <label class=" ModalLabel  control-label" style="width:auto;">To :</label>
+                    @Html.ListBoxFor(x => x.SendToL, Model.Branches, new { @class = "SendToL", @id = "SendToL" })
+                </td>
+            </tr>
+
+            <tr>
+                <td class="td1">
+
+                </td>
+                <td class="td2">
+
+                </td>
+                <td class="td3">
+                    <label class=" ModalLabel  control-label" style="width:auto;">Show LR Details :</label>
+                    <div style="display:flex;float:right;">
+                        <input type="checkbox" class="form-control chkLorryDetails" id="LorryDetails" value="LorryDetails" style="height:20px;width:35px;" />
+                    </div>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+

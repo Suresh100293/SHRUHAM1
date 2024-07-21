@@ -1,0 +1,133 @@
+﻿@model LRInvoiceVM
+@using Common
+
+    <script>
+    $(document).ready(function () {
+        loadGSTCode()
+
+        $('#GSTCode').change(function () {
+            var ModelData = {};
+            ModelData["PlaceOfSupply"] = $("#PlaceOfSupply").val();
+            ModelData["GSTType"] = $("#GSTType").val();
+            ModelData["GSTCode"] = $("#GSTCode").val();
+            ModelData["Taxable"] = $("#txttottxable").val();
+            ModelData["CutTDS"] = $("#CutTDS").is(':checked');
+            ModelData["TDSCode"] = $("#TDSCode").val();
+            ModelData["DocuDate"] = $("#DocuDate").val();
+            ModelData["LRCutTDS"] = $('#hdnLRCutTDS').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetGSTCalculation")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $('#txttotigst').val(result.IGSTAmt);
+                    $('#txttotsgst').val(result.SGSTAmt);
+                    $('#txttotcgst').val(result.CGSTAmt);
+                    $('#txtinvamt').val(result.InvoiceAmt);
+                    $('#TDSAmt').val(result.TDSAmt.toFixed(2));
+                    $('.spinner').hide();
+                },
+
+                error: function () {
+                    $('.spinner').hide();
+                    alert("An error occurred while processing the request.");
+                }
+            });
+
+        });
+        });
+
+     function loadGSTCode() {
+         var url = '@Url.Action("GetGSTCode")?MainType=' + $('#hdnMType').val() + '&VATGSTApp=G'
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#GSTCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#GSTCode').val('@Model.GSTCode').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+        
+    </script>
+    <div>
+        <br /><br />
+        <div class="col-sm-6">
+            <br />
+            <div class="form-group">
+                <label class="col-sm-2 control-label" style="padding-right:0px;padding-top:5px;">RoundOff:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.RoundOff, new { @style = "text-align:right;", @Id = "txtRoundOffVal", @class = "form-control" })
+                </div>
+
+            </div>
+
+            <div class="form-group">
+                <label class="col-sm-2 control-label" style="padding-right:0px;padding-top:5px;">GST Code:</label>
+                <div class="col-sm-3">
+                    @Html.DropDownListFor(x => x.GSTCode, DropdownHelper.EmptyList(), new { @style = "text-align:right;", @Id = "GSTCode", @Name = "GSTCode", @class = "form-control" })
+                </div>
+            </div>
+
+
+        </div>
+        <div class="col-sm-6">
+
+
+            <div class="form-group" hidden="hidden">
+                @Html.CheckBoxFor(x => x.CutTDS, new { @id = "CutTDS", @name = "CutTDS" })
+                @Html.TextBoxFor(x => x.TDSRate, new { @class = "form-control", @id = "TDSRate", @name = "TDSRate", @Value = @Model.TDSRate })
+                @Html.TextBoxFor(x => x.TDSCode, new { @class = "form-control", @id = "TDSCode", @name = "TDSCode", @Value = @Model.TDSCode })
+
+            </div>
+            <div class="form-group">
+                @*<label class="col-sm-2 control-label" style="padding-right:0px;padding-top:5px;">TDS Amt:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TDSAmt, new { @type = "number", @class = "form-control", @id = "TDSAmt", @name = "TDSAmt", @hidden = "hidden", @Value = @Model.TDSAmt })
+                </div>*@
+
+            </div>
+        </div>
+
+    </div>
+   
+
+
+
+
+
+@functions {
+    decimal GetValAbsolute(string dcb)
+    {
+        if (dcb == "" || dcb == null)
+        {
+            dcb = "0";
+        }
+        var mm = Convert.ToDecimal(dcb);
+        var msg = Math.Abs(mm);
+        return msg;
+    }
+}

@@ -1,0 +1,348 @@
+﻿@model LRInvoiceVM
+@using Common;
+<style>
+    #txtQty:focus {
+        border-color: #83eae4;
+    }
+</style>
+
+@*<div class="fixTableHead" id="SelectedledgerTable" style="max-height:250px;min-height:250px; overflow: scroll;">*@
+
+<table id="tabledata2" class="zui-table2" style="width:100%">
+    <thead>
+        <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%;">
+            <th colspan="2" style="width:6%">
+            </th>
+            <th style="width:1%">Sr.</th>
+            <th style="width:13%;">LR No</th>
+            <th style="width:10%;">LR Book Date</th>
+            <th style="width:10%;">Consigner</th>
+            <th style="width:10%;">Consignee</th>
+            <th style="width:10%">From</th>
+            <th style="width:10%">To</th>
+            <th style="width:10%">Charge Type</th>
+            <th style="width:10%">Total Qty</th>
+            <th style="width:10%">Qty</th>
+            <th style="width:10%">Total</th>
+            @if (Model.HeaderList != null)
+            {
+                foreach (var a in @Model.HeaderList)
+                {
+                    <th style="width:4%">@a</th>
+                }
+            }
+            <th>Bill Narr</th>
+        </tr>
+
+    </thead>
+    <tbody>
+        @if (Model.NewItemList != null && Model.NewItemList.Count > 0)
+        {
+            foreach (var item in @Model.NewItemList.Where(x => x.tempIsDeleted == false).ToList())
+            {
+
+                <tr role="row">
+                    @if (Model.Mode != "Delete")
+                    {
+                        <td style="vertical-align:inherit;">
+                            <button type="button" action="EditItem" class="btn btn-warning btn-sm" value="@item.tempId" title="Edit"><i class="fa fa-edit"></i></button>
+                        </td>
+                        <td style="vertical-align:inherit;">
+                            <button type="button" action="DeleteItem" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button>
+                        </td>
+                    }
+                    else
+                    {
+                        <td style="vertical-align:inherit;"></td>
+                        <td style="vertical-align:inherit;"></td>
+                    }
+                    <td style="width:1%">@item.tempId</td>
+                    <td style="width:20%">@item.Code </td>
+                    <td style="width:10%">@item.LRDocDate.ToString("dd-MM-yyyy") </td>
+                    <td style="width:9%">@item.Consignor</td>
+                    <td style="width:4%">@item.Consignee</td>
+                    <td style="width:5%">@item.FromLocation</td>
+                    <td style="width:5%;">@item.ToLocation</td>
+                    <td style="width:15%;">@item.ChargeType </td>
+                    <td style="width:5%">@item.TotalQty</td>
+                    <td style="width:7%">@item.Qty</td>
+                    <td style="width:5%;text-align:right;">@item.Val1</td>
+
+                    @if (item.ChgPickupList != null)
+                    {
+                        foreach (var a in item.ChgPickupList)
+                        {
+                            <td class="txtentercls" @*contenteditable="true"*@>@a</td>
+                        }
+                    }
+                    <td>@item.BillNarr</td>
+                    <td class="hidden AlertConsignmentKey" >@item.LRRefTableKey</td>
+                </tr>
+            }
+
+            <tr>
+                <td colspan="11">Total:</td>
+                <td>@Model.TotalQty</td>
+                <td>@Model.Taxable</td>
+                @if (Model.TotalChgPickupList != null)
+                {
+                    foreach (var a in Model.TotalChgPickupList)
+                    {
+                        <td class="txtentercls">@a</td>
+                    }
+                }
+                <td></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@*</div>*@
+
+
+
+<script>
+    $(document).ready(function () {
+
+        $("#btnadddata").blur(function (event) {
+            event.preventDefault();
+            $('#ErrorMessage').hide();
+
+            if ($("#Account").val() == '' || $("#Account").val() == null) {
+                alert('Select Bill To Party.');
+                return;
+            }
+            if ($("#btnadddata").val() != "" && $("#btnadddata").val() != null)
+            {
+                var ModelData = {};
+                ModelData["Code"] = $("#btnadddata").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        if (data.Status == "ValidError")
+                        {
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed")
+                        {
+                            GetConsignmentDetails(data.Message);
+                        }
+                        else
+                        {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+            
+        });
+
+        $('button[action|="EditItem"]').click(function (event) {
+            event.preventDefault(event);
+
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["SubType"] = $("#hdnSType").val();
+            ModelData["MainType"] = $("#hdnMType").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["SessionFlag"] = "Edit";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetItemListforUpdate")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#itemlistupdate').modal('show');
+                    $('#ItemListUpdate').html(data.Html);
+                    $("#pushrecord").hide();
+                },
+                error: function (er) {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="DeleteItem"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["SubType"] = $("#hdnSType").val();
+            ModelData["MainType"] = $("#hdnMType").val();
+            ModelData["Type"] = $("#hdnType").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteItemList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                    //$('#SaveData').prop('disabled', true);
+                    //$('#BothSaveEmail').prop('disabled', true);
+                    //$('#Print').prop('disabled', true);
+                },
+                success: function (data)
+                {
+                    if (data.Status == "Success")
+                    {
+                        $('.spinner').hide();
+                        $('#divLedgerTable').html('');
+                        $('#divLedgerTable').html(data.Html);
+                        $('#txttottxable').val(data.Total.toFixed(2));
+                        $('#addTaxable').val(data.Total.toFixed(2));
+                        $('#txttotitemqty').val(data.TotalQty);
+
+                        SetValuesInTable();
+                 }
+                   if(data.Status == "Error"){
+                    $('.spinner').hide();
+                    alert(data.Message);
+                    return;
+
+                  }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+    });
+    function GetConsignmentDetails(value)
+    {
+        $('#ConsignmentModels').modal('hide');
+        document.getElementById("Direct").click();
+        var ModelData = {};
+        ModelData["Code"] = value;
+        ModelData["Account"] = $('#Account').val();
+        ModelData["SessionFlag"] = "Add";
+        ModelData["SubType"] = $("#hdnSType").val();
+        ModelData["MainType"] = $("#hdnMType").val();
+        ModelData["Type"] = $("#hdnType").val();
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("GetSearchDocument")';
+
+        if ($("#btnadddata").val() != "" && $("#btnadddata").val() != null)
+        {
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (result) {
+                    $('#spinner').hide();
+                    debugger;
+                    $('#btnadddata').val("");
+                    if (result.Status == "ConfirmError")
+                    {
+                        var confrm = confirm(result.Message);
+                        if (confrm == false)
+                        {
+                            $('.spinner').hide();
+                            return;
+                        }
+                        else
+                        {
+                            $('#itemlistupdate').modal('show');
+                            $('#ItemListUpdate').html(result.Html);
+                            $("#pushrecord").hide();
+                            if (result.LockQty == true) {
+                                $('#UpdateQty').prop('disabled', true);
+                                $('#hdnuLockQty').val(true);
+                            }
+                            else
+                            {
+                                $('#UpdateQty').prop('disabled', false);
+                                $('#hdnuLockQty').val(false);
+                                $("#UpdateQty").focusin();
+                            }
+                            CalOnTab();
+                            AlertNoteMasterSingle(value);
+                            $('.spinner').hide();
+                        }
+                    }
+                    else if (result.Status == "ValidtnError")
+                    {
+                        alert(result.Message);
+                        return;
+                        $('.spinner').hide();
+                    }
+                    else
+                    {
+                        $('#itemlistupdate').modal('show');
+                        $('#ItemListUpdate').html(result.Html);
+                        $("#pushrecord").hide();
+                        CalOnTab();
+                        $("#UpdateQty").focusin();
+                        AlertNoteMasterSingle(value);
+                        $('.spinner').hide();
+                    }
+                },
+                error: function ()
+                {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        }
+    }
+</script>
+
+@functions{
+    string GetFixedTwo(decimal dcb)
+    {
+        decimal d = Math.Floor(100 * dcb) / 100;
+        string s = d.ToString("N2");
+        return s;
+    }
+}
+
+<style>
+    .fixTableHead {
+        overflow-y: auto;
+        height: 300px;
+    }
+
+        .fixTableHead thead th {
+            position: sticky;
+            top: 0;
+        }
+</style>
+
+
+

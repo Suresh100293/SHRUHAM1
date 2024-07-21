@@ -1,0 +1,127 @@
+﻿<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:7px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h4 style="padding-top:3px;" class="modal-title"><b>Send Text Message (SMS)</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="form-horizontal">
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">Mobile:</label>
+                    <div class="col-sm-6">
+                        <input name="SMSTo" class="form-control" id="SMSTo" type="text">
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">Message:</label>
+                    <div class="col-sm-10">
+                        <textarea name="SMSMessage" class="form-control" cols="160" id="SMSMessage" rows="10"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-left:0px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <label class="col-sm-2 control-label" style="text-align:left;color:black;padding-top:5px;">Message Template:</label>
+            <div class="col-sm-6">
+                <select id="SMSTemplate" name="SMSTemplate" class="form-control">
+                    <option selected="selected" value="0">-- Select --</option>
+                </select>
+            </div>
+            <div class="col-sm-1" style="padding-top:5px;padding-right:10px;">
+                <a onclick="GetSMSTemplateText()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Copy Template into Message"></a>
+            </div>
+            <button type="button" class="btn btn-success" id="btnsendsmscommon"><i class="fa fa-envelope"></i>&nbsp;&nbsp;Send SMS</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button"><i class="fa fa-arrow-left"></i>&nbsp;&nbsp;Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        loadSMSTemplates();
+
+        $('#SMSTemplate').change(function () {
+            GetSMSTemplateText();
+        })
+
+        $('#btnsendsmscommon').click(function (event) {
+            if ($("#SMSTo").val() == '') {
+                alert('Mobile Number is Required');
+                return;
+            }
+            var msg = $("#SMSMessage").val();
+            //, string , bool mAuto, string mParty, string mParentKey
+            var mstr = 'mParentKey=' + $("#hdparentkey").val() + '&mMobile=' + $("#SMSTo").val() + '&mMsg=' + encodeURI(msg.replace(/\n/g, "^~|"));
+            var url = '@Url.Action("SendSMSResponse")?' + mstr;
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    //if (data.Status == "Success") {
+                    alert(data.Message);
+                    //} else if (data.Status == "Error") {
+                    //    alert(data.Message);
+                    //}
+                    $('#commsendsms').modal('hide');
+                }
+                //error: function () {
+                //    $('.spinner').hide();
+                //    alert("Error occured while processing your request.");
+                //}
+            });
+        });
+    })
+
+    function GetSMSTemplateText() {
+        $('#SMSMessage').val('');
+        var url = '@Url.Action("GetMsgTextByTemplate")?Code=' + $('#SMSTemplate').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#SMSMessage').val(result.EmailTemplate);
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("1-An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadSMSTemplates() {
+        var url = '@Url.Action("GetEmailTemplates")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#SMSTemplate").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("2-An error occurred while processing the request.");
+            }
+        });
+    };
+</script>

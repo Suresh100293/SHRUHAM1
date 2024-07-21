@@ -1,0 +1,96 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.LRVM
+
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        $(".btnDelete").click(function (event) {
+        event.preventDefault();
+        var result = confirm("Want to delete?");
+        if (result) {
+            var url = '@Url.Action("Delete")';
+            var ModelData = {};
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { tempId: this.id },
+                success: function (data) {
+                    $('#ShowAllFile').html(data.Html);
+                }
+            });
+        }
+    });
+        $(".btnShow").click(function (event) {
+            debugger;
+             var url = '@Url.Action("ViewImage")';
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["AttachLrNo"] = this.id;
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    var LoadDownLoadFiles = $("#updTfatsearchDiv1");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch1').modal('show');
+                    //$('#AllVehicleRate').html('');
+                    //$('#AllVehicleRate').html(data.Html);
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                    @*$("#ImageId").val('@Model.attachmentDocuments.AttachmentCode');*@
+                   // $('#updTfatsearchDiv').html(data.Html);
+                },
+            });
+        });
+    });
+</script>
+
+@if (Model.attachments != null)
+{
+    <hr />
+    <div class="form-group1" id="PersonalPhotos">
+        <div class="col-md-12">
+            <table class="table table-bordered table-striped">
+                <thead>
+                    <tr>
+                        <th style="text-align:center;">FileName / Actions</th>
+                        <th style="text-align:center;">View</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.attachments)
+                    {
+                        <tr>
+                            <td style="text-align-last: center;">
+                                @item.FileName<br /><br />
+                                <button class="btn btn-info" onclick="location.href='@Url.Action("Download", "LR", new { tempId = item.AttachLrNo })';return false;"><i class="glyphicon glyphicon-download" style="color:black;"></i></button>
+
+                                <button class="btn btn-info btnDelete" id="@item.AttachLrNo"><i class="glyphicon glyphicon-trash" style="color:black;"></i></button>
+
+
+                            </td>
+                            <td style="text-align-last: center;">
+                                @{
+                                    string imageBase64 = Convert.ToBase64String(item.Image);
+                                    string imageSrc = string.Format("data:image/gif;base64,{0}", imageBase64);
+                                    <a class="btnShow" id="@item.AttachLrNo"><img src="@imageSrc" alt=@item.FileName class="img-thumbnail" style="height:100px;width:150px;" /></a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+}

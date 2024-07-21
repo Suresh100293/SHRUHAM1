@@ -1,0 +1,185 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.LocalDeliverySheetVM
+@{
+    Layout = null;
+}
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        $('#example').DataTable();
+
+        $("#All").click(function () {
+            $('input:checkbox').not(this).prop('checked', this.checked);
+            
+            if ($(this).prop("checked") == false)
+            {
+                $('.LoadQty').val('0');
+                $('.LoadWeight').val('0');
+                $('.LoadQty').prop('disabled', true);
+                $('.LoadWeight').prop('disabled', true);
+            }
+            else
+            {
+
+                $('.LoadQty').prop('disabled', false);
+                $('.LoadWeight').prop('disabled', false);
+                $("#example> tbody  > tr").each(function () {
+                    var Qty = $(this).find(".Qty").text();
+                    var Weight = $(this).find(".Weight").text();
+                    $(this).find(".LoadQty").val(Qty);
+                    $(this).find(".LoadWeight").val(Weight);
+                });
+            }
+        });
+
+        $(".checkbox").click(function ()
+        {
+            
+            $("#All").prop('checked', false);
+            var Row = $(this).closest('tr');
+            var CheckBox = Row.find('.checkbox').prop("checked");
+            if (CheckBox) {
+                Row.find(".LoadQty").val(Row.find(".Qty").text());
+                Row.find(".LoadQty").prop("disabled", false);
+                Row.find(".LoadWeight").val(Row.find(".Weight").text());
+                Row.find(".LoadWeight").prop("disabled", false);
+            } else {
+                Row.find(".LoadQty").val("0");
+                Row.find(".LoadQty").prop("disabled", true);
+                Row.find(".LoadWeight").val("0");
+                Row.find(".LoadWeight").prop("disabled", true);
+            }
+        });
+
+    });
+    function LoadQtyBlur1(value) {
+        
+        var Row = $("#" + value);
+
+        $("#example> tbody  > tr").each(function () {
+            
+            if (parseInt(value) == parseInt(this.id)) {
+                var Qty = $(this).find(".Qty").text();
+                var LoadQty = $(this).find(".LoadQty").val();
+                var Weight = $(this).find(".Weight").text();
+                if (parseFloat(Qty) < parseFloat(LoadQty)) {
+
+                    alert("Load Qty Not Greater Than Qty OF Lr.....!");
+                    $(this).find(".LoadQty").val(Qty);
+                    $(this).find(".LoadWeight").val(Weight);
+                } else {
+                    var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+                    if (parseInt(CalculateWeight) >= parseInt(Weight)) {
+                        $(this).find(".LoadWeight").val(Math.round(Weight));
+                    } else {
+                        $(this).find(".LoadWeight").val(Math.round(CalculateWeight));
+                    }
+                }
+            }
+
+        });
+    }
+    function LoadweightBlur1(value) {
+        
+        var Row = $("#" + value);
+
+        $("#example> tbody  > tr").each(function () {
+            
+            if (parseInt(value) == parseInt(this.id)) {
+                var Qty = $(this).find(".Qty").text();
+                var LoadQty = $(this).find(".LoadQty").val();
+                var Weight = $(this).find(".Weight").text();
+                var LWeight = $(this).find(".LoadWeight").val();
+                if (parseFloat(Weight) < parseFloat(LWeight)) {
+                    $(this).find(".LoadWeight").val(Weight);
+                    alert("Weight Not Greater Than Act Weight OF Lr.....!");
+                } else {
+                    if (Qty == LoadQty) {
+                        if (Weight != LWeight) {
+                            alert("Weight Cant Change .....!");
+                            $(this).find(".LoadWeight").val(Weight);
+                        }
+                    } else if (parseInt(Qty) > parseInt(LoadQty)) {
+                        if (Weight == LWeight) {
+                            alert("Cant Enter Total Weight .....!");
+                            var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+                            $(this).find(".LoadWeight").val(Math.round(CalculateWeight));
+                        }
+                    }
+                }
+            }
+
+        });
+    }
+</script>
+<style>
+    .span6 {
+        display: none !important;
+    }
+</style>
+<div class="container-fluid" style="margin-top:8px;margin-left:-5px;">
+    @if (Model.lcDetailsVMs != null)
+    {
+        <div>
+            <table id="example" class="table-bordered example" style="">
+                <thead>
+                    <tr>
+                        <th><center><input type="checkbox" id="All" class="LCchk" style="height: 17px;width: 18px;" /></center></th>
+                        <th>LRNo</th>
+                        <th>Pick From</th>
+                        <th>Quantity</th>
+                        <th>Load Quantity</th>
+                        <th>Weight</th>
+                        <th class="hidden">Amount</th>
+                        <th>Charge Weight</th>
+                        <th>Actual Weight</th>
+                        <th>Charge Type</th>
+                        <th>Description</th>
+                        <th>Unit</th>
+                        <th>From</th>
+                        <th>TO</th>
+                        <th>Consigner</th>
+                        <th>Consignee</th>
+                        <th>LR Type</th>
+                        <th>Delivery</th>
+                        <th>Collection</th>
+                        <th class="hidden">EditColumn</th>
+                        <th class="hidden">RecordKey</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.lcDetailsVMs)
+                    {
+                    <tr id="@item.Lrno">
+                        <td class="" style="text-align: center;font-weight: bold;color: #ad225c;width:50px;"><center><input type="checkbox" id="@item.recordekey" class="checkbox lRCHK" style="height: 17px;width: 18px;" /></center></td>
+                        <td class="LRValue">@item.Lrno</td>
+                        <td class="PickType">@item.PickType</td>
+                        <td class="Qty">@item.Qty</td>
+                        <td><center><input type="text" class="LoadQty" style="width:100px;" value="@item.LoadGQty" onblur="LoadQtyBlur1(@item.Lrno)" disabled/></center></td>
+                        <td><center><input type="text" class="LoadWeight" style="width:70px;" value="@item.LRActWeight" onblur="LoadweightBlur1(@item.Lrno)" disabled/></center></td>
+                        <td class="hidden "><center><input type="text" class="AmountEdit1" style="width:100px;" disabled value="@item.Amount" /></center></td>
+                        <td>@item.ChrWeight</td>
+                        <td class="Weight">@item.ActWeight</td>
+                        <td>@item.ChrgeType</td>
+                        <td>@item.Description</td>
+                        <td>@item.Unit</td>
+                        <td>@item.From</td>
+                        <td>@item.To</td>
+                        <td>@item.Consignor</td>
+                        <td>@item.Consignee</td>
+                        <td>@item.LrType</td>
+                        <td>@item.LRDelivery</td>
+                        <td>@item.LRColln</td>
+                        <td class="hidden EditLDC">@item.EditLDC</td>
+                        <td class="hidden Unique">@item.recordekey</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div>

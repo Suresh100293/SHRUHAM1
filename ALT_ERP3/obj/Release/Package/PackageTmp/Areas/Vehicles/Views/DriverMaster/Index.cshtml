@@ -1,0 +1,320 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.DriverMasterVM
+@using Common
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<style>
+    .col-sm-2 {
+        width: 10.666667%;
+    }
+
+    .form-group {
+        margin-bottom: 8px;
+    }
+
+    .panel-heading .nav {
+        margin: -23px;
+    }
+
+    .form-horizontal .control-label {
+        padding-top: 5px;
+        color: black;
+        text-align: left;
+    }
+
+    .fixhead {
+        text-transform: uppercase;
+    }
+
+    .tabcontent {
+        height: 500px;
+    }
+</style>
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#attachdoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+        $("#attachdoc").modal("hide");
+          GetMyFavorites('@Model.ViewDataId');
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+    });
+    function Gridacledger() {
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=DriverHistory';
+        var sUrlpath = '@Url.Action("GetMasterGridData")?ViewDataId=DriverHistory&Code=' + $("#Document").val();
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                //scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+    function SetEmptyAttachment(TabCode) {
+        var AttachDoc = $("#Div" + TabCode);
+        AttachDoc.html('');
+    }
+    function GetAttachment(TabCode)
+    {
+        var url = '/Logistics/Attachment/UploadFileWithoutModal';
+        var ModelData = {};
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Srl"] = $("#Document").val();
+        ModelData["Type"] = "Drive";
+        ModelData["DocType"] = TabCode;
+        ModelData["RefType"] = "@Model.Header";
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            }, 
+            success: function (data) {
+                $('.spinner').hide();
+                debugger;
+                var AttachDoc = $("#Div" + TabCode);
+                AttachDoc.html('');
+                AttachDoc.html(data.Html);
+            },
+        });
+    }
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:1%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="tab">
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="DefaultPage" style="width:180px;">Personal Information</button>
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable3')"style="width:180px;">Driver History</button>
+                <button class="tablinks" onclick="openCity(event, 'divLedgerTable4')" style="width:180px;">Document Attachment</button>
+            </div>
+            <div id="divLedgerTable" style="min-height:450px;max-height:450px;margin-bottom:10px;" class="tabcontent">
+                @Html.Partial("DriverMasterView", Model)
+            </div>
+            <div id="divLedgerTable3" style="min-height:450px;max-height:450px;margin-bottom:0px;" class="tabcontent">
+                <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                    <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                    <div id="pager" style="height:32px;width:100%;"></div>
+                </div>
+            </div>
+            <div id="divLedgerTable4" style="min-height:450px;max-height:450px;margin-bottom:0px;" class="tabcontent">
+                <div class="tab">
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'DriverPhoto')" id="DefaultPage1">Driver Photo</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'PanCard')">Pan Card</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'Aadharcard')">Aadhar card</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'License')">License</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'BankDetails')">Bank Details</button>
+                    <button class="tablinks tablinksNew" onclick="openCityNew(event, 'Other')">Other</button>
+                </div>
+                <div id="DriverPhoto" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivDriverPhoto" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="PanCard" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivPanCard" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="Aadharcard" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivAadharcard" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="License" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivLicense" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="BankDetails" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivBankDetails" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+                <div id="Other" style="min-height:400px;max-height:400px;margin-bottom:0px;" class="tabcontent tabcontentNew">
+                    <div id="DivOther" style="margin-bottom:20px;min-height:380px;max-height:380px;overflow-y:auto;overflow-x:hidden;">
+                    </div>
+                </div>
+            </div>
+            <script>
+                function openCity(evt, cityName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(cityName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                    if (cityName == "divLedgerTable3") {
+                        $('#list').jqGrid('clearGridData');
+                        $("#list").jqGrid("GridUnload");
+                        $('#list').trigger('reloadGrid');
+                        Gridacledger();
+                    }
+                    if (cityName == "divLedgerTable4") {
+                        document.getElementById("DefaultPage1").click();
+                    }
+                }
+                document.getElementById("DefaultPage").click();
+                function openCityNew(evt, cityName) {
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontentNew");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                        SetEmptyAttachment(tabcontent[i].id);
+                    }
+                    tablinks = document.getElementsByClassName("tablinksNew");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(cityName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                    GetAttachment(cityName);
+                }
+            </script>
+        </div>
+    </div>
+</section>
+
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnDeliveryAddDoc">Attachment</button>
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@Html.HiddenFor(x => x.Document)
+
+
+
+@*Suchan Attachment*@
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="attachdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="AttachDoc">
+            </div>
+        </div>
+    </div>
+</div>

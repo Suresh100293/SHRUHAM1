@@ -1,0 +1,549 @@
+﻿@model ALT_ERP3.PurchaseVM
+@using Common
+
+    <script>
+        $(document).ready(function () {
+            $(".txtfvalue").focusout(function (event) {
+                event.preventDefault();
+                var PSerial = [];
+                var PPSerial = [];
+
+                $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                    var row = $(this);
+                    var $tds = $(this).find('td'),
+                    pnos = $tds.find("input[class='txtfvalue']").val();
+                    PSerial.push(pnos);
+                });
+                $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                    var row = $(this);
+                    var $tds2 = $(this).find('td'),
+                    pss = $tds2.find("input[class='txt_row']").val();
+                    PPSerial.push(pss);
+                });
+                var ab = $(this).attr("alt");
+                var ModelData = {};
+                ModelData["Fld"] = $(this).attr("alt");
+                ModelData["Head"] = PSerial.toString();
+                ModelData["ValueLast"] = PPSerial.toString();
+                ModelData["Type"] = $("#hdnType").val();
+                ModelData["SubType"] = $("#hdnSType").val();
+                ModelData["Amt"] = $('#txtf_' + ab + '').val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("CalByEquation")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('#txtb_' + data.ALTNO + '').val(data.Equation.toFixed(2));
+                        $('#txttax_' + data.ALTNO + '').val(parseFloat(data.TaxAmt).toFixed(2));
+                        SetValueInTotal();
+
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+            });
+
+            $('#txtMLSPercent').focusout(function (event) {
+                event.preventDefault();
+                var invamt = parseFloat($('#txtinvamt').val());
+                var mlsperc = parseFloat($('#txtMLSPercent').val());
+                var samt = (invamt * mlsperc) / 100;
+                $('#txtMLSAmount').val(samt.toFixed(2));
+            });
+
+            $('#TDSAmt').on("focusout", function (event) {
+                SetValueInTotalWithTCS()
+            });
+
+            $('#TDSCess').on("focusout", function (event) {
+                SetValueInTotalWithTCS()
+            });
+
+            $('#TDSSchg').on("focusout", function (event) {
+                SetValueInTotalWithTCS()
+            });
+
+            $('#TDSSHECess').on("focusout", function (event) {
+                SetValueInTotalWithTCS()
+            });
+        });
+        function SetValueInTotal() {
+            var DSerial = [];
+            var TaxAmtArr = [];
+            $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                var row = $(this);
+                var $tds3 = $(this).find('td');
+                var dsrl = $tds3.eq(1).text();
+                var dnos = $tds3.find("input[class='txt_row']").val();
+                if (dnos == "") {
+                    dnos = "0";
+                }
+                var tamt = $tds3.find("input[class='txt_gstchg']").val();
+                if (tamt == "") {
+                    tamt = "0";
+                }
+                DSerial.push(dsrl + '' + dnos);
+                TaxAmtArr.push(dsrl + '' + tamt);
+            });
+            var ModelData = {};
+            ModelData["Head"] = DSerial.toString();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["MLSPercent"] = $('#txtMLSPercent').val();
+            ModelData["GSTType"] = $('#GSTType').val();
+            ModelData["TaxAmtStr"] = TaxAmtArr.toString();
+            ModelData["SubType"] = $("#hdnSType").val();
+            ModelData["MainType"] = $("#hdnMType").val();
+            ModelData["CutTDS"] = $("#CutTDS").is(':checked');
+            ModelData["TDSCode"] = $("#TDSCode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetTotal")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('#txttotcgst').val(data.CGSTAmt.toFixed(2));
+                    $('#txttotsgst').val(data.SGSTAmt.toFixed(2));
+                    $('#txttotigst').val(data.IGSTAmt.toFixed(2));
+                    if ($('#hdnIsRoundOff').val() == "True") {
+                        $('#txtinvamt').val(data.Total.toFixed(0));
+                        var rou = (parseFloat(data.Total.toFixed(0))) - parseFloat(data.Total);
+                        $('#txtRoundOffVal').val(rou.toFixed(2));
+
+                    } else {
+                        $('#txtinvamt').val(data.Total.toFixed(2));
+                    }
+
+                    if ($('#hdnMileStoneReqd').val() == "True") {
+                        $('#txtMLSAmount').val(data.MLSAmount.toFixed(2));
+                    }
+                    else {
+                        $('#txtMLSAmount').val(data.MLSAmount.toFixed(2));//only
+                    }
+
+                    if ($('#hdnMType').val() == "SL" || $('#hdnSType').val() == "RP") {
+                        $('#TDSAble').val(data.TDSAble.toFixed(2));
+                        $('#TDSAmt').val(data.TDSAmt);
+                        $('#TDSSchg').val(data.TDSSchg);
+                        $('#TDSCess').val(data.TDSCess);
+                        $('#TDSSHECess').val(data.TDSSHECess);
+                    }
+
+                    $('.spinner').hide();
+                    $('#SaveData').prop('disabled', false);
+                    $('#BothSaveEmail').prop('disabled', false);
+                    $('#Print').prop('disabled', false);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        }
+
+        function SetValueInTotalWithTCS() {
+            var DSerial = [];
+            var TaxAmtArr = [];
+            $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                var row = $(this);
+                var $tds3 = $(this).find('td');
+                var dsrl = $tds3.eq(1).text();
+                var dnos = $tds3.find("input[class='txt_row']").val();
+                if (dnos == "") {
+                    dnos = "0";
+                }
+                var tamt = $tds3.find("input[class='txt_gstchg']").val();
+                if (tamt == "") {
+                    tamt = "0";
+                }
+                DSerial.push(dsrl + '' + dnos);
+                TaxAmtArr.push(dsrl + '' + tamt);
+            });
+            var ModelData = {};
+            ModelData["Head"] = DSerial.toString();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["MLSPercent"] = $('#txtMLSPercent').val();
+            ModelData["GSTType"] = $('#GSTType').val();
+            ModelData["TaxAmtStr"] = TaxAmtArr.toString();
+            ModelData["SubType"] = $("#hdnSType").val();
+            ModelData["MainType"] = $("#hdnMType").val();
+            ModelData["CutTDS"] = $("#CutTDS").is(':checked');
+            ModelData["TDSCode"] = $("#TDSCode").val();
+            ModelData["TDSAmt"] = $("#TDSAmt").val();
+            ModelData["TDSCess"] = $("#TDSCess").val();
+            ModelData["TDSSchg"] = $("#TDSSchg").val();
+            ModelData["TDSSHECess"] = $("#TDSSHECess").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetTotal")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('#txttotcgst').val(data.CGSTAmt.toFixed(2));
+                    $('#txttotsgst').val(data.SGSTAmt.toFixed(2));
+                    $('#txttotigst').val(data.IGSTAmt.toFixed(2));
+                    if ($('#hdnIsRoundOff').val() == "True") {
+                        $('#txtinvamt').val(data.Total.toFixed(0));
+                        var rou = (parseFloat(data.Total.toFixed(0))) - parseFloat(data.Total);
+                        $('#txtRoundOffVal').val(rou.toFixed(2));
+
+                    } else {
+                        $('#txtinvamt').val(data.Total.toFixed(2));
+                    }
+
+                    if ($('#hdnMileStoneReqd').val() == "True") {
+                        $('#txtMLSAmount').val(data.MLSAmount.toFixed(2));
+                    }
+                    else {
+                        $('#txtMLSAmount').val(data.MLSAmount.toFixed(2));//only
+                    }
+
+                    if ($('#hdnMType').val() == "SL" || $('#hdnSType').val() == "RP") {
+                        $('#TDSAble').val(data.TDSAble.toFixed(2));
+                        $('#TDSAmt').val(data.TDSAmt);
+                        $('#TDSSchg').val(data.TDSSchg);
+                        $('#TDSCess').val(data.TDSCess);
+                        $('#TDSSHECess').val(data.TDSSHECess);
+                    }
+
+                    $('.spinner').hide();
+                    $('#SaveData').prop('disabled', false);
+                    $('#BothSaveEmail').prop('disabled', false);
+                    $('#Print').prop('disabled', false);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        }
+
+        function SetValuesInTable() {
+
+            $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+
+                var PSerial = [];
+                var PPSerial = [];
+                var row = $(this);
+                var $tds = $(this).find('td');
+
+                 $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                    var row = $(this);
+                    var $tds = $(this).find('td'),
+                    pnos = $tds.find("input[class='txtfvalue']").val();
+                    PSerial.push(pnos);
+                });
+                $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                    var row = $(this);
+                    var $tds2 = $(this).find('td'),
+                    pss = $tds2.find("input[class='txt_row']").val();
+                    PPSerial.push(pss);
+                });
+
+                var ab = $tds.eq(5).text();
+                var ModelData = {};
+                ModelData["Fld"] = $tds.eq(5).text();
+                ModelData["Head"] = PSerial.toString();
+                ModelData["ValueLast"] = PPSerial.toString();
+                ModelData["Type"] = $("#hdnType").val();
+                ModelData["Amt"] = $('#txtf_' + ab + '').val();
+                ModelData["SubType"] = $("#hdnSType").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("CalByEquation")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('#txtb_' + data.ALTNO + '').val(data.Equation.toFixed(2));
+                        $('#txttax_' + data.ALTNO + '').val(parseFloat(data.TaxAmt).toFixed(2));
+                        SetValueInTotal();
+
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+
+            });
+        }
+    </script>
+
+    <div class="col-sm-6">
+        <div class="grid" id="ChargeListDivTable" style="max-height: 350px; width: auto;overflow:auto;">
+            <table id="sample-table-1" class="zui-charge">
+                <thead>
+                </thead>
+                <tbody>
+                    @if (Model.Charges != null)
+                {
+                    foreach (var item in @Model.Charges.ToList())
+                    {
+                    <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;">
+                        <td style="vertical-align:inherit;">@item.Code</td>
+                        <td style="vertical-align:inherit;">@item.AddLess</td>
+                        <td><input type="text" id="txtf_@item.Fld" alt="@item.Fld" value="@item.ColVal" class="txtfvalue" style="text-align:right;height:25px;" /></td>
+                        <td class="row_data"><input type="text" id="txtb_@item.Fld" alt="@item.Fld" value="@item.ValueLast" class="txt_row" disabled="disabled" style="text-align:right;font-weight:bolder;height:25px;" /></td>
+                        <td hidden="hidden">@item.ChgPostCode</td>
+                        <td hidden="hidden">@item.Fld</td>
+                        <td><input type="text" id="txttax_@item.Fld" alt="@item.Fld" value="@item.TaxAmt" class="txt_gstchg" disabled="disabled" style="text-align:right;font-weight:bolder;height:25px;" /></td>
+                    </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    @if (Model.SubType == "RP" || Model.MainType == "SL")
+    {
+        <div class="col-sm-6">
+            <table>
+                <thead></thead>
+                <tbody>
+                    <tr>
+                        <td>@(Model.MainType == "SL"? "Cut TCS?": "Cut TDS?:" ) </td>
+                        <td>@Html.CheckBoxFor(x => x.CutTDS, new { @id = "CutTDS", @name = "CutTDS" })</td>
+                    </tr>
+                    <tr>
+                        <td>@(Model.MainType == "SL"? "TCS Name" : "TDS Name:" ):</td>
+                        <td>@Html.DropDownListFor(x => x.TDSCode, DropdownHelper.EmptyList(), new { @class = "form-control", @id = "TDSCode", @name = "TDSCode" })</td>
+                    </tr>
+                    <tr>
+                        <td>@(Model.MainType == "SL"? "TCS Taxable" : "TDS Taxable" ):</td>
+                        <td>@Html.TextBoxFor(x => x.TDSAble, new { @style = "text-align:right;", @class = "form-control", @id = "TDSAble", @name = "TDSAble" })</td>
+                    </tr>
+                    <tr>
+                        <td>@(Model.MainType == "SL"? "TCS Amt" : "TDS Amt" ):</td>
+                        <td>@Html.TextBoxFor(x => x.TDSAmt,  new { @style = "text-align:right;", @class = "form-control", @id = "TDSAmt", @name = "TDSAmt" })</td>
+                    </tr>
+                    <tr>
+                        <td>@(Model.MainType == "SL"? "TCS Surcharge" : "TDS Surcharge" ):</td>
+                        <td>@Html.TextBoxFor(x => x.TDSSchg, new { @style = "text-align:right;", @class = "form-control", @id = "TDSSchg", @name = "TDSSchg" })</td>
+                    </tr>
+                    <tr>
+                        <td>@(Model.MainType == "SL"? "TCS Cess" : "TDS Cess" ):</td>
+                        <td>@Html.TextBoxFor(x => x.TDSCess,  new { @style = "text-align:right;", @class = "form-control", @id = "TDSCess", @name = "TDSCess" })</td>
+                    </tr>
+                    <tr>
+                        <td>@(Model.MainType == "SL"? "TCS SHE Cess" : "TDS SHE Cess" ):</td>
+                        <td>@Html.TextBoxFor(x => x.TDSSHECess, new { @style = "text-align:right;", @class = "form-control", @id = "TDSSHECess", @name = "TDSSHECess" })</td>
+                    </tr>
+                </tbody>
+            </table>
+
+        </div>
+    }
+    <div class="row" style="padding-top:2px;">
+        <br />
+        <div class="form-group">
+            <label class="col-sm-1 control-label" style="padding-right:0px;padding-top:5px;">RoundOff:</label>
+            <div class="col-sm-1">
+                @Html.TextBoxFor(x => x.RoundOff, new { @style = "text-align:right;", @Id = "txtRoundOffVal", @class = "form-control" })
+            </div>
+            <label class="col-sm-1 control-label" style="padding-right:0px;padding-top:5px;">MileStone%:</label>
+            <div class="col-sm-1">
+                @Html.TextBoxFor(x => x.MLSPercent,  new { @style = "text-align:right;", @Id = "txtMLSPercent", @class = "form-control" })
+            </div>
+            <label class="col-sm-1 control-label" style="padding-right:0px;padding-top:5px;">Amount:</label>
+            <div class="col-sm-1">
+                @Html.TextBoxFor(x => x.MLSAmount, new { @style = "text-align:right;", @Id = "txtMLSAmount", @class = "form-control" })
+            </div>
+        </div>
+    </div>
+
+
+@functions {
+    decimal GetValAbsolute(string dcb)
+    {
+        if (dcb == "" || dcb == null)
+        {
+            dcb = "0";
+        }
+        var mm = Convert.ToDecimal(dcb);
+        var msg = Math.Abs(mm);
+        return msg;
+    }
+}
+<script>
+    $(document).ready(function () {
+        loadTdsCode()
+
+        $("#txtRoundOffVal").focusout(function (event) {
+            event.preventDefault();
+            var DSerial = [];
+            var TaxAmtArr = [];
+            $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                var row = $(this);
+                var $tds3 = $(this).find('td'),
+                dsrl = $tds3.eq(1).text(),
+                dnos = $tds3.find("input[class='txt_row']").val();
+                if (dnos == "") {
+                    dnos = "0";
+                }
+                var tamt = $tds3.find("input[class='txt_gstchg']").val();
+                if (tamt == "") {
+                    tamt = "0";
+                }
+                DSerial.push(dsrl + '' + dnos);
+                TaxAmtArr.push(dsrl + '' + tamt);
+            });
+            var ModelData = {};
+            ModelData["Head"] = DSerial.toString();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["MLSPercent"] = $('#txtMLSPercent').val();
+            ModelData["GSTType"] = $('#GSTType').val();
+            ModelData["TaxAmtStr"] = TaxAmtArr.toString();
+            ModelData["SubType"] = $("#hdnSType").val();
+            ModelData["MainType"] = $("#hdnMType").val();
+            ModelData["CutTDS"] = $("#CutTDS").is(':checked');
+            ModelData["TDSAmt"] = $("#TDSAmt").val();
+            ModelData["TDSCess"] = $("#TDSCess").val();
+            ModelData["TDSSchg"] = $("#TDSSchg").val();
+            ModelData["TDSSHECess"] = $("#TDSSHECess").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetTotal")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('#txttotcgst').val(data.CGSTAmt.toFixed(2));
+                    $('#txttotsgst').val(data.SGSTAmt.toFixed(2));
+                    $('#txttotigst').val(data.IGSTAmt.toFixed(2));
+                    $('#txtinvamt').val(data.Total.toFixed(2));
+                    var invamt = parseFloat($("#txtinvamt").val());
+                    var final = parseFloat($("#txtRoundOffVal").val()) + invamt;
+                    $("#txtinvamt").val(final.toFixed(2));
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+          
+        })
+
+        $('#TDSCode').change(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["TDSCode"] = $("#TDSCode").val();
+            ModelData["TDSAble"] = $("#TDSAble").val();
+            ModelData["CutTDS"] = $("#CutTDS").is(':checked');
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("PopulateTDSRates")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#TDSAmt').val(data.TDSAmt);
+                    $('#TDSSchg').val(data.TDSSchg);
+                    $('#TDSCess').val(data.TDSCess);
+                    $('#TDSSHECess').val(data.TDSSHECess);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+    function loadTdsCode() {
+        var url = '@Url.Action("GetTDSCodes")'
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#TDSCode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#TDSCode').val($('#hdnAccTDSCode').val()).attr("selected", "selected");
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+    function loadValuesTdsAble() {
+        var ModelData = {};
+        ModelData["TDSCode"] = $("#TDSCode").val();
+        ModelData["TDSAble"] = $("#TDSAble").val();
+        ModelData["CutTDS"] = $("#CutTDS").is(':checked');
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("PopulateTDSRates")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#TDSAmt').val(data.TDSAmt);
+                $('#TDSSchg').val(data.TDSSchg);
+                $('#TDSCess').val(data.TDSCess);
+                $('#TDSSHECess').val(data.TDSSHECess);
+            },
+            error: function () {
+                alert("Error occured while processing your request.");
+            }
+        });
+    }
+</script>

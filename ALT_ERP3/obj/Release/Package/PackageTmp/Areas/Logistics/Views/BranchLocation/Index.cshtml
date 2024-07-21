@@ -1,0 +1,192 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.BranchLocationVM
+@using Common
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<style>
+</style>
+<script type="text/javascript">
+    var mmain = "@Model.MainType";
+    $(document).ready(function () {
+
+        GetMyFavorites('@Model.ViewDataId');
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+
+        $('.TDLocation').click(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            var OriginalContent = $(this).text();
+            $(this).addClass("cellEditing");
+            $(this).html("<input type='text' class='form-control' maxlength='75'  value='" + OriginalContent + "' />");
+            $(this).children().first().focus();
+            $(this).children().first().keypress(function (e) {
+
+                if (e.which == 13) {
+                    var newContent = $(this).val();
+                    OriginalContent = newContent;
+                    $(this).parent().text(newContent);
+                    $(this).parent().removeClass("cellEditing");
+                }
+            });
+            $(this).children().first().blur(function () {
+                if ($(this).val() == "") {
+                    $(this).parent().text("");
+                } else {
+                    $(this).parent().text($(this).val());
+                }
+
+                $(this).parent().removeClass("cellEditing");
+            });
+        });
+        $('.TDTitle').click(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            var OriginalContent = $(this).text();
+            $(this).addClass("cellEditing");
+            $(this).html("<input type='text' class='form-control' maxlength='50'  value='" + OriginalContent + "' />");
+            $(this).children().first().focus();
+            $(this).children().first().keypress(function (e) {
+
+                if (e.which == 13) {
+                    var newContent = $(this).val();
+                    OriginalContent = newContent;
+                    $(this).parent().text(newContent);
+                    $(this).parent().removeClass("cellEditing");
+                }
+            });
+            $(this).children().first().blur(function () {
+                if ($(this).val() == "") {
+                    $(this).parent().text("");
+                } else {
+                    $(this).parent().text($(this).val());
+                }
+                $(this).parent().removeClass("cellEditing");
+            });
+        });
+        $('#Submit').click(function (event)
+        {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            var TripCharges = [];
+            $("#detail_table > tbody  > tr").each(function () {
+                debugger;
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    Area: tds.eq(0).text(),
+                    ID: tds.eq(1).text(),
+                    Location: tds.eq(2).text(),
+                    Title: tds.eq(3).text(),
+                }
+                TripCharges.push(myDets);
+            });
+
+            if (TripCharges.length==0) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Fill Location...');
+                return;
+            }
+            ModelData["list"] = TripCharges;
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var url = '@Url.Action("SaveData")';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function ()
+                {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    if (data.Status == 'Success')
+                    {
+                        $('.spinner').hide();
+                        window.location.href = "/DashBoard/SetUP";
+                        $("#ErrorMessage").hide();
+                    }
+                    else
+                    {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+</script>
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-sm-3" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <span class="tools pull-right" style="margin-top:5px;">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right" style="margin-top:5px;">
+            <b class="CodeSt">Edit Mode</b>
+        </span>
+        <div class="col-sm-1 pull-right" style="width:auto;">
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:4%;height:auto;padding:0px;">
+        <div class="form-horizontal" id="optionpanel" role="form" style="margin-top:0px;">
+            <div class="col-sm-12" style="min-height:470px;max-height:470px;overflow:auto;">
+                <table id="detail_table" class="detail zui-table" style="width:70%;">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                            <th style="width:5%;">Area</th>
+                            <th class="hidden" style="width:10%;">Id</th>
+                            <th style="width:15%;">Location {Latitude,Longitude}</th>
+                            <th style="width:15%;">Title</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.list != null)
+                        {
+                            foreach (var item in Model.list)
+                            {
+                                <tr role="row" class="Branch" style="font-family:Tahoma;font-size:9pt;" id="@item.ID">
+                                    <td style="display:flex;"><span style="width:15px;"></span>@item.Area.ToString()<span style="width:10px;"></span></td>
+                                    <td class="hidden">@item.ID</td>
+                                    <td class="TDLocation">@item.Location.ToString()</td>
+                                    <td class="TDTitle">@item.Title.ToString()</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-2" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-5">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+@Html.HiddenFor(x => x.Document, new { @id = "Document" }) 

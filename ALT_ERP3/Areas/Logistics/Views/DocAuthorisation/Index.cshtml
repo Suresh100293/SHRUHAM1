@@ -1,0 +1,735 @@
+﻿@model GridOption
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<script type="text/javascript">
+    var mdocument = "",Level="";
+
+    $(document).ready(function ()
+    {
+        GetMyFavorites('@Model.ViewDataId');
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        LoadUser();
+
+        mheight = $(window).innerHeight() - 120; // net usable area = 505
+
+        mheight = mheight*2 / 3;  // equal space for grid area and tab area
+        $('#displaylist').height(mheight-32);//search panel, pager1
+
+        if ('@Model.ARAPReqOnly' == "True" || '@Model.ARAPReqOnly' == "true") {
+            $(".SuperOnly").removeClass("hidden");
+            $("#mVar1").prop("disabled", true);
+        }
+        else
+        {
+            $(".SuperOnly").addClass("hidden");
+            $("#mVar1").prop("disabled", false);
+        }
+        $("#ARAPReqOnly").change(function () {
+            if (this.checked)
+            {
+                $("#mVar1").prop("disabled", true);
+            }
+            else
+            {
+                $("#mVar1").prop("disabled", false);
+            }
+        });
+        clickRefreshAll();
+        $('#displaytype').change(function () {
+            clickRefreshAll();
+
+        });
+
+        $("#AuthSelectAll").click(function () {
+            var CheckBox = $("#AuthSelectAll").prop("checked");
+            if (CheckBox) {
+                $(".AuthDebitGrid").prop('checked', true);
+            } else {
+                $(".AuthDebitGrid").prop('checked', false);
+            }
+        });
+    });
+
+    function opentask() {
+        var url = "/Logistics/AssignTasks/Index?TableName=Task&Task_RefDoc=" + mdocument + "&Task_Reference=" + $("#displaytype").val() + "&Mode=Add&Header=Tasks%20/%20Activities&ViewDataId=AssignTasks&Controller2=AssignTasks&Module=CRM&optiontype=M&optioncode=AssignTasks";
+        window.open(url, '_blank');
+    };
+
+    function GridDisplayList() {
+        event.preventDefault();
+
+        if ($("#displaytype").val().substring(0, 1) == "A") {
+            $('#btnauthorise').hide();
+            $('#btnunauthorise').show();
+            $('#btnreject').hide();
+        } else if ($("#displaytype").val() == "R") {
+            $('#btnauthorise').show();
+            $('#btnunauthorise').hide();
+            $('#btnreject').hide();
+        } else {
+            $('#btnauthorise').show();
+            $('#btnunauthorise').hide();
+            $('#btnreject').show();
+        }
+        // init subgrid to blank
+        $('#rightgrid').jqGrid('clearGridData');
+        $('#rightgrid').jqGrid("GridUnload");
+        $('#rightgrid').trigger('reloadGrid');
+        $('#mtype').val('');
+        $('#mprefix').val('');
+        $('#mserial').val('');
+        $('#mdocdate').val('');
+        $('#mparty').val('');
+        $('#mdocamount').val('');
+        $('#menterdby').val('');
+        $('#mentrydate').val('');
+        $('#mnarration').val('');
+        $('#mauthlevel').val('');
+        $('#mauthother').val('');
+        $('#mremark').val('');
+        $('#myourremark').val('');
+        var ColName, Coldata;
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?MainType=' + $("#displaytype").val().substring(0, 1) + '&Type=' + $("#Type").val();
+        var sUrlpath = '@Url.Action("GetGridData")?MainType=' + $("#displaytype").val().substring(0, 1) + '&Type=' + $("#Type").val() + '&searchField=' + $('#searchField').val() + '&searchString=' + $('#searchString').val() + '&searchOper=' + $('#searchOper').val() + '&mVar3=' + $('#mVar1').val() + '&ARAPReqOnly=' + $('#ARAPReqOnly').is(":checked");
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#displaylist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+                rowNum: 5000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: mheight-32-32,// - searchpanel , pager
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                onSelectRow: function (id, status, e) {
+                    debugger;
+                    e.preventDefault();
+                    mdocument = $('#displaylist').jqGrid('getCell', id, 'Document')
+                    Level = $('#displaylist').jqGrid('getCell', id, 'Level')
+                    UpdateTabData();
+
+                },
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    mdocument = $('#displaylist').jqGrid('getCell', id, 'Document');
+                    //GetURL1(mdocument);
+                    //GetDocument(mdocument);
+                    ////http://localhost:52070/Transactions/CashBank/Index?Document=HO0000BRC0018000003&Mode=View&ChangeLog=View&ViewDataId=ViewData-Ledger&Header=Bank%20Receipts&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankReceipts&Controller2=CashBank
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+
+                    var ids = jQuery("#displaylist").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var beChecked = "<input type ='checkbox' id='" + rowId + "'  class='AuthDebitGrid' name='AuthDebitGrid'  style='height: 22px;width: 19px;' />";
+                        var btn = "<button type='button' id='btnZoom" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Zoom Document' , title='Zoom Document' , attr='" + rowId + "'><span class='glyphicon glyphicon-zoom-in'></span></button>";
+                        var Trackbtn = "<button type='button' id='btnTrack" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Track Document' , title='Track Document' , attr='" + rowId + "'><span class='glyphicon glyphicon-link'></span></button>";
+                        if (jQuery("#displaylist").getCell(rowId, "Track") == "No") {
+                            Trackbtn = "";
+                        }
+                        jQuery("#displaylist").jqGrid('setRowData', rowId, { Zoom: btn, Select: beChecked,Track: Trackbtn });
+                    }
+                    $("button").click(function (event)
+                    {
+                        debugger;
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#displaylist');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        switch (btntype)
+                        {
+                            case "btnZoom":
+                                ZoomURL(cellVal);
+                                break;
+                            case "btnTrack":
+                                TrackURL(cellVal);
+                                break;
+                        }
+                    });
+                    $('.spinner').hide();
+                    $('#pager1').height = 5;
+                },
+            });
+            jQuery("#displaylist").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "filter"});
+            jQuery("#displaylist").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    function ZoomURL(mdocument) {
+        GetURL1(mdocument);
+    }
+    function TrackURL(mdocument) {
+        GetURLTrack(mdocument);
+    }
+
+    function clickRefresh() {
+        $('#displaylist').jqGrid('clearGridData');
+        $("#displaylist").jqGrid("GridUnload");
+        $('#displaylist').trigger('reloadGrid');
+        GridDisplayList();
+    }
+
+    function clickRefreshAll() {
+        GetColumnsList('Authorisation-' + ($("#displaytype").val().substring(0, 1) == 'R' ? 'RejectedList' : ($("#displaytype").val().substring(0, 1) == 'U' ? 'Un' : '')) + 'AuthorisedList');
+        $('#displaylist').jqGrid('clearGridData');
+        $("#displaylist").jqGrid("GridUnload");
+        $('#displaylist').trigger('reloadGrid');
+        GridDisplayList();
+    }
+
+    function GetURL1(mdocument) {
+        debugger;
+        //var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var mURL = '@Url.Action("GetURLDoc")?mdocument=' + mdocument +'&mode=View';
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $('.spinner').hide();
+                if (result.url != "") {
+                    window.open(result.url, '_blank');
+                } else {
+                    alert("Error! Can't Zoom into the Details!\n" + result.Message);
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+
+    function GetURLTrack(mdocument) {
+        debugger;
+        //var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var mURL = '@Url.Action("GetURLDocForTrack")?mdocument=' + mdocument;
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $('.spinner').hide();
+                if (result.url != "") {
+                    window.open(result.url, '_blank');
+                } else {
+                    alert("Error! Can't Zoom into the Details!\n" + result.Message);
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+
+
+    function UpdateAuthorise(maction) {
+        var ModelData = {};
+
+        var myTableArray = [];
+        $("#displaylist > tbody  > tr").each(function () {
+            if ($(this).find("input[class='AuthDebitGrid']").prop("checked") == true) {
+                debugger;
+                var myDets = {
+                    Document: $(this).find('td:eq(2)').text(),
+                    Type: $(this).find('td:eq(4)').text(),
+                    Serial: $(this).find('td:eq(6)').text(),
+                    Level: $(this).find('td:eq(18)').text(),
+                    AcType: maction,
+                }
+                myTableArray.push(myDets);
+            }
+        });
+        var check = $('#displaylist').find("input[class='AuthDebitGrid']:checked").length;
+        if (check > 0) {
+            ModelData["Document"] = mdocument;
+            ModelData["Narr"] = $('#myourremark').val();
+            ModelData["Party"] = $('#mparty').val();
+            ModelData["Type"] = $('#mtype').val();
+            ModelData["Serial"] = $('#mserial').val();
+            ModelData["Level"] = Level;
+            ModelData["AcType"] = maction;
+            ModelData["list"] = myTableArray;
+            var DTO = { Model: ModelData };
+            var sPathUrl = '@Url.Action("UpdateAuthorise")';
+            //?mdocument = ' + mdocument + ' & mnarr=' + $('#myourremark').val() + ' & mparty=' + $('#mparty').val() + ' & maction=' + maction;
+            $.ajax({
+                dataType: "json",
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: sPathUrl,
+                contentType: "application/json;charset=utf-8",
+                success: function (result) {
+                    $('.spinner').hide();
+                    alert(result.Message);
+                    $('#displaylist').jqGrid('clearGridData');
+                    $('#displaylist').jqGrid("GridUnload");
+                    $('#displaylist').trigger('reloadGrid');
+                    GridDisplayList();
+                },
+                error: function (ex) {
+                    alert("Error! Updating the Data.." + ex);
+                }
+            });
+        }
+        else {
+            alert("Atleast One Document Select...");
+        }
+
+        @*else {
+            ModelData["Document"] = mdocument;
+                ModelData["Narr"] = $('#myourremark').val();
+                ModelData["Party"] = $('#mparty').val();
+                ModelData["Type"] = $('#mtype').val();
+                ModelData["Serial"] = $('#mserial').val();
+                ModelData["Level"] = Level;
+                ModelData["AcType"] = maction;
+                var DTO = { Model: ModelData };
+                var sPathUrl = '@Url.Action("UpdateAuthorise")';
+                //?mdocument = ' + mdocument + ' & mnarr=' + $('#myourremark').val() + ' & mparty=' + $('#mparty').val() + ' & maction=' + maction;
+                $.ajax({
+                    dataType: "json",
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: sPathUrl,
+                    contentType: "application/json;charset=utf-8",
+                    success: function (result) {
+                        $('.spinner').hide();
+                        alert(result.Message);
+                        $('#displaylist').jqGrid('clearGridData');
+                        $('#displaylist').jqGrid("GridUnload");
+                        $('#displaylist').trigger('reloadGrid');
+                        GridDisplayList();
+                    },
+                    error: function (ex) {
+                        alert("Error! Updating the Data.." + ex);
+                    }
+                });
+        }*@
+        return false;
+    };
+
+    function UpdateTabData() {
+        event.preventDefault();
+        //mdocument = encodeURI(mdocument);
+        var ModelData = {};
+        ModelData["Document"] = mdocument;
+        ModelData["Level"] = Level;
+        var DTO = { Model: ModelData };
+        var sPathUrl = '@Url.Action("GetDocInformation")';
+        $.ajax({
+            dataType: "json",
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: sPathUrl,
+            contentType: "application/json;charset=utf-8",
+            success: function (data) {
+                $('.spinner').show();
+                var minfo = data.split('|');
+                $('#mtype').val(minfo[0]);
+                $('#mprefix').val(minfo[1]);
+                $('#mserial').val(minfo[2]);
+                $('#mdocdate').val(minfo[3]);
+                $('#mparty').val(minfo[4]);
+                $('#mdocamount').val(minfo[5]);
+                $('#menterdby').val(minfo[6]);
+                $('#mentrydate').val(minfo[7]);
+                $('#mnarration').val(minfo[8]);
+                $('#mauthlevel').val(minfo[9]);
+                $('#mauthother').val(minfo[10]);
+                $('#mremark').val(minfo[11]);
+                $('#myourremark').val(minfo[12]);
+                $('#rightgrid').jqGrid('clearGridData');
+                $('#rightgrid').jqGrid("GridUnload");
+                $('#rightgrid').trigger('reloadGrid');
+                GridReload();
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("Error with AJAX callback");
+            }
+        });
+    };
+
+    function GridReload() {
+        debugger;
+        event.preventDefault();
+        $("#hiddenvalues").val(mdocument);
+        var ColName, Coldata;
+        var sPathUrl = '@Url.Action("GetGridStructureSub")?Document=' + encodeURI(mdocument);
+        var sUrlpath = '@Url.Action("GetGridDataSub")?Document=' + encodeURI(mdocument);
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                //$('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#rightgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                rowNum: 5000,
+                height: $(window).height() - 205,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                },
+            });
+            jQuery("#rightgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function LoadUser() {
+        var url = '@Url.Action("GetTypes")'
+        $('#mVar1').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.mVar1', text: '@Model.mVar2' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:5px;width:100%;margin-top:0%;height:41px;">
+    <div class="fixhead">
+        <div class="col-sm-4" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <label class="col-sm-1 control-label" style="font-family:Tahoma;font-weight:normal;font-size:9pt;color:black;padding-top:5px;padding-right:0px;width:100px;">Show:</label>
+        <div class="col-sm-2" style="padding-left:0px;">
+            <select id="displaytype" class="form-control" style="font-weight:bolder;">
+                <option style="font-weight:bolder;font-size:10pt;" value="A">Authorised</option>
+                <option style="font-weight:bolder;font-size:10pt;" value="U" selected>Un-Authorised</option>
+                <option style="font-weight:bolder;font-size:10pt;" value="R">Rejected</option>
+            </select>
+        </div>
+        <div class="col-sm-3">
+            <label class="col-sm-3 control-label SuperOnly" style="padding-top:5px;padding-right:0px;font-size:9pt;font-weight:normal;color:black;">All User:</label>
+            <div class="col-sm-2 SuperOnly">
+                @Html.CheckBoxFor(x => x.ARAPReqOnly, new { @value = Model.ARAPReqOnly, @style = "height:20px;width:35px;", @title = "Get All Users Authorisation List." })
+            </div>
+            <label class="col-sm-2 control-label" style="padding-top:5px;padding-right:0px;font-size:9pt;font-weight:normal;color:black;">User:</label>
+            <div class="col-sm-5">
+                @Html.TextBoxFor(x => x.mVar1, new { @class = "input-large search-query", @style = "width:150%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "mVar1", @name = "mVar1", @value = Model.mVar1 })
+            </div>
+        </div>
+
+
+        <div class="col-sm-1 pull-right" style="padding-right:0px; padding-top:-3px;float:right;align-items:flex-end;">
+            <button class="btn btn-success" onclick="clickRefreshAll()" style="font-size:14px;padding:4px 12px;" id="btnPrint">Refresh</button>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:30px;height:500px;padding-left:0px;padding-right:5px;">
+        @Html.Partial("SearchGridView")
+        <div class="col-sm-9" style="padding-left:0px;padding-right:0px;">
+            <div class="jqGrid" id="divgrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="displaylist" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;margin-top:0px;"></table>
+                <div id="pager1" style="height:32px;width:100%;"></div>
+            </div>
+            <div class="form-horizontal" id="Rmaster" role="form" style="margin-top:5px; overflow-x:hidden;padding-left:10px; ">
+                <div class="form-group" style="border-bottom:1px solid lightgray;margin-right:-5px;">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Your Remark:</label>
+                    <div class="col-sm-5">
+                        <input type="text" id="myourremark" class="form-control" style="text-align:left;font-weight:bolder;background-color:lightgray;" />
+                    </div>
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Select All:</label>
+                    <div class="col-sm-1" style="width:auto;">
+                        <input value="False" class="form-control" data-val="true" data-val-required="The GetDate field is required." id="AuthSelectAll" name="GetDate" style="height:20px;width:20px;" type="checkbox">
+                    </div>
+                    <button class="btn btn-success" onclick="UpdateAuthorise('A')" id="btnauthorise" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Authorise</button>
+                    <button class="btn btn-success" onclick="UpdateAuthorise('N')" id="btnunauthorise" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Un-Authorise</button>
+                    <button class="btn btn-warning" onclick="UpdateAuthorise('R')" id="btnreject" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Reject</button>
+                </div>
+                <div class="form-group" style="border-bottom:1px solid lightgray;margin-right:-5px;">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Type:</label>
+                    <div class="col-sm-1">
+                        <input type="text" id="mtype" class="form-control" style="border:none;text-align:left;font-size:14px;font-weight:bolder;color:darkorange;background-color:white;" disabled="disabled" />
+                    </div>
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Prefix:</label>
+                    <div class="col-sm-1">
+                        <input type="text" id="mprefix" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Serial:</label>
+                    <div class="col-sm-1">
+                        <input type="text" id="mserial" class="form-control" style="border:none;text-align:left;font-weight:bolder;color:darkorange;background-color:white;" disabled="disabled" />
+                    </div>
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Doc.Date:</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="mdocdate" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="border-bottom:1px solid lightgray;margin-right:-5px;">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Account / Item:</label>
+                    <div class="col-sm-4">
+                        <input type="text" id="mparty" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="border-bottom:1px solid lightgray;margin-right:-5px;">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Doc.Amount:</label>
+                    <div class="col-sm-1">
+                        <input type="text" id="mdocamount" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Entered By:</label>
+                    <div class="col-sm-1">
+                        <input type="text" id="menterdby" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Entry Date:</label>
+                    <div class="col-sm-2">
+                        <input type="text" id="mentrydate" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group hidden" style="border-bottom:1px solid lightgray;margin-right:-5px;">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Remark:</label>
+                    <div class="col-sm-10">
+                        <input type="text" id="mnarration" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="border-bottom:1px solid lightgray;margin-right:-5px;">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Auth.Level:</label>
+                    <div class="col-sm-1">
+                        <input type="text" id="mauthlevel" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                    <label class="col-sm-3 control-label" style="font-family:Arial;font-size:9pt;">Who Else Can Approve:</label>
+                    <div class="col-sm-6">
+                        <input type="text" id="mauthother" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="border-bottom:1px solid lightgray;margin-right:-5px;">
+                    <label class="col-sm-1 control-label" style="font-family:Arial;font-size:9pt;">Others' Remark:</label>
+                    <div class="col-sm-5">
+                        <input type="text" id="mremark" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-3" style="padding-left:0px;padding-right:0px;">
+            <div class="form-group" id="divrightgrid">
+                <div class="col-sm-12" style="padding-left:0px;padding-right:0px;overflow:scroll;">
+                    <div id="page-contentgridright">
+                        <div class="jqGrid">
+                            <table id="rightgrid" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="col-sm-4" style="padding-left:2px;">
+        <button class="btn btn-success" onclick="opentask()" id="btntask" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Create Task</button>
+        @*<button class="btn btn-primary" id="btnemail" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Send Email</button>
+            <button class="btn btn-primary" id="btnsms" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Send SMS</button>
+            <button class="btn btn-primary" id="btnfollowup" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Follow Up</button>*@
+    </div>
+    <div class="col-sm-4" style="text-align:center;margin-top:4px;text-align:center;">
+        ALT AIR-3.0, Shruham Software
+    </div>
+    @*<div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-warning" id="btnprint" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Print List</button>
+                <button class="btn btn-warning" id="btnconvert" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:4px;" name="Command">Convert to Contact</button>
+            </div>
+        </div>*@
+</footer>
+
+@* reportprintoptions*@
+<div class="example-modal">
+    <div id="dialogprint" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:600px;">
+            <div id="dialogtoprint">
+                @Html.Partial("ReportPrintOptions");
+            </div>
+        </div>
+    </div>
+</div>
+
+@*<div class="example-modal">
+        <div id="commsendemail" class="modal modal-default">
+            <div class="modal-dialog" style="width:840px;">
+                <div id="MultiEmailDiv">
+                    @Html.Partial("SendEmailCommon");
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="example-modal">
+        <div id="commsendsms" class="modal modal-default">
+            <div class="modal-dialog" style="width:840px;">
+                <div id="MultiSMSDiv">
+                    @Html.Partial("SendSMSCommon");
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="example-modal">
+        <div id="followups" class="modal modal-default">
+            <div class="modal-dialog" style="width:840px;">
+                <div id="followupDiv">
+                    @Html.Partial("Followups");
+                </div>
+            </div>
+        </div>
+    </div>*@
+<input type="hidden" id="hdntabformat" />
+@* reportprintoptions - all following three*@
+@Html.HiddenFor(x => x.ViewCode, new { @Id = "viewcode" })
+<input type="hidden" id="hdnparastring" />
+<input type="hidden" id="hiddenvalues" />

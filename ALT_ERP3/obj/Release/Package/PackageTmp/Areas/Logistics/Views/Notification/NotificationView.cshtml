@@ -1,0 +1,325 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.NotificationVM
+@using Common;
+@{
+    ViewBag.Title = "Notification";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        if ('@Model.Mode' == "Add") {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Create New Notification Not Allow...!');
+        }
+
+        $('#CreateOn').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        LoadToIDs();
+        LoadFromIDs();
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#MessageLog").validate().form() == false)
+            //    return;
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Clear"] = $("#Clear").is(':checked');
+            ModelData["Priority"] = $("#Priority").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        if ('@Model.CloseTab'=="True") {
+                            window.close();
+                        } else {
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        }
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadToIDs() {
+        var url = '@Url.Action("AutoCompleteToIDs")'
+        $('#ToUser').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ToUser', text: '@Model.ToUserName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function LoadFromIDs() {
+        var url = '@Url.Action("AutoCompleteToIDs")'
+        $('#ENTEREDBY').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ENTEREDBY', text: '@Model.AUTHIDS' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            @if (Model.CloseTab)
+            {
+                <a href="" onclick="window.top.close();" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+            }
+            else
+            {
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+            }
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+    </div>
+</header>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="MessageLog" role="form" style="margin-top:25px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @if (Model.Mode != "Add")
+            {
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Notification ID:</label>
+                    <div class="col-sm-1">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.Srl, new { @maxlength = "10", @disabled = "disabled", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "Srl", @Value = Model.Srl, @Id = "Srl" })
+                        }
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Create ON:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.CreateOn, new { @type = "text", @disabled = "disabled", @class = "form-control", @style = "width:125px;", @Name = "CreateOn", @id = "CreateOn", @Value = Model.CreateOn.ToString("dd/MM/yyyy") })
+                        }
+                    </div>
+                    <label class="col-sm-1 control-label">To User:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.ToUser, new { @class = "input-large-query", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @id = "ToUser", @Value = Model.ToUser, @Name = "ToUser" })
+                        }
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Describe:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.Describe, new { @type = "text", @readonly = "readonly", @class = "form-control", @style = "", @Name = "Describe", @id = "Describe", @Value = Model.Describe })
+                        }
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Doc Type:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.DocType, new { @type = "text", @readonly = "readonly", @class = "form-control", @style = "width:125px;", @Name = "DocType", @id = "DocType", @Value = Model.DocType })
+                        }
+                    </div>
+                    <label class="col-sm-1 control-label">Doc No:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.DocNo, new { @type = "text", @readonly = "readonly", @class = "form-control", @style = "width:125px;", @Name = "DocNo", @id = "DocNo", @Value = Model.DocNo })
+                        }
+                    </div>
+                    @Html.TextBoxFor(x => x.Parentkey, new { @type = "text", @class = "form-control hidden", @style = "width:125px;", @Name = "Parentkey", @id = "Parentkey", @Value = Model.Parentkey })
+                    @Html.TextBoxFor(x => x.Tablekey, new { @type = "text", @class = "form-control hidden", @style = "width:125px;", @Name = "Tablekey", @id = "Tablekey", @Value = Model.Tablekey })
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Mark as Clear:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.Clear, new { @value = Model.Clear, @id = "Clear", @name = "Clear", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Mark as Priority:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.Priority, new { @value = Model.Priority, @id = "Priority", @name = "Priority", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Message:</label>
+                    <div class="col-sm-4" id="podText">
+                        @if (Model.Mode != "Add")
+                        {
+                            // Remove the <span> tag using regex
+                            string cleanedValue = System.Text.RegularExpressions.Regex.Replace(Model.Msg, "<span[^>]*>|</span>", "");
+                            @Html.TextAreaFor(x => cleanedValue, new { @readonly = "readonly", @class = "form-control", @Name = "Msg", @Value = cleanedValue, @Id = "Msg", @rows = 7 })
+                        }
+                    </div>
+                </div>
+                if (Model.Mode != "Add" && string.IsNullOrEmpty(Model.HtmlString) == false)
+                {
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">Extra Info:</label>
+                        <div class="col-sm-4">
+                            <label style="text-align-last: center;color:black;font-size:9pt;font-family:Tahoma;word-wrap: break-word!important;" class="custom-label">@Html.Raw(Model.HtmlString)</label>
+                        </div>
+
+                    </div>
+                }
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Create By:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.ENTEREDBY, new { @readonly = "readonly", @class = "input-large-query", @style = "width:100%;", @Name = "AUTHIDS", @id = "ENTEREDBY", @Value = Model.ENTEREDBY })
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else if (Model.Mode == "Edit")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Update</button>
+                    }
+                }
+                @if (Model.CloseTab)
+                {
+                    <a href="" onclick="window.top.close();" class="btn btn-danger" style="color:black;margin-right:10px;font-size:13px;padding:3px 12px;" id="Cancel">Cancel</a>
+                }
+                else
+                {
+                    <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+                }
+            </div>
+        </div>
+    </div>
+</footer>

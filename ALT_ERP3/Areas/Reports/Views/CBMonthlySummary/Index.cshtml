@@ -1,0 +1,184 @@
+﻿@model GridOption
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<link href="~/Content/js/jquery-multi-select/css/multi-select.css" rel="stylesheet" />
+<script src="~/Content/js/jquery-multi-select/js/jquery.multi-select.js"></script>
+<script src="~/Content/js/jquery-multi-select/js/jquery.quicksearch.js"></script>
+<style>
+    .select2-container-multi .select2-choices {
+        width: 270px;
+    }
+
+    .table > thead > tr > th {
+        padding: unset;
+        text-align: center;
+    }
+
+    .table-bordered > thead > tr > th, .table-bordered > tbody > tr > th, .table-bordered > tfoot > tr > th, .table-bordered > thead > tr > td, .table-bordered > tbody > tr > td, .table-bordered > tfoot > tr > td {
+        border: 1px solid darkgrey;
+    }
+
+    .table-bordered {
+        border: 1px solid darkgrey;
+    }
+
+    .table > tbody > tr > td, .table > tbody > tr > th, .table > tfoot > tr > td, .table > tfoot > tr > th, .table > thead > tr > td, .table > thead > tr > th {
+        padding: unset;
+    }
+</style>
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        loadAccount()
+        $('select').select2();
+
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+
+        $('#btnrefresh').click(function (event) {
+            event.preventDefault();
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var url = '@Url.Action("GetMonthlySummary")' + '?Date=' + Date + '&AccountName=' + $('#Account').val();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $.each(data, function (i, item) {
+                            $('#MonthSummary').html(data.Html);
+                        });
+                    } 
+                },
+                error: function (ex) {
+                    alert("Error occured while processing your request." + ex);
+                }
+            });
+            return false;
+        });
+
+
+        $('#btnexcel').click(function () {
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + Date + '&AccountName=' + $('#Account').val())
+        });
+
+        $('#btnPrint').click(function () {
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDF")?Date=' + Date +'&AccountName=' + $('#Account').val())
+        });
+
+    });
+
+
+
+    function loadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var elementText = $(element).attr('data-init-text');
+                xcallback({ "term": elementText });
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+
+
+
+</script>
+
+<div class="row">
+    <div class="col-md-12">
+        <section class="panel" style="margin-bottom:7px;">
+            <header class="panel-heading" style="background:beige;padding:6px;">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-2"><b>Cash/Bank Monthly Summary</b></div>
+                        <div class="col-md-4 pull-right">
+                            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy">
+                                <span class="input-group-addon">To</span>
+                                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div class="row">
+                <div class="col-xs-12">
+                    <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                        Account
+                    </div>
+                    <div class="col-sm-2">
+                        <input type="text" id="Account" class="input-large search-query" style="width: 100%;" />
+                    </div>
+                    <button class="btn btn-info btn-sm" id="btnrefresh"><i class="fa fa-refresh"></i></button>
+                    <button class="btn btn-success btn-sm" id="btnexcel"><i class="fa fa-file-excel-o"></i>Excel</button>
+                    <button class="btn btn-success btn-sm" id="btnPrint"><i class="fa fa-file-excel-o"></i>Print</button>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col-md-12" id="header">
+                    <div class="col-md-2" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;">
+                        <b>Opening Balance :</b>
+                    </div>
+                    <div class="col-md-2" id="openb" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;">
+
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div id="MonthSummary">
+                @Html.Partial("MonthlySummary", new GridOption())
+            </div>
+        </section>
+    </div>
+</div>
+<input type="hidden" id="hdnPurchArray" />
+<input type="hidden" id="hdnPurchCodeArray" />

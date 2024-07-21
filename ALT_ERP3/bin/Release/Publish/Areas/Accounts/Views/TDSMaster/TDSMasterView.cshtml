@@ -1,0 +1,312 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.TDSMasterVM
+@using Common;
+@{
+    ViewBag.Title = "TDS Master";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#TDSMaster_FileDate').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadPostCode()
+
+        @* iX9: Date Picker Code *@
+        $('#TDSMaster_FileDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#TDSMaster').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TDSMaster_Name: {required: true,},
+                TDSMaster_Prefix: {required: true,},
+               },
+            messages: {
+                TDSMaster_Name: {required: 'Name is Required',},
+                TDSMaster_Prefix: {required: 'Prefix is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#TDSMaster_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TDSMaster_Prefix").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TDSMaster_CertAfter").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_CertBefore").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_DaysCert").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_DaysDeposit").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_DepositAfter").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_DepositBefore").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_FormType").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_FileAfter").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TDSMaster_FileBefore").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#TDSMaster").validate().form() == false)
+            //    return;
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["TDSMaster_Code"] = $("#TDSMaster_Code").val();
+            ModelData["TDSMaster_Name"] = $("#TDSMaster_Name").val();
+            ModelData["TDSMaster_CertAuto"] = $("#TDSMaster_CertAuto").is(':checked');
+            ModelData["TDSMaster_Prefix"] = $("#TDSMaster_Prefix").val();
+            ModelData["TDSMaster_PostCode"] = $("#TDSMaster_PostCode").val();
+            ModelData["TDSMaster_CertAfter"] = $("#TDSMaster_CertAfter").val();
+            ModelData["TDSMaster_CertBefore"] = $("#TDSMaster_CertBefore").val();
+            ModelData["TDSMaster_Sections"] = $("#TDSMaster_Sections").val();
+            ModelData["TDSMaster_DaysCert"] = $("#TDSMaster_DaysCert").val();
+            ModelData["TDSMaster_DaysDeposit"] = $("#TDSMaster_DaysDeposit").val();
+            ModelData["TDSMaster_Form"] = $("#TDSMaster_Form").val();
+            ModelData["TDSMaster_DepositAfter"] = $("#TDSMaster_DepositAfter").val();
+            ModelData["TDSMaster_DepositBefore"] = $("#TDSMaster_DepositBefore").val();
+            ModelData["TDSMaster_Form15H"] = $("#TDSMaster_Form15H").is(':checked');
+            ModelData["TDSMaster_Differ"] = $("#TDSMaster_Differ").is(':checked');
+            ModelData["TDSMaster_FormType"] = $("#TDSMaster_FormType").val();
+            ModelData["TDSMaster_FileAfter"] = $("#TDSMaster_FileAfter").val();
+            ModelData["TDSMaster_FileBefore"] = $("#TDSMaster_FileBefore").val();
+            ModelData["FileDateVM"] = $("#TDSMaster_FileDate").val();
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadPostCode() {
+        var url = '@Url.Action("AutoCompletePostCode")'
+        $('#TDSMaster_PostCode').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TDSMaster_PostCode', text: '@Model.PostCodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="TDSMaster" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TDSMaster_Code, new { @maxlength = "6", @class = "form-control", @readonly = "readonly", @Name = "TDSMaster_Code", @Id = "TDSMaster_Code" })
+                </div>
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TDSMaster_Name, new { @maxlength = "60", @class = "form-control", @Name = "TDSMaster_Name", @Id = "TDSMaster_Name" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Cert. Auto:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TDSMaster_CertAuto, new { @value = Model.TDSMaster_CertAuto, @id = "TDSMaster_CertAuto", @name = "TDSMaster_CertAuto", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Prefix:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TDSMaster_Prefix, new { @maxlength = "8", @class = "form-control", @Name = "TDSMaster_Prefix", @Id = "TDSMaster_Prefix" })
+                </div>
+                <label class="col-sm-1 control-label">Post Code:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TDSMaster_PostCode, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TDSMaster_PostCode", @Name = "TDSMaster_PostCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Cert. After:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_CertAfter, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_CertAfter", @Id = "TDSMaster_CertAfter" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Cert.Before:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_CertBefore, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_CertBefore", @Id = "TDSMaster_CertBefore" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Sections:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TDSMaster_Sections, new { @maxlength = "10", @class = "form-control", @Name = "TDSMaster_Sections", @Id = "TDSMaster_Sections" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">DaysCert:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_DaysCert, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_DaysCert", @Id = "TDSMaster_DaysCert" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Days Deposit:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_DaysDeposit, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_DaysDeposit", @Id = "TDSMaster_DaysDeposit" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Form:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TDSMaster_Form, new { @maxlength = "5", @class = "form-control", @Name = "TDSMaster_Form", @Id = "TDSMaster_Form" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Deposit. After:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_DepositAfter, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_DepositAfter", @Id = "TDSMaster_DepositAfter" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Deposit Before:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_DepositBefore, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_DepositBefore", @Id = "TDSMaster_DepositBefore" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Form15H:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TDSMaster_Form15H, new { @value = Model.TDSMaster_Form15H, @id = "TDSMaster_Form15H", @name = "TDSMaster_Form15H", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Differ Rate?:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.TDSMaster_Differ, new { @value = Model.TDSMaster_Differ, @id = "TDSMaster_Differ", @name = "TDSMaster_Differ", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Form Type:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_FormType, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_FormType", @Id = "TDSMaster_FormType" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">File After:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_FileAfter, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_FileAfter", @Id = "TDSMaster_FileAfter" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">File Before:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TDSMaster_FileBefore, "{0:n0}", new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TDSMaster_FileBefore", @Id = "TDSMaster_FileBefore" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">File Date:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.FileDateVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "TDSMaster_FileDate", @id = "TDSMaster_FileDate", @Value = Model.TDSMaster_FileDate.Value.ToString("dd/MM/yyyy") })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            @* iX9: -- Code for Body Starts -- *@
+            @* iX9: Tab Body Panels *@
+            @* iX9: -- Call Grid Partial View -- *@
+            <div>
+                @Html.Partial("GridDataView")
+            </div>
+            @* iX9: -- Code for Body Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Wed 27-Feb-2019 05:05 PM
+    Engine: iX6Generator, ver: 3.7 Revision: 9
+    by Team Suchan, T.FAT *@
+

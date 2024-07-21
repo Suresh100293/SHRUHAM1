@@ -1,0 +1,269 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.MonthlyBookingBillVM
+
+<style>
+    .ModalLabel {
+        font-weight: bold !important;
+        color: black !important;
+        padding: 3px !important;
+    }
+
+   
+
+    .multiselect-container {
+        width: 215px !important;
+    }
+
+    
+
+    .td1 {
+        width: 500px !important;
+    }
+
+    .td2 {
+        width: 500px !important;
+    }
+
+    .td3 {
+        width: 500px !important;
+    }
+
+    
+</style>
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        $("#txtReportName").val("");
+        if ('@Model.ReportName' != "") {
+            $("#txtReportName").val('@Model.ReportName');
+        }
+        debugger;
+        $('#Branch').val('');
+        var CommonValue = "";
+        if ('@Model.Branch' != "") {
+            $.each('@Model.Branch'.split(','), function (idx, val) {
+                $(".BranchL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "'" + val + "',";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#Branch').val(CommonValue);
+        }
+
+        $("#Customer").val("");
+        if ('@Model.CustomerF'=="True" || '@Model.CustomerF'=="true") {
+            $("#CustomerFF").prop("checked", true);
+            $("#MasterF").prop("checked", false);
+            $('.CustomerDiv').removeClass("hidden");
+            $('.MasterDiv').addClass("hidden");
+            if ('@Model.Customer' != "")
+            {
+                $.each('@Model.Customer'.split(','), function (idx, val) {
+                    $(".CustomerL option[value='" + val + "']").attr("selected", true);
+                    CommonValue += "'" + val + "',";
+                });
+                CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+                $('#Customer').val(CommonValue);
+            }
+        } else {
+            $("#MasterF").prop("checked", true);
+            $("#CustomerFF").prop("checked", false);
+            $('.CustomerDiv').addClass("hidden");
+            $('.MasterDiv').removeClass("hidden");
+            if ('@Model.Customer' != "")
+            {
+                $.each('@Model.Customer'.split(','), function (idx, val) {
+                    $(".MasterL option[value='" + val + "']").attr("selected", true);
+                    CommonValue += "'" + val + "',";
+                });
+                CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+                $('#Customer').val(CommonValue);
+            }
+        }
+        debugger;
+        $("#BranchF").val(false);
+        if ('@Model.BranchF'=="True" || '@Model.BranchF'=="true") {
+            $("#BranchFlag").prop("checked", true);
+            $("#BranchF").val(true);
+        }
+
+        $("#AccountF").val(false);
+        if ('@Model.AccountF'=="True" || '@Model.AccountF'=="true") {
+            $("#AccountFlag").prop("checked", true);
+            $("#AccountF").val(true);
+        }
+
+        
+
+        
+
+        $('.BranchL,.CustomerL,.MasterL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Item',
+        });
+        $('#btnopnFormat').click(function(event){
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["ViewDataId"] = $("#hdnformatname").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    $('#updTfatsearchDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#SubmitSaveReport').click(function (event) {
+            event.preventDefault();
+            $('#SaveReportName').modal('show');
+        });
+
+        $(".BranchL").change(function () {
+
+            $('#Branch').val('');
+            var selected = "";
+            $(".BranchL :selected").each(function () {
+                selected += ("'" + $(this).val() + "',");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Branch').val(selected)
+            return false;
+        });
+
+        
+
+        $(".CustomerL").change(function () {
+            $('#Customer').val('');
+            var selected = "";
+            $(".CustomerL :selected").each(function () {
+                selected += ("'" + $(this).val() + "',");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Customer').val(selected)
+            return false;
+        });
+
+        $(".MasterL").change(function () {
+
+            $('#Customer').val('');
+            var selected = "";
+            $(".MasterL :selected").each(function () {
+                selected += ("'" + $(this).val() + "',");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#Customer').val(selected)
+            return false;
+        });
+
+        
+
+        $("input[name$='AccountType']").change(function () {
+            debugger;
+            var GetChrgesName = this.value;
+            if (GetChrgesName == "CustomerFF") {
+                $('.CustomerDiv').removeClass("hidden");
+                $('.MasterDiv').addClass("hidden");
+                $(".CustomerL").trigger("change");
+            }
+            else if (GetChrgesName == "MasterF") {
+                $('.CustomerDiv').addClass("hidden");
+                $('.MasterDiv').removeClass("hidden");
+                $(".MasterL").trigger("change");
+            }
+        });
+
+        $(".BranchFlag").change(function () {
+            if (this.checked) {
+                $('#BranchF').val(true);
+                BranchCoumnsList(true,);
+            } else {
+                $('#BranchF').val(false);
+                BranchCoumnsList(false);
+            }
+        });
+
+        $(".AccountFlag").change(function () {
+            if (this.checked) {
+                $('#AccountF').val(true);
+                AccountCoumnsList(true);
+            } else {
+                $('#AccountF').val(false);
+                AccountCoumnsList(false);
+            }
+        });
+
+    });
+
+</script>
+
+
+<table class="table table-striped table-bordered">
+    <thead>
+    </thead>
+    <tbody>
+
+        <tr>
+            <td class="td1">
+                <label class=" ModalLabel  control-label" style="width:auto;"> Branch :</label>
+                @Html.ListBoxFor(x => x.BranchL, Model.Branches, new { @class = "BranchL", @id = "BranchL" })
+            </td>
+            <td class="td2">
+                <label class=" ModalLabel  control-label" style="width:auto;">Acc. Type :</label>
+                <div style="display:flex;float:right;">
+                    <input type="radio" class="form-control " name="AccountType" id="CustomerFF" value="CustomerFF" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Customer</label>
+                    <input type="radio" class="form-control " name="AccountType" id="MasterF" value="MasterF" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Master</label>
+                </div>
+            </td>
+            <td class="td3">
+                <div id="CustomerDiv" class="CustomerDiv">
+                    <label class=" ModalLabel  control-label" style="width:auto;">Customer :</label>
+                    @Html.ListBoxFor(x => x.CustomerL, Model.Customers, new { @class = "CustomerL", @id = "CustomerL" })
+                </div>
+                <div id="MasterDiv" class="MasterDiv hidden">
+                    <label class=" ModalLabel  control-label" style="width:auto;">Master :</label>
+                    @Html.ListBoxFor(x => x.MasterL, Model.Masters, new { @class = "MasterL", @id = "MasterL" })
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="td1" colspan="2">
+                <label class=" ModalLabel  control-label" style="width:auto;">Combination Report Type</label>
+                <div style="display:flex;float:right;">
+                    <input type="checkbox" class="form-control BranchFlag" id="BranchFlag" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Branch</label>
+                    <input type="checkbox" class="form-control AccountFlag" id="AccountFlag" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:black;padding: 3px 0px 0px 0px;"> Account</label>
+                </div>
+            </td>
+            <td class="td2">
+                
+
+            </td>
+        </tr>
+        
+    </tbody>
+</table>
+
+
+

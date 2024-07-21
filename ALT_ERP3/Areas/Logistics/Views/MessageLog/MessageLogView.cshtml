@@ -1,0 +1,461 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.MessageLogVM
+@using Common;
+@{
+    ViewBag.Title = "Messenger";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        $('#MessageLog_mDate').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#MessageLog_mTime').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadFromIDs()
+        LoadCode()
+        LoadCategory()
+
+        @* iX9: Date Picker Code *@
+        $('#MessageLog_mDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#MessageLog_mTime').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#MessageLog').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                MessageLog_mDate: {required: true,},
+                MessageLog_mTime: {required: true,},
+                MessageLog_Code: {required: true,},
+                MessageLog_Category: {required: true,},
+                MessageLog_Message: {required: true,},
+               },
+            messages: {
+                MessageLog_mDate: {required: 'mDate is Required',},
+                MessageLog_mTime: {required: 'mTime is Required',},
+                MessageLog_Code: {required: 'Code is Required',},
+                MessageLog_Category: {required: 'Category is Required',},
+                MessageLog_Message: {required: 'Message is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#MessageLog_MessageID").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#MessageLog_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#MessageLog_Category").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#MessageLog").validate().form() == false)
+            //    return;
+
+            if ($("#MessageLog_mDate").val() == null || $("#MessageLog_mDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('mDate is Required..');
+                return;
+            }
+            if ($("#MessageLog_mTime").val() == null || $("#MessageLog_mTime").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('mTime is Required..');
+                return;
+            }
+            if ($("#MessageLog_Code").val() == null || $("#MessageLog_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To User is Required..');
+                return;
+            }
+            if ($("#MessageLog_Category").val() == null || $("#MessageLog_Category").val() == 0)
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Category is Required..');
+                return;
+            }
+            if ($("#MessageLog_Message").val() == null || $("#MessageLog_Message").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Message is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["MessageLog_MessageID"] = $("#MessageLog_MessageID").val();
+            ModelData["MessageLog_mDateVM"] = $("#MessageLog_mDate").val();
+            ModelData["MessageLog_mTimeVM"] = $("#MessageLog_mTime").val();
+            ModelData["MessageLog_FromIDs"] = $("#MessageLog_FromIDs").val();
+            ModelData["MessageLog_Code"] = $("#MessageLog_Code").val();
+            ModelData["MessageLog_Category"] = $("#MessageLog_Category").val();
+            ModelData["MessageLog_MessageRead"] = $("#MessageLog_MessageRead").is(':checked');
+            ModelData["MessageLog_MessageDelete"] = $("#MessageLog_MessageDelete").is(':checked');
+            ModelData["MessageLog_ReplyRequest"] = $("#MessageLog_ReplyRequest").is(':checked');
+            ModelData["MessageLog_SendNow"] = $("#MessageLog_SendNow").is(':checked');
+            ModelData["MessageLog_Message"] = $("#MessageLog_Message").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadFromIDs() {
+        var url = '@Url.Action("AutoCompleteFromIDs")'
+        $('#MessageLog_FromIDs').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.MessageLog_FromIDs', text: '@Model.FromIDsName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCode() {
+        var url = '@Url.Action("AutoCompleteCode")'
+        $('#MessageLog_Code').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.MessageLog_Code', text: '@Model.CodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCategory() {
+        var url = '@Url.Action("AutoCompleteCategory")'
+        $('#MessageLog_Category').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.MessageLog_Category', text: '@Model.CategoryName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="MessageLog" role="form" style="margin-top:25px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">MessageID:</label>
+                <div class="col-sm-1">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_MessageID, new { @maxlength = "10", @readonly = "readonly", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "MessageLog_MessageID", @Value = Model.MessageLog_MessageID, @Id = "MessageLog_MessageID" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_MessageID, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "MessageLog_MessageID", @Value = Model.MessageLog_MessageID, @Id = "MessageLog_MessageID" })
+                    }
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Msg.Date:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_mDateVM, new { @type = "text", @readonly = "readonly", @class = "form-control", @style = "width:125px;", @Name = "MessageLog_mDate", @id = "MessageLog_mDate", @Value = Model.MessageLog_mDate.ToString("dd/MM/yyyy") })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_mDateVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "MessageLog_mDate", @id = "MessageLog_mDate", @Value = Model.MessageLog_mDate.ToString("dd/MM/yyyy") })
+                    }
+                </div>
+                <label class="col-sm-1 control-label">Msg.Time:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_mTimeVM, new { @type = "text", @readonly = "readonly", @class = "form-control", @style = "width:125px;", @Name = "MessageLog_mTime", @id = "MessageLog_mTime", @Value = Model.MessageLog_mTime.ToString("dd/MM/yyyy") })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_mTimeVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "MessageLog_mTime", @id = "MessageLog_mTime", @Value = Model.MessageLog_mTime.ToString("dd/MM/yyyy") })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                @*<label class="col-sm-1 control-label">FromIDs:</label>
+                    <div class="col-sm-3">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.MessageLog_FromIDs, new { @class = "input-large-query", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @id = "MessageLog_FromIDs", @Value = Model.MessageLog_FromIDs, @Name = "MessageLog_FromIDs" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.MessageLog_FromIDs, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @readonly = "readonly", @id = "MessageLog_FromIDs", @Value = Model.MessageLog_FromIDs, @Name = "MessageLog_FromIDs" })
+                        }
+                    </div>*@
+                <label class="col-sm-1 control-label">To User:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_Code, new { @class = "input-large-query", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @id = "MessageLog_Code", @Value = Model.MessageLog_Code, @Name = "MessageLog_Code" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_Code, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "MessageLog_Code", @Value = Model.MessageLog_Code, @Name = "MessageLog_Code" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Msg.Category:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_Category, new { @class = "input-large-query", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @id = "MessageLog_Category", @Value = Model.MessageLog_Category, @Name = "MessageLog_Category" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.MessageLog_Category, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "MessageLog_Category", @Value = Model.MessageLog_Category, @Name = "MessageLog_Category" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Mark as Read:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.MessageLog_MessageRead, new { @value = Model.MessageLog_MessageRead, @id = "MessageLog_MessageRead", @name = "MessageLog_MessageRead", @style = "height:16px;width:16px;" })
+                </div>
+                <label class="col-sm-1 control-label">Mark as Clear:</label>
+                <div class="col-sm-1">
+                    @Html.CheckBoxFor(x => x.MessageLog_MessageDelete, new { @value = Model.MessageLog_MessageDelete, @id = "MessageLog_MessageDelete", @name = "MessageLog_MessageDelete", @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            @*<div class="form-group">
+                    <label class="col-sm-1 control-label">Request Reply:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.MessageLog_ReplyRequest, new { @value = Model.MessageLog_ReplyRequest, @id = "MessageLog_ReplyRequest", @name = "MessageLog_ReplyRequest", @style = "height:16px;width:16px;"})
+                    </div>
+                    <label class="col-sm-1 control-label">Send Now:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.MessageLog_SendNow, new { @value = Model.MessageLog_SendNow, @id = "MessageLog_SendNow", @name = "MessageLog_SendNow", @style = "height:16px;width:16px;"})
+                    </div>
+                </div>*@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Message:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode != "Add")
+                    {
+                        @Html.TextAreaFor(x => x.MessageLog_Message, new { @readonly = "readonly", @class = "form-control", @Name = "MessageLog_Message", @Value = Model.MessageLog_Message, @Id = "MessageLog_Message", @rows = 7 })
+                    }
+                    else
+                    {
+                        @Html.TextAreaFor(x => x.MessageLog_Message, new { @class = "form-control", @Name = "MessageLog_Message", @Value = Model.MessageLog_Message, @Id = "MessageLog_Message", @rows = 7 })
+                    }
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Tue 13-Aug-2019 01:18 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 49
+    by Team Suchan, T.FAT *@
+

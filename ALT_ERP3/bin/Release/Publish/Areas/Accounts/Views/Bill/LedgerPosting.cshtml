@@ -1,0 +1,521 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+@using Common;
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Ledger Posting</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" id="LedgerPostTable" style="max-height:360px;min-height:360px; width:100%; overflow: scroll;">
+                <table id="LedgerPostgrid" class="zui-table">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                            <th style="width:3%">Sr.</th>
+                            <th style="width:15%">Code</th>
+                            <th style="width:35%">Account Descr</th>
+                            <th style="width:15%">Debit</th>
+                            <th style="width:15%">Credit</th>
+                            <th style="width:10%">Branch</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.LedgerPostList != null)
+                        {
+                            foreach (var item in @Model.LedgerPostList.ToList())
+                            {
+                                <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;border:solid 1px lightgray;">
+                                    <td style="width:3%;">@item.tempId</td>
+                                    <td style="width:15%;">@item.Code</td>
+                                    <td style="width:35%;">@item.AccountName</td>
+                                    <td style="width:15%;text-align:right">@GetAbsolute(@item.Debit)</td>
+                                    <td style="width:15%;text-align:right">@GetAbsolute(@item.Credit)</td>
+                                    <td style="width:10%;">@item.Branch</td>
+                                    <td><button type="button" action="EdtPostAccount" class="btn btn-warning btn-sm" style="padding:0px 5px;border:1px solid black" value="@item.tempId" title="Edit"><i class="fa fa-edit" style="color:black"></i></button></td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr style="font-family:Tahoma;font-size:9pt;font-weight:bolder;border: solid 1px lightgray;background-color:lightgray;">
+                            <td style="width:3%;"></td>
+                            <td style="width:15%;"></td>
+                            <td style="width:35%;">Total</td>
+                            <td style="width:15%;text-align:right" id="txtledpostdeb"></td>
+                            <td style="width:15%;text-align:right" id="txtledpostcred"></td>
+                            <td style="width:10%;"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <button type="button" class="btn btn-warning" data-dismiss="modal" id="SaveLedgerPost">Save</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="ledgerpostshowmodel" class="modal modal-default" style="z-index:2500;overflow:unset;">
+        <div class="modal-dialog">
+            <div id="ledgerpostshowDialog">
+                @Html.Partial("LedgerPostEditPopUp")
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        document.getElementById('txtledpostdeb').innerHTML = parseFloat(@Model.TotDebit).toFixed(2);
+        document.getElementById('txtledpostcred').innerHTML = parseFloat(@Model.TotCredit).toFixed(2);
+        var tdeb = 0;
+        var tcred = 0;
+
+
+        $('button[action|="EdtPostAccount"]').click(function (event) {
+            event.preventDefault(event);
+            var myLederArray = [];
+            $('#LedgerPostgrid tbody').find('tr').each(function () {
+                var tds = $(this).find('td');
+
+                var myDets = { tempId: tds.eq(0).text(), Code: tds.eq(1).text(), AccountName: tds.eq(2).text(), Debit: tds.eq(3).text(), Credit: tds.eq(4).text(), Branch: tds.eq(5).text() }
+                myLederArray.push(myDets);
+            });
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["ChangeLog"] = $("#hdnchangelog").val();
+            ModelData["LedgerPostList"] = myLederArray;
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetPostingforUpdate")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                },
+                success: function (data) {
+                    $('#ledgerpostshowmodel').modal('show');
+                    $('#ledgerpostshowDialog').html(data.Html);
+                },
+                error: function (er) {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+
+       $('#SaveLedgerPost').click(function (event) {
+            event.preventDefault();
+            $('#LedgerPostgrid tfoot').find('tr').each(function () {
+                var $tds = $(this).find('td');
+                tdeb += parseFloat($tds.eq(3).text());
+                tcred += parseFloat($tds.eq(4).text());
+
+            });
+           if (tdeb != tcred) {
+               alert('Credit and Debit doesnt Match cant Save')
+                return;
+            }
+            else {
+
+               var tab2size = $('#tabledata2 tbody tr').length;
+               if ($('#hdnIsManual').val() == "True" && $('#hdnchangelog').val() == "Add") {
+                   if ($("#Srl").val() == '') {
+                       alert('Enter Document Number.');
+                       return;
+                   }
+               }
+               if ($("#Account").val() == '') {
+                   alert('Select Party.');
+                   return;
+               }
+               if ($("#LocationCode").val() == 0) {
+                   alert('Select Warehouse/Location.');
+                   return;
+               }
+               if (tab2size == 0 && $('#hdnSkipStock').val() != "Y") {
+                   alert('Add Product.');
+                   return;
+               }
+               if ($("#hdnSType").val() == "RP" || $("#hdnSType").val() == "CP" || $("#hdnSType").val() == "IM" || $("#hdnSType").val() == "NP" || $("#hdnSType").val() == "IC" || $("#hdnSType").val() == "PX" || $("#hdnSType").val() == "GP") {
+                   if ($("#BillNumber").val() == '') {
+                       alert('Enter Bill Number.');
+                       return;
+                   }
+               }
+               else if ($("#hdnSType").val() == "OP") {
+                   if ($("#BillNumber").val() == '') {
+                       alert('Enter Order Number.');
+                       return;
+                   }
+               }
+               if ($("#hdnForceChln").val() == "True" || $("#hdnForceChln").val() == "true") {
+                   if ($("#RefDoc").val() != 'Challans') {
+                       alert('PLease Pickup From Challan');
+                       return;
+                   }
+               }
+               else {
+
+               }
+
+               //$("#ErrorMessage").hide();
+               var ChargeList = [];
+               var AddonSerial = [];
+               var TermList = [];
+
+               $('#addongrid').find('tr[id="datacharge"]').each(function () {
+                   var $tds = $(this).find('td');
+                   var myDets = {
+                       Fld: $tds.eq(0).text(),
+                       ApplCode: $tds.find(".addontxtfvalue").val(),
+                       FldType: $tds.eq(4).text()
+                   }
+
+                   AddonSerial.push(myDets);
+               });
+
+               $('#sample-table-1').find('tr[id="datacharge"]').each(function () {
+                   var tds = $(this).find('td');
+                   var chgs = {
+                       Code: tds.eq(0).text(),
+                       AddLess: tds.eq(1).text(),
+                       Amt: tds.find("input[class='txtfvalue']").val(),
+                       Val1: tds.find("input[class='txt_row']").val(),
+                       ChgPostCode: tds.eq(4).text(),
+                       Fld: tds.eq(5).text()
+                   }
+                   ChargeList.push(chgs);
+               });
+
+
+               $('#TermTbl tbody tr').each(function () {
+                   var tds = $(this).find('td');
+                   var myDets = {
+                       tempId: tds.eq(0).text(),
+                       TermId: tds.eq(1).text(),
+                       TermName: tds.eq(2).text(),
+
+                   }
+                   TermList.push(myDets);
+               });
+
+               if ($("#hdnSType").val() == "RP" || $("#hdnSType").val() == "CP" || $("#hdnSType").val() == "IM" || $("#hdnSType").val() == "NP" || $("#hdnSType").val() == "RS" || $("#hdnSType").val() == "CS" || $("#hdnSType").val() == "XS" || $("#hdnSType").val() == "NS") {
+                   $('#saveFooter :input').prop("disabled", true);
+                   $('#frmpurchase :input').prop("disabled", true);
+                   $('.form-horizontal :input').prop("disabled", true);
+                   $('#ItemListTable :input').prop('disabled', true);
+
+                   if (parseFloat($("#txtinvamt").val()) > parseFloat(50000)) {
+                       alert('Invoice Amt Greater Than 50,000 \n Consider Preparing EWAY-Bill')
+                   }
+
+                   var myLederArray = [];
+                   $('#LedgerPostgrid tbody').find('tr').each(function () {
+                       var tds = $(this).find('td');
+
+                       var myDets = { tempId: tds.eq(0).text(), Code: tds.eq(1).text(), Debit: tds.eq(3).text(), Credit: tds.eq(4).text() }
+                       myLederArray.push(myDets);
+                   });
+                   var mAuthorise = "";
+                   if ($('#hdnSaveAsDraft').val() == "Y") {
+                       mAuthorise = "X00";
+                   }
+                   else {
+                       mAuthorise = $('#hdnAuthorise').val();
+                   }
+
+                   var url = '@Url.Action("SaveData")';
+                   var ModelData = {};
+                   ModelData["LedgerPostList"] = myLederArray;
+                   ModelData["DocuDate"] = $("#DocuDate").val();
+                   ModelData["PDocNo"] = $("#PDocNo").val();
+                   ModelData["OrdDate"] = $("#OrdDate").val();
+                   ModelData["BillNumber"] = $("#BillNumber").val();
+                   ModelData["RefDoc"] = $("#RefDoc").val();
+                   ModelData["Branch"] = $("#Branch").val();
+                   ModelData["LocationCode"] = $("#LocationCode").val();
+                   ModelData["Store"] = $("#Store").val();
+                   ModelData["CrPeriod"] = $("#CrPeriod").val();
+                   ModelData["Account"] = $("#Account").val();
+                   ModelData["GSTType"] = $("#GSTType").val();
+                   ModelData["AltAddress"] = $("#AltAddress").val();
+                   ModelData["DelyCode"] = $("#DelyCode").val();
+                   ModelData["DelyAltAdd"] = $("#DelyAltAdd").val();
+                   ModelData["BillContact"] = $("#BillContact").val();
+                   ModelData["DelyContact"] = $("#DelyContact").val();
+                   ModelData["WONumber"] = $("#WONumber").val();
+                   ModelData["Reference"] = $("#Reference").val();
+                   ModelData["SalesmanCode"] = $("#SalesmanCode").val();
+                   ModelData["SCommOn"] = $("#SCommOn").val();
+                   ModelData["SCommission"] = $("#SCommission").val();
+                   ModelData["SAmt"] = $("#SAmt").val();
+                   ModelData["Broker"] = $("#BrokerName").val();
+                   ModelData["BrokerOn"] = $("#BrokerOn").val();
+                   ModelData["Brokerage"] = $("#Brokerage").val();
+                   ModelData["BrokerAmt"] = $("#BrokerAmt").val();
+                   ModelData["Transporter"] = $("#TransporterN").val();
+                   ModelData["NoPkg"] = $("#NoPkg").val();
+                   ModelData["FreightType"] = $("#FreightType").val();
+                   ModelData["NoteNo"] = $("#NoteNo").val();
+                   ModelData["NotuDate"] = $("#NotuDate").val();
+                   ModelData["VehicleNo"] = $("#VehicleNo").val();
+                   ModelData["DeliveryType"] = $("#DeliveryType").val();
+                   ModelData["Remark"] = $("#Remark").val();
+                   ModelData["TransMode"] = $("#TransMode").val();
+                   ModelData["ContactPerson"] = $("#ContactPerson").val();
+                   ModelData["MainType"] = $("#hdnMType").val();
+                   ModelData["SubType"] = $("#hdnSType").val();
+                   ModelData["Type"] = $("#hdnType").val();
+                   ModelData["Charges"] = ChargeList;
+                   ModelData["ChangeLog"] = $('#hdnchangelog').val();
+                   ModelData["TableName"] = $('#hdnTableName').val();
+                   ModelData["ParentKey"] = $("#hdnParentKey").val();
+                   ModelData["Srl"] = $("#Srl").val();
+                   ModelData["Prefix"] = $("#hdnPrefix").val();
+                   ModelData["Amt"] = $("#txtinvamt").val();
+                   ModelData["PayTerms"] = $("#PayTerms").val();
+                   ModelData["IncoPlace"] = $("#IncoPlace").val();
+                   ModelData["EwBillNo"] = $("#EwBillNo").val();
+                   ModelData["IncoTerms"] = $("#IncoTerms").val();
+                   ModelData["TransportType"] = $("#TransportType").val();
+                   ModelData["TrxWeight"] = $("#TrxWeight").val();
+                   ModelData["RichNote"] = $('#RichNote').val();
+                   ModelData["StrEWBDate"] = $('#StrEWBDate').val();
+                   ModelData["AddOnList"] = AddonSerial;
+                   ModelData["InsuranceNo"] = $('#InsuranceNo').val();
+                   ModelData["RoundOff"] = $('#txtRoundOffVal').val();
+                   ModelData["TermList"] = TermList;
+                   ModelData["CrPeriod"] = $('#CrPeriod').val();
+                   ModelData["LCNo"] = $('#LCNo').val();
+                   ModelData["AdvLicence"] = $('#AdvLicence').val();
+                   ModelData["SourceDoc"] = $('#RefDoc').val();
+                   ModelData["Authorise"] = mAuthorise;
+                   ModelData["AuthLock"] = $('#hdnAuthLock').val();
+                   ModelData["AuthNoPrint"] = $('#hdnAuthNoPrint').val();
+                   ModelData["AuthReq"] = $('#hdnAuthReq').val();
+                   ModelData["AuthAgain"] = $('#hdnAuthAgain').val();
+                   ModelData["IsManual"] = $('#hdnIsManual').val();
+                   ModelData["CurrName"] = $('#CurrName').val();
+                   ModelData["CurrRate"] = $('#CurrRate').val();
+                   ModelData["CrLimit"] = $('#CrLimit').text();//Label
+                   ModelData["Header"] = $('#Header').val();
+                   ModelData["MLSAmount"] = $('#txtMLSAmount').val();
+                   ModelData["MLSPercent"] = $('#txtMLSPercent').val();
+                   ModelData["CutTDS"] = $('#CutTDS').is(':checked');
+                   ModelData["TDSCode"] = $('#TDSCode').val();
+                   ModelData["TDSAble"] = $('#TDSAble').val();
+                   ModelData["TDSAmt"] = $('#TDSAmt').val();
+                   ModelData["TDSSchg"] = $('#TDSSchg').val();
+                   ModelData["TDSCess"] = $('#TDSCess').val();
+                   ModelData["TDSSHECess"] = $('#TDSSHECess').val();
+                   ModelData["PrevInvAmt"] = $('#PrevInvAmt').val();
+                   ModelData["NonStock"] = $('#NonStock').val();
+                   ModelData["InterBranch"] = $('#InterBranch').val();
+                   ModelData["InterSrl"] = $('#InterSrl').val();
+                   ModelData["ITFKey"] = $('#ITFKey').val();
+                   ModelData["VATGSTApp"] = $('#hdnVATGSTApp').val();
+                   ModelData["SaveAsDraft"] = $('#hdnSaveAsDraft').val();
+                   ModelData["IsDraftSave"] = $('#hdnIsDraftSave').val();
+                   ModelData["FIFOOrder"] = $('#hdnFIFOOrder').val();
+                   var DTO = { Model: ModelData };
+                   $.ajax({
+                       type: "POST",
+                       dataType: "json",
+                       data: JSON.stringify(DTO),
+                       cache: false,
+                       url: url,
+                       contentType: "application/json; charset=utf-8",
+                       beforeSend: function () {
+                           $('.spinner').show();
+                       },
+                       success: function (data) {
+                           $('.spinner').hide();
+                           if (data.Status == 'CancelError') {
+                               $('#saveFooter :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+                               alert(data.Message);
+
+                           }
+                           else if (data.Status == 'PrimaryKeyError') {
+                               alert(data.Message);
+                               $('#saveFooter :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+
+                           }
+                           else if (data.Status == 'Success') {
+                               if ($('#hdnSaveAsDraft').val() == "Y") {
+                                   alert("Draft Saved as " + data.NewSrl + "");
+                                   $('#hdnIsDraftSave').val('True');
+                                   $('#saveFooter :input').prop("disabled", false);
+                                   $('#frmpurchase :input').prop("disabled", false);
+                                   $('.form-horizontal :input').prop("disabled", false);
+                                   $('#ItemListTable :input').prop('disabled', false);
+                                   var ModelData = {};
+                                   ModelData["Type"] = $("#hdnType").val();
+                                   ModelData["Document"] = data.NewSrl;
+                                   var DTO = { Model: ModelData };
+                                   var url = '@Url.Action("GetMultiPrint")';
+                                   $.ajax({
+                                       type: "POST",
+                                       dataType: "json",
+                                       data: JSON.stringify(DTO),
+                                       cache: false,
+                                       url: url,
+                                       contentType: "application/json;charset=utf-8",
+                                       beforeSend: function () {
+                                           $('.spinner').show();
+                                       },
+                                       success: function (data1) {
+                                           $("#ErrorMessage").hide();
+                                           $('.spinner').hide();
+                                           $('#multiprint').modal('show');
+                                           $('#MultiPrintDiv').html(data1.Html);
+                                           $('#PrintDocument').val(data1.Document);
+                                       },
+                                       error: function () {
+                                           alert("Error occured while processing your request.");
+                                       }
+                                   });
+                               }
+                             else if ($("#hdnIsPrint").val() == "Y") {
+                                   alert("Document Saved as " + data.NewSrl + "");
+                                   var ModelData = {};
+                                   ModelData["Type"] = $("#hdnType").val();
+                                   ModelData["Document"] = data.NewSrl;
+                                   var DTO = { Model: ModelData };
+                                   var url = '@Url.Action("GetMultiPrint")';
+                                   $.ajax({
+                                       type: "POST",
+                                       dataType: "json",
+                                       data: JSON.stringify(DTO),
+                                       cache: false,
+                                       url: url,
+                                       contentType: "application/json;charset=utf-8",
+                                       beforeSend: function () {
+                                           $('.spinner').show();
+                                       },
+                                       success: function (data1) {
+                                           $("#ErrorMessage").hide();
+                                           $('.spinner').hide();
+                                           $('#multiprint').modal('show');
+                                           $('#MultiPrintDiv').html(data1.Html);
+                                           $('#PrintDocument').val(data1.Document);
+                                           $('#saveFooter :input').prop("disabled", true);
+                                           $('#frmpurchase :input').prop("disabled", true);
+                                           $('.form-horizontal :input').prop("disabled", true);
+                                           $('#ItemListTable :input').prop('disabled', true);
+                                       },
+                                       error: function () {
+                                           alert("Error occured while processing your request.");
+                                       }
+                                   });
+                               }
+                             else if ($('#hdnSendEmail').val() == "Y") {
+                                   alert("Document Saved as " + data.NewSrl + "");
+
+                                   var ModelData = {};
+                                   ModelData["Type"] = $("#hdnType").val();
+                                   ModelData["Document"] = data.NewSrl;
+                                   var DTO = { Model: ModelData };
+                                   var url = '@Url.Action("EmailData")';
+                                   $.ajax({
+                                       type: "POST",
+                                       dataType: "json",
+                                       data: JSON.stringify(DTO),
+                                       cache: false,
+                                       url: url,
+                                       contentType: "application/json;charset=utf-8",
+                                       beforeSend: function () {
+                                           $('.spinner').show();
+                                       },
+                                       success: function (data1) {
+                                           $("#ErrorMessage").hide();
+                                           $('.spinner').hide();
+                                           alert('Saved and Email Successfully')
+                                           $('#saveFooter :input').prop("disabled", true);
+                                           $('#frmpurchase :input').prop("disabled", true);
+                                           $('.form-horizontal :input').prop("disabled", true);
+                                           $('#ItemListTable :input').prop('disabled', true);
+                                       },
+                                       error: function () {
+                                           alert("Error occured while processing your request.");
+                                       }
+                                   });
+                               }
+                             else if ($('#hdnSaveAsDraft').val() == "N" && $('#hdnSendEmail').val() == "N" && $("#hdnIsPrint").val() == "N") {
+                                   alert("Document Saved as " + data.NewSrl + "");
+                                   if ($('#hdnchangelog').val() != "Add") {
+                                       window.location.href = "/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2";
+                                   }
+                                   else {
+                                       window.location.href = "/Accounts/" + '@Model.Controller2' + "/Index?Type=" + '@Model.Type' + '&ChangeLog=Add&Mode=Add' + '&ViewDataId=' + '@Model.ViewDataId' + '&Header=' + '@Model.Header' + '&Module=' + '@Model.Module' + '&TableName=' + '@Model.TableName' + '&OptionType=' + '@Model.optiontype' + '&OptionCode=' + '@Model.OptionCode' + '&Controller2=' + '@Model.Controller2';
+                                   }
+                               }
+
+
+                           }
+                           else if (data.Status == 'Error') {
+                               alert(data.Message);
+                               $('#saveFooter :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+                               $("#ErrorMessage").show();
+                               $("#ErrorMessage").text(data.Message);
+
+                           }
+                           else {
+                               alert('Status not Success')
+                               $('#saveFooter :input').prop("disabled", false);
+                               $('#frmpurchase :input').prop("disabled", false);
+                               $('.form-horizontal :input').prop("disabled", false);
+                               $('#ItemListTable :input').prop('disabled', false);
+                               $("#ErrorMessage").show();
+                               $("#ErrorMessage").html(data.html);
+
+                           }
+                       },
+                       error: function (ex) {
+                           alert(JSON.stringify(ex))
+                           alert("Error occured while processing your request.");
+                           $('#saveFooter :input').prop("disabled", false);
+                           $('#frmpurchase :input').prop("disabled", false);
+                           $('.form-horizontal :input').prop("disabled", false);
+                           $('#ItemListTable :input').prop('disabled', false);
+                       }
+                   });
+               }
+
+           }
+        });
+    });
+</script>
+
+
+
+@functions {
+    decimal GetAbsolute(decimal dcb)
+    {
+        var msg = Math.Abs(dcb);
+        return msg;
+    }
+
+    string GetFixedTwo(decimal dcb)
+    {
+        decimal d = Math.Floor(100 * dcb) / 100;
+        string s = d.ToString("N2");
+        return s;
+    }
+}

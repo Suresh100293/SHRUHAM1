@@ -1,0 +1,1163 @@
+﻿
+@model ALT_ERP3.Areas.Logistics.Models.MonthlyBookingLRVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<style>
+    .disabled-link {
+        pointer-events: none;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        LoadSavedParamentersType();
+        LoadDelBranch();
+        $("#hdnformatname").val('@Model.ViewDataId');
+        //$("#LrGenetate").val("");
+
+        $("#Submit").click(function () {
+            $('#acledger').jqGrid('clearGridData');
+            $("#acledger").jqGrid("GridUnload");
+            $('#acledger').trigger('reloadGrid');
+            $("#hdnformatname").val('@Model.ViewDataId');
+            GridReload();
+            document.getElementById("Ledger").click();
+            //ParameterReset();
+        });
+
+        $(".ReportName").change(function (event) {
+            event.preventDefault();
+            debugger;
+            if ($(".ReportName").val() != "" && $(".ReportName").val() != null) {
+                $("#txtReportName").val($(".ReportName option:selected").text());
+            } else {
+                $("#txtReportName").val("");
+                $("#btnReset").trigger("click");
+            }
+
+        });
+        $('#btnReportParam').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            if ($("#txtReportName").val() == "" || $("#txtReportName").val() == null) {
+                alert("Please Enter The Report Name....!");
+                $('.spinner').hide();
+                return;
+            }
+
+            var url = '@Url.Action("SaveParameter")';
+
+            var ModelData = {};
+            ModelData["FromDate"] = $("#Fromdate").val();
+            ModelData["ToDate"] = $("#ToDate").val();
+
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["ReportTypeL"] ='@Model.ViewDataId';
+            ModelData["ReportName"] = $("#txtReportName").val();
+
+
+            ModelData["Branch"] = $("#Branch").val();
+            ModelData["Charge"] = $("#Charge").val();
+            ModelData["Customer"] = $("#Customer").val();
+
+
+            if ($("input[name='AccountType']:checked").val() =="CustomerFF") {
+                ModelData["CustomerF"] = true;
+            } else {
+                ModelData["CustomerF"] = false;
+            }
+
+            if ($("input[name='Amount']:checked").val() =="BillAmt") {
+                ModelData["LRBillAmtF"] = true;
+            } else {
+                ModelData["LRBillAmtF"] = false;
+            }
+
+            ModelData["AccountF"] = $("#AccountF").val();
+            ModelData["BranchF"] = $("#BranchF").val();
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert("Save Report Sucessfully..........");
+                    $('#SaveReportName').modal('hide');
+                    $("#btnReset").trigger("click");
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+        $('#btnDeleteReportParam').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            if ($("#txtReportName").val() == "" || $("#txtReportName").val() == null) {
+                alert("Please Enter The Report Name....!");
+                return;
+            }
+
+            var url = '@Url.Action("SaveParameter")';
+
+            var ModelData = {};
+            ModelData["ReportTypeL"] = '@Model.ViewDataId';
+            ModelData["ReportName"] = $("#txtReportName").val();
+
+
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["Mode"] = "Delete";
+
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert("Delete Report Sucessfully..........");
+                    $('#SaveReportName').modal('hide');
+                    $("#btnReset").trigger("click");
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+        $("#btnReset").click(function (event) {
+            event.preventDefault();
+           $("#Submit").prop("disabled", true);
+            $("#GetReportParameter").val(false);
+
+           $('#acledger').jqGrid("clearGridData");
+           $("#acledger").jqGrid("GridUnload");
+           $('#acledger').trigger("reloadGrid");
+
+            var url = '@Url.Action("ParameterReset")';
+            var ModelData = {};
+           ModelData["Branch"] = '@Model.Branch';
+           ModelData["ViewDataId"] = '@Model.ViewDataId';
+           ModelData["ReportTypeL"] = '@Model.ViewDataId';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#Submit").prop("disabled", false);
+
+                    if (data.Status == "Success") {
+                        var LoadDownLoadFiles = $("#ParameterDiv");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $('#Optionsmodal').modal('show');
+                        LoadSavedParamentersType();
+                    }
+                    else {
+                        alert("Some Error Occured...!");
+                    }
+                },
+            });
+        });
+
+
+        //$('.listbox').multiselect({
+        //    includeSelectAllOption: true,
+        //    enableFiltering: true,
+        //    enableCaseInsensitiveFiltering: true,
+        //    filterPlaceholder: 'Search for something...'
+        //})
+
+        $('#acledger').jqGrid('clearGridData');
+        $("#acledger").jqGrid("GridUnload");
+        $('#acledger').trigger('reloadGrid');
+        //GridReload();
+    });
+
+    function BranchCoumnsList(flag)
+    {
+        var url = '@Url.Action("BranchDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: '@Model.ViewDataId' };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+    function AccountCoumnsList(flag)
+    {
+        var url = '@Url.Action("AccountDetailsColumns")';
+        var DTO = { Flag: flag, ViewDataId: '@Model.ViewDataId' };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+            },
+        });
+    }
+
+    function GetSaveParameter()
+    {
+        if ($("#ReportName").val() == "" || $("#ReportName").val() == null) {
+            alert("Please Select First Reports From The Combo....!");
+            return;
+        }
+
+        var url = '@Url.Action("GetParameterAuto")';
+        var ModelData = {};
+        ModelData["ReportTypeL"] = '@Model.ViewDataId';
+        ModelData["ReportName"] = $("#txtReportName").val();
+        ModelData["ViewDataId"] = '@Model.ViewDataId';
+
+        $("#GetReportParameter").val(false);
+        if ($(".ReportName").val() != "" && $(".ReportName").val() != null) {
+            $("#GetReportParameter").val(true);
+        }
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $("#Submit").prop("disabled", false);
+
+                if (data.Status == "Success") {
+                    debugger;
+                    var LoadDownLoadFiles = $("#ParameterDiv");
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                    $('#Optionsmodal').modal('show');
+                }
+                else {
+                    alert("Some Error Occured...!");
+                }
+            },
+        });
+    }
+    function LoadSavedParamentersType() {
+        event.preventDefault();
+        var url = '@Url.Action("PopulateSaveReports")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { ViewDataId:'@Model.ViewDataId'},
+            success: function (result) {
+                $('#ReportName').empty();
+                $('#ReportName').append($("<option></option>").attr("value", "").text(" -- Select Saved Reports -- "));
+                $.each(result, function (i, item) {
+                    $("#ReportName").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function SetDates(value)
+    {
+        if (value == 1)
+        {
+            $('#Fromdate').datepicker("setDate", '@Session["StartDate"].ToString().Trim()');
+            $('#ToDate').datepicker("setDate", '@Session["LastDate"].ToString().Trim()');
+        }
+        else if (value == 2)
+        {
+            var d = new Date();
+            var Month = d.getMonth() + 1;
+            var LastDate = "";
+            var days = daysInMonth();
+            if (days < 9) {
+                LastDate = "0" + days.toString().trim() + "/";
+            } else {
+                LastDate = days.toString().trim() + "/";
+            }
+
+            var SDD = "01/" + Month + "/" + d.getFullYear();
+            var LDD = LastDate + Month + "/" + d.getFullYear();
+
+            $('#Fromdate').datepicker("setDate", SDD);
+            $('#ToDate').datepicker("setDate", LDD);
+        }
+        else if (value == 3)
+        {
+            var d = new Date();
+            var Month = d.getMonth() + 1;
+            var day = d.getDate();
+            var LastDate = "";
+            if (day < 9) {
+                LastDate = "0" + day.toString().trim() + "/";
+            } else {
+                LastDate = day.toString().trim() + "/";
+            }
+            var SDD = LastDate + Month + "/" + d.getFullYear();
+
+
+            $('#Fromdate').prop("disabled", false);
+            $('#ToDate').prop("disabled", false);
+            $('#Fromdate').datepicker("setDate", SDD);
+            $('#ToDate').datepicker("setDate", SDD);
+        }
+    }
+    function daysInMonth() {
+
+        var d = new Date();
+        var month = d.getMonth() + 1;
+        var year = d.getFullYear();
+
+        return new Date(year, month, 0).getDate();
+    }
+    function clickPrint(mwhat) {
+
+        var LrGenetate = "";
+        if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'A'" + ",'M'";
+        } else if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == false) {
+            LrGenetate = "'A'";
+        } else if ($(".LrGenerateA").is(":checked") == false && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'M'";
+        }
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        //var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val() + '&mWhat=' + mwhat, '_blank');
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Fromdate=' + $("#Fromdate").val() + '&page=' + $('#pager1') + '&rows= @Session["GridRows"]' + '&ViewDataId=' + $("#FormatCode").val()+'&ToDate=' + $("#ToDate").val() + '&FromBranch=' + $("#FromBranch").val() + '&ToBranch=' + $("#ToBranch").val() + '&FromDestination=' + $("#FromDestination").val() + '&ToDestination=' + $("#ToDestination").val() + '&BillingBranch=' + $("#BillingBranch").val() + '&LrType=' + $("#LrType").val() + '&Consignor=' + $("#Consignor").val() + '&Consignee=' + $("#Consignee").val() + '&BillingParty=' + $("#BillingParty").val() + '&ChargeType=' + $("#ChargeType").val() + '&Particular=' + $("#Particular").val() + '&Unit=' + $("#Unit").val() + '&ReportTypeL=' + $("#ReportTypeL").val() + '&Collection=' + $("#Collection").val() + '&Delivery=' + $("#Delivery").val() + '&LrGenetate=' + LrGenetate + '&ConsignmentNo=' + $("#ConsignmentNo").val() + '&ChargeShow=' + $("#ChargeShow").val() + '&BillChargeShow=' + $("#BillChargeShow").val() + '&BillRelationDetails=' + $("#BillRelationDetails").val() + '&DispatchDetails=' + $("#DispatchDetails").val() + '&DeliveryDetails=' + $("#DeliveryDetails").val() + '&ExpensesDetails=' + $("#ExpensesDetails").val() + '&mWhat=' + mwhat, '_blank');
+
+    };
+
+    function PrintReport() {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var murl="/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=@Model.ViewDataId &mopening="+ $('#openb').val()+"&mRunning=true&mParaString=Code^" + $('#Account').val()+ '&Code=' + $('#Account').val();
+        window.open(murl,'_blank');
+    };
+
+    @*$('#btnPDF').click(function () {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val()+'&mWhat='+'EPDF', '_blank');
+    });
+
+    $('#btnPDL').click(function () {
+        var mformat=$("#hdnformatname").val();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + mformat + '&Code=' + $('#Account').val()+'&mWhat='+'PDL', '_blank');
+    });*@
+
+    function clickRefresh() {
+
+        $('#acledger').jqGrid('clearGridData');
+        $("#acledger").jqGrid("GridUnload");
+        $('#acledger').trigger('reloadGrid');
+
+        $("#hdnformatname").val('@Model.ViewDataId');
+
+        GridReload();
+        document.getElementById("Ledger").click();
+
+    }
+
+    function GetURL(mdocument) {
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var mURL = '@Url.Action("GetURL")?mDate=' + mDate + '&mdocument=' + mdocument;
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                //mURL = encodeURIComponent(result.url);
+                $('.spinner').hide();
+                if (result.url != "") {
+                    //var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val(), '_blank');
+                    window.open(result.url, '_blank');
+                    //window.location.href = result.url;
+                } else {
+                    alert("Error! Can't Zoom into the Transaction!");
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+
+    function GridReload() {
+        event.preventDefault();
+        $('.spinner').show();
+        $("#FormatCode").val('@Model.ViewDataId');
+
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+
+        var LrGenetate = "";
+        if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'A'" + ",'M'";
+        } else if ($(".LrGenerateA").is(":checked") == true && $(".LrGenerateM").is(":checked") == false) {
+            LrGenetate = "'A'";
+        } else if ($("#CustomerF").is(":checked") == false && $(".LrGenerateM").is(":checked") == true) {
+            LrGenetate = "'M'";
+        }
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=@Model.ViewDataId &ChargeShow=' + $("#ChargeShow").val() + '&BillChargeShow=' + $("#BillChargeShow").val() + '&BillRelationDetails=' + $("#BillRelationDetails").val() + '&DispatchDetails=' + $("#DispatchDetails").val() + '&DeliveryDetails=' + $("#DeliveryDetails").val() + '&ExpensesDetails=' + $("#ExpensesDetails").val();
+        var sUrlpath = '@Url.Action("GetGridData")?Fromdate=' + $("#Fromdate").val() + '&ViewDataId=@Model.ViewDataId &ToDate=' + $("#ToDate").val() + '&FromBranch=' + $("#FromBranch").val() + '&ToBranch=' + $("#ToBranch").val() + '&FromDestination=' + $("#FromDestination").val() + '&ToDestination=' + $("#ToDestination").val() + '&BillingBranch=' + $("#BillingBranch").val() + '&LrType=' + $("#LrType").val() + '&Consignor=' + $("#Consignor").val() + '&Consignee=' + $("#Consignee").val() + '&BillingParty=' + $("#BillingParty").val() + '&ChargeType=' + $("#ChargeType").val() + '&Particular=' + $("#Particular").val() + '&Unit=' + $("#Unit").val() + '&ReportTypeL=' + $("#ReportTypeL").val() + '&Collection=' + $("#Collection").val() + '&Delivery=' + $("#Delivery").val() + '&LrGenetate=' + LrGenetate + '&ConsignmentNo=' + $("#ConsignmentNo").val() + '&ChargeShow=' + $("#ChargeShow").val() + '&BillChargeShow=' + $("#BillChargeShow").val() + '&BillRelationDetails=' + $("#BillRelationDetails").val() + '&DispatchDetails=' + $("#DispatchDetails").val() + '&DeliveryDetails=' + $("#DeliveryDetails").val() + '&ExpensesDetails=' + $("#ExpensesDetails").val();
+
+         var sPathUrl = '@Url.Action("GetGridStructureRecords")';
+        var ModelData = {};
+        ModelData["Date"] = mDate;
+        ModelData["ViewDataId"] = '@Model.ViewDataId';
+        ModelData["Branch"] = $("#Branch").val();
+        ModelData["Charge"] = $("#Charge").val();
+        ModelData["Customer"] = $("#Customer").val();
+        ModelData["GetReportParameter"] = $("#GetReportParameter").val();
+
+
+        if ($("input[name='AccountType']:checked").val() =="CustomerFF") {
+            ModelData["CustomerF"] = true;
+        } else {
+            ModelData["CustomerF"] = false;
+        }
+
+        if ($("input[name='Amount']:checked").val() =="BillAmt") {
+            ModelData["LRBillAmtF"] = true;
+        } else {
+            ModelData["LRBillAmtF"] = false;
+        }
+
+        ModelData["AccountF"] = $("#AccountF").val();
+        ModelData["BranchF"] = $("#BranchF").val();
+
+
+
+
+        var DTO = { Model: ModelData };
+
+
+        $.ajax({
+            data: JSON.stringify(DTO),//Suresh
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                $('#openb').val(obj[2]);
+                $('#closeb').val(obj[3]);
+                $('#tcredit').val(obj[4]);
+                $('#tdebit').val(obj[5]);
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#acledger').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 235,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#acledger');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'LrNo');
+                    GetURL(cellVal);
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pager1').height = 5;
+                },
+            });
+            jQuery("#acledger").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#acledger").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    // grid functions for MthlyAccSummary
+    function GridReloadMthSummary() {
+        event.preventDefault();
+        $('.spinner').show();
+        $("#FormatCode").val("DeliveryReport");
+        $('#mthsummary').jqGrid('clearGridData');
+        $("#mthsummary").jqGrid("GridUnload");
+        $('#mthsummary').trigger('reloadGrid');
+
+
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        //var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'DeliveryReport' + '&DelBranch=' + $('#DelBranch').val() + '&DelGeneral=' + $('#DelGeneral').prop("checked");
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'DeliveryReport' + '&DelBranch=' + $('#DelBranch').val() + '&DelGeneral=' + $('#DelGeneral').prop("checked");
+
+         var sPathUrl = '@Url.Action("GetGridStructureRecords")';
+        var ModelData = {};
+        ModelData["Date"] = mDate;
+        ModelData["ViewDataId"] = 'DeliveryReport';
+        ModelData["Branch"] = $("#Branch").val();
+        ModelData["Charge"] = $("#Charge").val();
+        ModelData["Customer"] = $("#Customer").val();
+
+
+        if ($("input[name='AccountType']:checked").val() =="CustomerFF") {
+            ModelData["CustomerF"] = true;
+        } else {
+            ModelData["CustomerF"] = false;
+        }
+
+        if ($("input[name='Amount']:checked").val() =="BillAmt") {
+            ModelData["LRBillAmtF"] = true;
+        } else {
+            ModelData["LRBillAmtF"] = false;
+        }
+
+        ModelData["AccountF"] = $("#AccountF").val();
+        ModelData["BranchF"] = $("#BranchF").val();
+
+        var DTO = { Model: ModelData };
+
+        $.ajax({
+            data: JSON.stringify(DTO),//Suresh
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataMthSummary();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataMthSummary() {
+            $('#mthsummary').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: false,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager2'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 235,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll:true,
+                autoencode: true,
+                search: false,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#mthsummary").jqGrid('navGrid', "#pager2",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#mthsummary").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    function GridReloadZoneMthSummary() {
+        event.preventDefault();
+        $('.spinner').show();
+        $("#FormatCode").val("DeliveryReport");
+        $('#zonemthsummary').jqGrid('clearGridData');
+        $("#zonemthsummary").jqGrid("GridUnload");
+        $('#zonemthsummary').trigger('reloadGrid');
+
+
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        //var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + 'DeliveryReport' + '&DelBranch=' + $('#DelBranch').val() + '&DelGeneral=' + $('#DelGeneral').prop("checked");
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + 'ZoneBookingReport' + '&DelBranch=' + $('#DelBranch').val() + '&DelGeneral=' + $('#DelGeneral').prop("checked");
+
+         var sPathUrl = '@Url.Action("GetGridStructureRecords")';
+        var ModelData = {};
+        ModelData["Date"] = mDate;
+        ModelData["ViewDataId"] = 'DeliveryReport';
+        ModelData["Branch"] = $("#Branch").val();
+        ModelData["Charge"] = $("#Charge").val();
+        ModelData["Customer"] = $("#Customer").val();
+
+
+        if ($("input[name='AccountType']:checked").val() =="CustomerFF") {
+            ModelData["CustomerF"] = true;
+        } else {
+            ModelData["CustomerF"] = false;
+        }
+
+        if ($("input[name='Amount']:checked").val() =="BillAmt") {
+            ModelData["LRBillAmtF"] = true;
+        } else {
+            ModelData["LRBillAmtF"] = false;
+        }
+
+        ModelData["AccountF"] = $("#AccountF").val();
+        ModelData["BranchF"] = $("#BranchF").val();
+
+        var DTO = { Model: ModelData };
+
+        $.ajax({
+            data: JSON.stringify(DTO),//Suresh
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataMthSummary();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataMthSummary() {
+            $('#zonemthsummary').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: false,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#zonepager2'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 235,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll:true,
+                autoencode: true,
+                search: false,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#zonemthsummary").jqGrid('navGrid', "#zonepager2",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#zonemthsummary").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    // grid functions for DailySummary
+    function GridReloadDailySummary() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSales")?Date=' + mDate + '&ViewDataId=' + 'LedgerDailySummary' + '&Code=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridDataSales")?Date=' + mDate + '&ViewDataId=' + 'LedgerDailySummary' + '&Code=' + $('#Account').val();
+
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridDataDailySummary();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataDailySummary() {
+            $('#DailySummary').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: false,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerd'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 215,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: true,
+                autoencode: true,
+                search: false,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    $('.spinner').show();
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    $('.spinner').hide();
+                },
+            });
+            jQuery("#DailySummary").jqGrid('navGrid', "#pagerd",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#DailySummary").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function ClickPara() {
+        $('#Optionsmodal').modal('show');
+    }
+
+    function LoadDelBranch() {
+        var url = '@Url.Action("DelBranch")'
+        $('#DelBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DelBranch', text: '@Model.DelBranchL' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" id="infofooter" style="position:fixed;background-color:lightgray;padding:5px;width:100%;margin-top:0%;height:41px;">
+    <div class="fixhead">
+        <div class="col-md-2" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt">@Model.Header</b>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <div class="col-md-2 pull-right" style="padding-right:0px; padding-top:-3px;float:right;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="clickRefresh()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;padding-right:15px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="ClickPara()" class="fa fa-cogs" style="font-size:20px;cursor:pointer" title="Parameters"></a>
+            </div>
+            <div class="btn-group" style="float:left;">
+                <button data-toggle="dropdown" class="btn btn-primary dropdown-toggle" type="button">Report  <span class="caret"></span></button>
+                <ul class="dropdown-menu" style="font-family:Tahoma; border-left:1px thin;box-shadow:3px 3px 15px 1px rgba(0,0,0,0.2) !important; margin-top:2px;min-height:322px;padding-top:10px; max-height:322px;width:205px;left:-75px;background-color:whitesmoke;">
+                    <li><a onclick="PrintReport()">&nbsp;&nbsp;&nbsp;Report Viewer</a></li>
+                    <li><a onclick="clickPrint('RPDF')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to PDF-Portrait</a></li>
+                    <li><a onclick="clickPrint('RPDL')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to PDF-Landscape</a></li>
+                    <li><a onclick="clickPrint('RXLS')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to Excel</a></li>
+                    <li><a onclick="clickPrint('RWRD')" class="disabled-link">&nbsp;&nbsp;&nbsp;Export to Word</a></li>
+                    <li><a onclick="clickPrint('CRPDF')" class="disabled-link">&nbsp;&nbsp;&nbsp;Report to PDF-Crystal</a></li>
+                    <li class="divider"></li>
+                    <li><a onclick="clickPrint('PDF')">&nbsp;&nbsp;&nbsp;Export Data to PDF-Portrait</a></li>
+                    <li><a onclick="clickPrint('PDL')">&nbsp;&nbsp;&nbsp;Export Data to PDF-Landscape</a></li>
+                    <li><a onclick="clickPrint('XLS')">&nbsp;&nbsp;&nbsp;Export Data to Excel</a></li>
+                    <li class="divider"></li>
+                    <li><a onclick="clickPrint('EPDF')">&nbsp;&nbsp;&nbsp;Send PDF in Email</a></li>
+                    <li><a onclick="clickPrint('EXLS')">&nbsp;&nbsp;&nbsp;Send Excel in Email</a></li>
+                    <li><a onclick="clickPrint('EWRD')">&nbsp;&nbsp;&nbsp;Send Word in Email</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnopnFormat" data-toggle="tooltip" data-placement="top" title="Which Column U Want In The List Page.">Column-View</button>
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:2%;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="tab">
+            <button class="tablinks" style="width:180px;" onclick="openTab(event, 'tabLedger')" id="Ledger">Branch Monthly Booking</button>
+            <button class="tablinks" style="width:130px;" onclick="openTab(event, 'tabMthSummary')">Branch Delivery</button>
+            <button class="tablinks" style="width:130px;" onclick="openTab(event, 'tabZoneMthSummary')">Zonewise Monthly Booking</button>
+            @*<button class="tablinks" style="width:130px;" onclick="openTab(event, 'tabDailySummary')">Daily Summary</button>*@
+        </div>
+
+        <div id="tabLedger" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="acledger" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pager1" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabMthSummary" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="mthsummary" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pager2" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabZoneMthSummary" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="zonemthsummary" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="zonepager2" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabDailySummary" class="tabcontent" style="height:485px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                <table id="DailySummary" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerd" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <script>
+
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+                if (tabName == "tabLedger") {
+                    $("#hdnformatname").val('@Model.ViewDataId');
+                }
+                else if (tabName == "tabMthSummary") {
+                    $('#mthsummary').jqGrid('clearGridData');
+                    $("#mthsummary").jqGrid("GridUnload");
+                    $('#mthsummary').trigger('reloadGrid');
+                    $("#hdnformatname").val('DeliveryReport');
+                    GridReloadMthSummary();
+                }
+                else if (tabName == "tabZoneMthSummary") {
+                    $('#zonemthsummary').jqGrid('clearGridData');
+                    $("#zonemthsummary").jqGrid("GridUnload");
+                    $('#zonemthsummary').trigger('reloadGrid');
+                    $("#hdnformatname").val('ZoneReport');
+                    GridReloadZoneMthSummary();
+                }
+
+            }
+            document.getElementById("Ledger").click();
+
+            function ParameterReset() {
+                var url = '@Url.Action("ParameterReset")';
+                var ModelData = {};
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        var AttachDoc = $("#ParameterDiv");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                    },
+                });
+            }
+
+
+
+
+        </script>
+    </div>
+</section>
+
+<div id="myfooter" class="footer-section" style="position:fixed;background-color:rgb(235, 235, 235);padding:2px;color:unset;height:30px;border:solid 1px black;">
+    <center><label class="col-sm-12 control-label" style="padding-top:2px;color:black;">ALT AIR-3.0, Shruham Software</label></center>
+</div>
+
+
+<div class="modal fade" id="Optionsmodal" style="z-index:auto;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: 70%;margin: auto;margin-top: 7%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="col-md-4">
+                </div>
+                <div class="col-md-3">
+                    <h4 class="modal-title">
+                        <b>Report Query Options</b>
+                    </h4>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="grid" id="FormatTable" style="max-height:400px;min-height:400px; width:100%;overflow:auto;">
+                    <div id="" class="" style="width:100%;">
+                        <div class="col-md-12" id="ParameterDiv">
+                            @Html.Partial("_OptionsView", Model)
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                <button class="btn btn-danger" style="float:left; font-size: 13px;padding:3px 12px;" id="btnReset">Reset</button>
+                <div class="col-sm-offset-2 col-sm-6" style="display:flex;">
+
+                    @Html.DropDownListFor(m => m.ReportName, DropdownHelper.EmptyList(), new { @class = "form-control ReportName", @Name = "ReportName", @Id = "ReportName" })
+                    <a onclick="GetSaveParameter();" class="btn btn-warning" style="padding:4px 10px;">
+                        <span class="glyphicon glyphicon-refresh"></span>
+                    </a>
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SubmitSaveReport">Save Report</button>
+                </div>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="Submit" data-dismiss="modal">GetReport</button>
+                <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="example-modal">
+    <div id="SaveReportName" class="modal modal-default">
+        <div class="modal-dialog" style="width:1000px;">
+            <div id="SaveReportNameDiv">
+                <div class="modal-body" style="margin-top:4%;">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Save Report Format</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <div class="col-sm-2">
+                                    <label class=" ModalLabel  control-label" style="width:auto;">Report Name :</label>
+                                </div>
+                                <div class="col-sm-10">
+                                    @Html.TextBoxFor(x => x.ReportName, new { @maxlength = "100", @class = "form-control", @id = "txtReportName", @style = "display: inline-table;float: initial;" })
+                                </div>
+                            </div>
+                            <br />
+
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button id="btnDeleteReportParam" class="btn btn-danger" type="button">Delete</button>
+                            <button id="btnReportParam" class="btn btn-success" type="button">Update</button>
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+<div class="example-modal">
+    <div id="updTfatsearch" class="modal modal-default">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="updTfatsearchDiv">
+                @*@Html.Partial("TfatSearchUpdate")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="hdnformatname" />
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.Branch)
+@Html.HiddenFor(x => x.Customer)
+@Html.HiddenFor(x => x.BranchF)
+@Html.HiddenFor(x => x.AccountF)
+@Html.HiddenFor(x => x.Charge)
+@Html.HiddenFor(x => x.GetReportParameter)
+@Html.HiddenFor(x => x.ViewDataId, new { @id = "FormatCode" })
+

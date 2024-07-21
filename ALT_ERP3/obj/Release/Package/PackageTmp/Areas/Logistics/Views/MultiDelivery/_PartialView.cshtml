@@ -1,0 +1,678 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.MultiDeliveryVM
+@using Common;
+@{
+    ViewBag.Title = "Delivery";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/JQGridJs/jquery.jqGrid.min.js")" type="text/javascript"></script>
+
+<link href="~/Content/ToogleCreate/CreateTgl.css" rel="stylesheet" />
+<script src="~/Content/ToogleCreate/CreateTgl.js"></script>
+
+<style>
+    .toggle {
+        border-radius: 15px !important;
+        margin-top: -35px !important;
+    }
+
+        .toggle.btn {
+            min-width: 77px !important;
+            min-height: 34px;
+        }
+
+    .bold {
+        color: green;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    legend {
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    .legend2 {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        background-color: #57c8f1;
+        color: white !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 20px 5px 20px;
+        margin-bottom: 0px !important;
+        margin-top: -36px;
+    }
+
+    .legend3 {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        color: white !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 20px 5px 20px;
+        margin-bottom: 0px !important;
+        margin-top: -36px;
+    }
+
+    .example {
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        width: max-content;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .example th {
+            background-color: #F7F7F7;
+            font-weight: bold;
+        }
+
+        .example th, .example td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .example, .example table td {
+            border: 0px solid #ccc;
+        }
+
+    .SearchRow {
+        background-color: coral;
+    }
+
+    .SelectedRow {
+        background-color: rgb(225 205 225) !important;
+    }
+
+    .HideRow {
+        display: none !important;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        $('#Fromdate').val('@Model.StartDate');
+        $('#ToDate').val('@Model.EndDate');
+        $('#Fromdate,#ToDate').datepicker({
+            format: "dd/mm/yyyy",
+            autoclose: true
+        });
+
+        $("#DeliveryDays").constrain({ allow: { regex: "[0-9]" } });
+
+        $('#GetLRLIst').modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+        $("#GetLRLIst").modal("hide");
+
+        // Select All Check Then Calculate No of Consignment And Stock
+        $("#DeselectAll").click(function () {
+            var TotalQty = 0;
+            var CheckBox = $("#DeselectAll").prop("checked");
+            if (CheckBox)
+            {
+                $("#list > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    debugger;
+                    Row.find("input[class='DebitGrid']").prop("checked", true);
+                    Row.find(".DELNarr").prop("disabled", false);
+                    Row.find(".DeliveryDate").prop("disabled", false);
+                    if (Row.find('td:eq(15)').text()!="") {
+                        TotalQty += parseInt(Row.find('td:eq(15)').text());
+                    }
+                });
+            }
+            else
+            {
+                $("#list > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    Row.find("input[class='DebitGrid']").prop("checked", false);
+                    Row.find(".DELNarr").prop("disabled", true);
+                    Row.find(".DeliveryDate").prop("disabled", true);
+                });
+            }
+            debugger;
+            $("#mTotalQty1").html(TotalQty);
+            $("#mTotalLR1").html($('#list').find("input[class='DebitGrid']:checked").length);
+        });
+        // Select Manual Consignment then Calculate Qty all columns
+        $("#SelectLR").blur(function () {
+
+            var TotalQty = 0;
+            var WantToselectLRNO = $("#SelectLR").val();
+            var ScrollRow;
+            var count = 0;
+            debugger;
+            if ($("#SelectLR").val() != "" && $("#SelectLR").val() != null) {
+                $('#list tbody tr').each(function () {
+                    debugger;
+                    var Qty = 0
+                    var Row = $(this).closest('tr');
+                    var LRNO = Row.find('td:eq(10)').text();
+                    var CheckBox = $(this).find("input[class='DebitGrid']").is(':checked');
+                    Row.find(".DELNarr").prop("disabled", true);
+                    Row.find(".DeliveryDate").prop("disabled", true);
+
+                    if (LRNO == WantToselectLRNO) {
+                        ScrollRow = Row;
+                        Row.find("input[class='DebitGrid']").prop("checked", true);
+                        Row.find(".DELNarr").prop("disabled", false);
+                        Row.find(".DeliveryDate").prop("disabled", false);
+                        Qty = parseInt(Row.find('td:eq(15)').text());
+
+                        var objTable = $("#list");
+                        var iRow = ScrollRow.find("td:eq(7)").text();
+                        objTable.jqGrid('setSelection', iRow);
+                        count++;
+                    }
+                    else {
+                        if (CheckBox) {
+                            Qty = parseInt(Row.find('td:eq(15)').text());
+                            Row.find(".DELNarr").prop("disabled", false);
+                            Row.find(".DeliveryDate").prop("disabled", false);
+                        }
+                    }
+                    TotalQty += Qty;
+                });
+
+                var check = $('#list').find("input[class='DebitGrid']:checked").length;
+                $("#mTotalQty1").html(TotalQty);
+                $("#mTotalLR1").html(check);
+                debugger;
+                if (count == 0) {
+                    alert("Not Found");
+                    $("#Search").focus();
+                }
+                else {
+                    $("#SelectLR").focus();
+                }
+            }
+            $("#SelectLR").val("");
+        });
+        // Search all columns
+        $('#Search').keyup(function () {
+            var value = $(this).val();
+            if (value != "") {
+                $('#list > tbody > tr').removeClass('SearchRow');
+
+                $("#list > tbody > tr > td ").each(function () {
+                    if ($(this).text().toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                        var dd = $(this).text().toLowerCase();
+                        $(this).addClass("SearchRow");
+                    }
+                    else {
+                        $(this).removeClass("SearchRow");
+                    }
+                });
+            }
+            else {
+                $('#list td').removeClass('SearchRow');
+            }
+        });
+
+
+        $('#GodownPickData').click(function (event) {
+            event.preventDefault();
+            $("#DeselectAll").prop('checked', false);
+            $("#Search").val("");
+            $("#SelectLR").val("");
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            GridReload("1");
+        });
+        $('#TransitPickData').click(function (event) {
+            event.preventDefault();
+            $("#DeselectAll").prop('checked', false);
+            $("#Search").val("");
+            $("#SelectLR").val("");
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            GridReload("2");
+        });
+        $('#AllPickData').click(function (event) {
+            event.preventDefault();
+            $("#DeselectAll").prop('checked', false);
+            $("#Search").val("");
+            $("#SelectLR").val("");
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            GridReload("0");
+        });
+
+        $('#btnGetLc').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("GridView")';
+            var myTableArray = [];
+            $("#list > tbody  > tr").each(function () {
+                if ($(this).find("input[class='DebitGrid']").prop("checked") == true) {
+                    debugger;
+                    var myDets =
+                    {
+                        StockTablekey: $(this).find('td:eq(4)').text(),
+                        Tablekey: $(this).find('td:eq(5)').text(),
+                        DeliveryDate: $(this).find('.DeliveryDate').val(),
+                        DeliveryRemark: $(this).find('.DELNarr').val(),
+                        Lrno: $(this).find('td:eq(10)').text(),
+                        BookDate: $(this).find('td:eq(11)').text(),
+                        StockBranch: $(this).find('td:eq(12)').text(),
+                        StockType: $(this).find('td:eq(13)').text(),
+                        TotQty: $(this).find('td:eq(14)').text(),
+                        StockQty: $(this).find('td:eq(15)').text(),
+                        ChgWt: $(this).find('td:eq(16)').text(),
+                        ActWt: $(this).find('td:eq(17)').text(),
+                        ChgTypeName: $(this).find('td:eq(18)').text(),
+                        UnitName: $(this).find('td:eq(19)').text(),
+                        FromName: $(this).find('td:eq(20)').text(),
+                        ToName: $(this).find('td:eq(21)').text(),
+                        ConsignerName: $(this).find('td:eq(22)').text(),
+                        ConsigneeName: $(this).find('td:eq(23)').text(),
+                        LRtypeName: $(this).find('td:eq(24)').text(),
+                        Delivery: $(this).find('td:eq(25)').text(),
+                        Colln: $(this).find('td:eq(26)').text(),
+                    }
+                    myTableArray.push(myDets);
+                }
+            });
+            var check = $('#list').find("input[class='DebitGrid']:checked").length;
+            if (check > 0)
+            {
+                $("#GetLRLIst").modal("hide");
+                var ModelData = {};
+                ModelData["GridDetails"] = myTableArray;
+                var DTO = { mModel:ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        var LoadDownLoadFiles1 = $("#SelectedLrShow");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles1.html('');
+                        LoadDownLoadFiles1.html(data.Html);
+                        $("#txtSearchLr").val("");
+                    },
+                });
+            }
+            else
+            {
+                alert("Please Select Stock Required...");
+            }
+        });
+
+        $("#Submit").click(function (event) {
+            if ($("#example tbody tr").length<=0) {
+                alert('Atleast One Consignment Stock Required To Delivery...');
+                return;
+            }
+            $('#Submit').prop("disabled", true);
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        alert("Documents Save Sucessfully...!");
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+
+    });
+    function GridReload(value) {
+        var ColName, Coldata;
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=PickStockMultiDelivery';
+        var ExistLr = "";
+        $("#example > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            if (ExistLr == "") {
+                ExistLr = ExistLr + tds.eq(0).text() + "',"
+            }
+            else {
+                ExistLr = ExistLr + "'" + tds.eq(0).text() + "',"
+            }
+        });
+        if (ExistLr != "") {
+            ExistLr = ExistLr.substr(0, ExistLr.length - 2)
+        }
+
+        var sUrlpath = '@Url.Action("GetGridData")?ViewDataId=PickStockMultiDelivery&mVar4=' + ExistLr + '&FromDate=' + $("#Fromdate").val() + '&ToDate=' + $("#ToDate").val() + '&mVar5=' + $("#DeliveryDays").val();
+
+        if (value == "1")
+        {
+            sUrlpath = '@Url.Action("GetGridData1")?ViewDataId=PickStockMultiDelivery&mVar4=' + ExistLr + '&FromDate=' + $("#Fromdate").val() + '&ToDate=' + $("#ToDate").val() + '&mVar5=' + $("#DeliveryDays").val();
+        }
+        else if (value == "2")
+        {
+            sUrlpath = '@Url.Action("GetGridData2")?ViewDataId=PickStockMultiDelivery&mVar4=' + ExistLr + '&FromDate=' + $("#Fromdate").val() + '&ToDate=' + $("#ToDate").val() + '&mVar5=' + $("#DeliveryDays").val();
+        }
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: 350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                },
+
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var beChecked = "<input type ='checkbox' id='" + rowId + "' value='" + jQuery("#list").getCell(rowId, "Recordekey") + "'  onclick='JQGridCheckbox();' class='DebitGrid' name='DebitGrid'  style='height: 22px;width: 19px;' />";
+                        //var Narr = "<textarea class='DELNarr' name='w3review' rows='2' cols='30' maxlength='150' disabled></textarea>";
+                        var DeliveryDate = "<input value='" + jQuery("#list").getCell(rowId, "Delivery Date") + "' class='form-control DeliveryDate' name='DeliveryDate' type='text' disabled>";
+                        jQuery("#list").jqGrid('setRowData', rowId, { 'Select': beChecked, 'Delivery Date': DeliveryDate });
+                    }
+                    $('.DeliveryDate').datepicker({
+                        format: "dd/mm/yyyy",
+                        autoclose: true
+                    });
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            $('#GetLRLIst').modal('show');
+        };
+    };
+    function JQGridCheckbox() {
+        var TotalQty = 0, count=0;
+
+        $('#list tbody tr').each(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            var CheckBox = $(this).find("input[class='DebitGrid']").is(':checked');
+            Row.find(".DELNarr").prop("disabled", true);
+            Row.find(".DeliveryDate").prop("disabled", true);
+            var Qty = 0;
+            if (CheckBox)
+            {
+                Qty = parseInt(Row.find('td:eq(15)').text());
+                Row.find(".DELNarr").prop("disabled", false);
+                Row.find(".DeliveryDate").prop("disabled", false);
+                count++;
+            }
+            TotalQty += Qty;
+        });
+
+
+        $("#mTotalQty1").html(TotalQty);
+        $("#mTotalLR1").html(count);
+    }
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+    </div>
+</header>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LRMaster" role="form" style="">
+            <fieldset class=" col-sm-12" style="margin-top: 3%;">
+                <div class="form-group" style="margin-top: 5px;">
+                    <div class="col-md-3" style="padding-right:unset;">
+                        <div>
+                            <div class="col-md-10 pull-right">
+                                <div class="col-sm-12" style="padding-left: 0px;">
+                                    <div class="input-group input-span" data-date-format="dd/mm/yyyy" style="margin-right: 0px;">
+                                        <div class="col-sm-5" style="padding-left:0px;padding-right:0px;">
+                                            <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                                        </div>
+                                        <div class="col-sm-2" style="padding-left:0px;padding-right:0px;">
+                                            <span class="input-group-addon" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">to</span>
+                                        </div>
+                                        <div class="col-sm-5" style="padding-left:0px;padding-right:0px;">
+                                            <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-1 pull-right" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt;color:black; width:unset;text-align:right">
+                                Period:
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-3">
+                        <label class=" bold   col-md-5  control-label">Set Delivery Date:</label>
+                        <div class="col-md-5">
+                            @Html.TextBoxFor(x => x.DeliveryDays, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliveryDays, @title = "Add Days To Consignment Bookdate And then Set To DeliveryDate." })
+                        </div>
+                    </div>
+
+                    <div class="col-sm-3">
+                        <button type="button" style="height:28px;padding-top:4px;" class="btn btn-primary" id="GodownPickData">Godown Stock</button>
+                        <button type="button" style="height:28px;padding-top:4px;" class="btn btn-primary" id="TransitPickData">Transit Stock</button>
+                        <button type="button" style="height:28px;padding-top:4px;" class="btn btn-primary" id="AllPickData">ALL Stock</button>
+                    </div>
+
+
+                </div>
+            </fieldset>
+        </div>
+    </div>
+</section>
+<section class="panel" style="margin-top: 20px;">
+    <div class="panel-body" style="margin-top:-30px;">
+        <div class="form-horizontal " role="form" style="">
+            <fieldset class=" col-md-12" style="">
+                <div class="panel panel-default" style="margin-bottom: 0px !important;">
+                    <div class="panel-body " style="max-height:350px;min-height:350px;padding-left: 20px;padding: 1px !important;">
+                        <div class="grid" id="SelectedLrShow" style="overflow: auto;width: 100%;display: block !important;max-height:290px;min-height:290px; width:auto;">
+                            @Html.Partial("GridView", Model.GridDetails)
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+</section>
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4">
+            <div class="pull-left">
+            </div>
+        </div>
+        <div class="col-sm-4" style="margin-top:0px;">
+            <div class="col-sm-12" id="" style="overflow: hidden;padding-left: 0px!important;">
+                <label class="col-sm-offset-4 col-sm-8 control-label" style="margin-top:5px;">ALT AIR-3.0, Shruham Software</label>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode == "Delete")
+                {
+                    <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+
+                }
+                else
+                {
+                    <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+<!--LR Stock Modal -->
+<div class="modal fade" id="GetLRLIst" style="width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 5%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-2">
+                        <h4 class="modal-title">
+                            <b>Stock Details</b>
+                        </h4>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="col-md-4">
+                            <label class=" bold control-label" style="margin-top: 5px;">Select All :</label>
+                        </div>
+                        <div class="col-md-1">
+                            <input type="checkbox" tabindex="1" id="DeselectAll" style="height:20px;width:20px;" />
+                        </div>
+                        <div class="col-md-3">
+                        </div>
+                        <div class="col-md-1">
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="col-md-2">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Select By</label>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" id="SelectLR" tabindex="2" class="form-control" placeholder="LR NO" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="text" id="Search" class="form-control" placeholder="Search Here" />
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div id="tabLedger" class="tabcontent" style="height:450px;padding:0px 0px 0px 0px;display:block !important;">
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="pager" style="height:32px;width:100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="form-group">
+                    <div class="col-md-1" style="font-weight: bold;text-align:center;color: red;">Total -:</div>
+                    <div class="col-md-2" style="font-weight: bold;width:auto;">No. Of LR :<label id="mTotalLR1" style="padding-left: 15px;font-weight: bold;color: red;">0</label></div>
+                    <div class="col-md-2" style="font-weight: bold;width:auto;">Quantity :<label id="mTotalQty1" style="padding-left: 15px;font-weight: bold;color: red;">0</label></div>
+                </div>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnGetLc">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>

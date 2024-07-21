@@ -1,0 +1,1004 @@
+﻿@model GridOption
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<style>
+    .Clear {
+        clear: both;
+    }
+</style>
+
+<script type="text/javascript">
+    var count = 0, amount = 0, count1 = 0, amount1 = 0, DebitTableKeyArray = [], CreditTableKeyArray = [];
+    var mheight = ($(window).innerHeight()-16-16-63-45-33-34-34-80)/2;//top+header+debitinfo+crinfo+fixedbottom+2pagers = 2grids
+    $(document).ready(function () {
+
+        GetMyFavorites('@Model.ViewDataId');
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        $('#list').jqGrid('clearGridData');
+        $('#list').jqGrid("GridUnload");
+        $('#list').trigger('reloadGrid');
+        $('#Creditlist').jqGrid('clearGridData');
+        $('#Creditlist').jqGrid("GridUnload");
+        $('#Creditlist').trigger('reloadGrid');
+        LoadBranch();
+        LoadLocation();
+        LoadParties();
+        $('#hdntype').val('@Model.Type');
+        $('#hdnmode').val('@Model.Mode');
+        $('#hdnMType').val('@Model.MainType');
+        document.getElementById("section1").style.height = mheight;
+        document.getElementById("panel1").style.height = mheight;
+        $('#btnRefresh').click(function () {
+            ResetDebitAndCreditEntry();
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            Debitgridreload();
+            $('#list1').jqGrid('clearGridData');
+            $("#list1").jqGrid("GridUnload");
+            $('#list1').trigger('reloadGrid');
+            gridreload1();
+            $('#Creditlist').jqGrid('clearGridData');
+            $('#Creditlist').jqGrid("GridUnload");
+            $('#Creditlist').trigger('reloadGrid');
+            Creditgridreload();
+            $('#Creditlist1').jqGrid('clearGridData');
+            $('#Creditlist1').jqGrid("GridUnload");
+            $('#Creditlist1').trigger('reloadGrid');
+            gridreload2();
+            //gridreload1();
+        });
+
+        $('#Account').change(function () {
+            //debugger;
+            $('.spinner').show();
+            ResetDebitAndCreditEntry();
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            Debitgridreload();
+            $('#list1').jqGrid('clearGridData');
+            $("#list1").jqGrid("GridUnload");
+            $('#list1').trigger('reloadGrid');
+            gridreload1();
+            $('#Creditlist').jqGrid('clearGridData');
+            $('#Creditlist').jqGrid("GridUnload");
+            $('#Creditlist').trigger('reloadGrid');
+            Creditgridreload();
+            $('#Creditlist1').jqGrid('clearGridData');
+            $('#Creditlist1').jqGrid("GridUnload");
+            $('#Creditlist1').trigger('reloadGrid');
+            gridreload2();
+            //$.ajax({
+            //    type: "POST",
+            //    traditional: true,
+            //    url: "../ARAPInterface/Address",
+            //    data: {PartyCode:$("#Account").val()},
+            //    success: function(result) {
+            //        //debugger;
+            //        $('.spinner').hide();
+            //        if (result[0].Mobile=="" && result[0].Tel1=="" && result[0].Tel2=="" && result[0].Adrl1=="") {
+            //            var Add="";
+            //            $('#Address').html(Add);
+            //        }else {
+            //            var Add="MOB NO:"+result[0].Mobile+" Tel NO:"+result[0].Tel1+"/"+result[0].Tel2+" Addr:"+result[0].Adrl1;
+            //            // $("#Address").val(Add);
+            //            $('#Address').html(Add);
+            //        }
+            //    }
+            //});
+            LoadOpeningClosing()
+        });
+
+        //$('#LocationCode').change(function () {
+        //    //debugger;
+        //    ResetDebitAndCreditEntry();
+        //    $('#list').jqGrid('clearGridData');
+        //    $("#list").jqGrid("GridUnload");
+        //    $('#list').trigger('reloadGrid');
+        //    Debitgridreload();
+        //    $('#list1').jqGrid('clearGridData');
+        //    $("#list1").jqGrid("GridUnload");
+        //    $('#list1').trigger('reloadGrid');
+        //    gridreload1();
+        //    $('#Creditlist').jqGrid('clearGridData');
+        //    $('#Creditlist').jqGrid("GridUnload");
+        //    $('#Creditlist').trigger('reloadGrid');
+        //    Creditgridreload();
+        //    $('#Creditlist1').jqGrid('clearGridData');
+        //    $('#Creditlist1').jqGrid("GridUnload");
+        //    $('#Creditlist1').trigger('reloadGrid');
+        //    gridreload2();
+        //});
+
+        $('#btnFIFO').click(function () {
+            var confrm = confirm('Are You Sure To FIFO Adjustment.');
+            if (confrm == false) {
+                $('.spinner').hide();
+                return;
+            }
+            else {
+                if ($('#list tr').length - 1 > 0 && $('#Creditlist tr').length - 1 > 0) {
+                    $('.spinner').show();
+                    $.ajax({
+                        type: "POST",
+                        traditional: true,
+                        url: "/Accounts/ARAPInterface/FIFOAdjust",
+                        data: { Fromdate: $('#Fromdate').val(), ToDate: $('#ToDate').val(), ViewDataId: '@Model.ViewDataId', LocationCode: $('#LocationCode').val(), Code: $('#Account').val(), MainType: $('#hdnMType').val() },
+                        success: function (result) {
+                            $('.spinner').hide();
+                            if (result == "Success") {
+                                $('#list').jqGrid('clearGridData');
+                                $("#list").jqGrid("GridUnload");
+                                $('#list').trigger('reloadGrid');
+                                Debitgridreload();
+                                $('#list1').jqGrid('clearGridData');
+                                $("#list1").jqGrid("GridUnload");
+                                $('#list1').trigger('reloadGrid');
+                                gridreload1();
+                                $('#Creditlist').jqGrid('clearGridData');
+                                $('#Creditlist').jqGrid("GridUnload");
+                                $('#Creditlist').trigger('reloadGrid');
+                                Creditgridreload();
+                                $('#Creditlist1').jqGrid('clearGridData');
+                                $('#Creditlist1').jqGrid("GridUnload");
+                                $('#Creditlist1').trigger('reloadGrid');
+                                gridreload2();
+                            } else { alert(response); }
+                        }
+                    });
+                } else {
+                    $('.spinner').hide();
+                    alert("Erorr! Getting Data!");
+                }
+            }
+        });
+
+        $('#btnAdjust').click(function () {
+            var flag=false;
+            //debugger;
+            if ( CreditTableKeyArray.length>0 && DebitTableKeyArray.length>0) {
+                flag=true
+            } else {
+                flag=false
+            }
+            if (flag) {
+                CallServerSideAdjust();
+            }else {
+                alert("Please Select Proper Adjustment..!");
+            }
+        });
+
+        $('#btnRelease').click(function () {
+            var flag = false;
+            if (CreditTableKeyArray.length > 0 || DebitTableKeyArray.length > 0) {
+                flag = true
+            } else {
+                flag = false
+            }
+            if (flag) {
+                CallReleaseAdjust();
+            } else {
+                alert("Please Select Proper Release Document..!");
+            }
+
+            //CallReleaseAdjust();
+        });
+
+        $('#btnReleaseAll').click(function () {
+            if (confirm("Are sure to Relase all the Documents for this Party?")==true) {
+                CallReleaseAll();
+            }
+        });
+
+        $("#list").live("click", '.DebitGrid', function () {
+            //debugger;
+            DebitTableKeyArray=[];
+            //event.preventDefault();
+            $("#DebitEntry").css('color', 'red');
+            //var currentid = $(this).closest("tr").context.id;
+            //var sp = currentid.split('|');
+            //var Curramt = sp[0].split('$');
+            //var value = parseFloat(Curramt[1]).toFixed(2) ;
+            //var tablekey=sp[1].split('^');
+            amount=0.00;
+            count=0;
+            $('input[name="DebitGrid"]:checked').each(function() {
+                var Cid=this.id;
+                var currentid = Cid;
+                var sp = currentid.split('|');
+                var Curramt = sp[0].split('$');
+                var value = parseFloat(Curramt[1]).toFixed(2) ;
+                var tablekey=sp[1].split('^');
+                //if ($( "#"+currentid+"" ).prop( "checked", true )) {
+                amount = parseFloat(amount) + parseFloat(value);
+                DebitTableKeyArray.push(tablekey[1]);
+                count++;
+                // }
+            });
+
+            if (count==0) {
+                amount=0.00;
+            }
+            $("#chkCount").text(count);
+            $("#ChkAmt").text(amount.toFixed(2));
+        });
+
+        $("#Creditlist").live("click", '.CreditGrid', function () {
+            //debugger;
+            CreditTableKeyArray=[];
+            $("#CreditEntry").css('color', 'red');
+            amount=0.00;
+            count=0;
+            $('input[name="CreditGrid"]:checked').each(function() {
+                var Cid=this.id;
+                var currentid = Cid;
+                var sp = currentid.split('|');
+                var Curramt = sp[0].split('$');
+                var value = parseFloat(Curramt[1]).toFixed(2) ;
+                var tablekey=sp[1].split('^');
+                amount = parseFloat(amount) + parseFloat(value);
+                CreditTableKeyArray.push(tablekey[1]);
+                count++;
+            });
+
+            if (count==0) {
+                amount=0.00;
+            }
+            $("#chkCountC").text(count);
+            $("#ChkAmtC").text(amount.toFixed(2));
+        });
+    })
+
+    function ResetDebitAndCreditEntry() {
+        $("#DebitEntry").css('color', 'black');
+        $("#CreditEntry").css('color', 'black');
+        amount=0.00;
+        count=0;
+        $("#chkCount").text(count);
+        $("#ChkAmt").text(amount.toFixed(2));
+        $("#chkCountC").text(count);
+        $("#ChkAmtC").text(amount.toFixed(2));
+        DebitTableKeyArray=[];
+        CreditTableKeyArray=[];
+    }
+
+    function CallReleaseAll() {
+        //debugger;
+        $('.spinner').show();
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: "/Accounts/ARAPInterface/ReleaseAll",
+            data: {Code:$("#Account").val(),LocationCode: $('#LocationCode').val()},
+            success: function(result) {
+                $('.spinner').show();
+                if (result=="Success") {
+                    $('#list').jqGrid('clearGridData');
+                    $("#list").jqGrid("GridUnload");
+                    $('#list').trigger('reloadGrid');
+                    Debitgridreload();
+                    $('#list1').jqGrid('clearGridData');
+                    $("#list1").jqGrid("GridUnload");
+                    $('#list1').trigger('reloadGrid');
+                    gridreload1();
+                    $('#Creditlist').jqGrid('clearGridData');
+                    $('#Creditlist').jqGrid("GridUnload");
+                    $('#Creditlist').trigger('reloadGrid');
+                    Creditgridreload();
+                    $('#Creditlist1').jqGrid('clearGridData');
+                    $('#Creditlist1').jqGrid("GridUnload");
+                    $('#Creditlist1').trigger('reloadGrid');
+                    gridreload2();
+                } else {
+                    $('.spinner').hide();
+                    alert(result);
+                }
+            }
+        });
+    }
+
+    function CallReleaseAdjust() {
+        //debugger;
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: "/Accounts/ARAPInterface/ReleaseAdjust",
+            data: { CTablekey: CreditTableKeyArray, DTablekey: DebitTableKeyArray, Code: $("#Account").val(), LocationCode: $('#LocationCode').val(), MainType: $('#hdnMType').val()},
+            success: function(result) {
+                if (result=="Success") {
+                    $('#list').jqGrid('clearGridData');
+                    $("#list").jqGrid("GridUnload");
+                    $('#list').trigger('reloadGrid');
+                    Debitgridreload();
+                    $('#list1').jqGrid('clearGridData');
+                    $("#list1").jqGrid("GridUnload");
+                    $('#list1').trigger('reloadGrid');
+                    gridreload1();
+                    $('#Creditlist').jqGrid('clearGridData');
+                    $('#Creditlist').jqGrid("GridUnload");
+                    $('#Creditlist').trigger('reloadGrid');
+                    Creditgridreload();
+                    $('#Creditlist1').jqGrid('clearGridData');
+                    $('#Creditlist1').jqGrid("GridUnload");
+                    $('#Creditlist1').trigger('reloadGrid');
+                    gridreload2();
+                }else {alert(result);}
+            }
+        });
+    }
+
+    function CallServerSideAdjust() {
+        //debugger;
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: "/Accounts/ARAPInterface/Adjust",
+            data: { CTablekey: CreditTableKeyArray, DTablekey: DebitTableKeyArray, PartyCode: $("#Account").val(), EndDate: $('#ToDate').val(), LocationCode: $('#LocationCode').val(), MainType: $('#hdnMType').val()},
+            success: function(result) {
+                if (result=="Success") {
+                    $('#list').jqGrid('clearGridData');
+                    $("#list").jqGrid("GridUnload");
+                    $('#list').trigger('reloadGrid');
+                    Debitgridreload();
+                    $('#list1').jqGrid('clearGridData');
+                    $("#list1").jqGrid("GridUnload");
+                    $('#list1').trigger('reloadGrid');
+                    gridreload1();
+                    $('#Creditlist').jqGrid('clearGridData');
+                    $('#Creditlist').jqGrid("GridUnload");
+                    $('#Creditlist').trigger('reloadGrid');
+                    Creditgridreload();
+                    $('#Creditlist1').jqGrid('clearGridData');
+                    $('#Creditlist1').jqGrid("GridUnload");
+                    $('#Creditlist1').trigger('reloadGrid');
+                    gridreload2();
+                }else {alert(result);}
+            }
+        });
+    }
+
+    function LoadBranch() {
+        var url = '@Url.Action("GetBranches")'
+        $('#Branch').select2({
+            minimumInputLength:0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Text, id: item.Value
+                            }
+                        })
+                    };
+                }
+            },
+             initSelection: function (element, callback) {
+                var data = { id: '@Model.Branch', text: '@Model.BranchName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + ";width:200px;'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + ";width:200px;'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadLocation() {
+        var url = '@Url.Action("GetLocations")';
+        $('#LocationCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                 results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Text, id: item.Value
+                            }
+                        })
+                    };
+                }
+            },
+            //initSelection: function (element, callback) {
+            //    var elementText = $(element).attr('data-init-text');
+            //    callback({ "term": elementText });
+            //},
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + ";width:200px;'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + ";width:200px;'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadParties() {
+        var url = '@Url.Action("GetParties")'
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                //data:{LocationCode:$('#LocationCode').val()},
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                    types: ["exercise"],
+                    limit: -1,
+                    term: term + "^" + $('#hdnMType').val()
+                    };
+                },
+                results: function (data, page) {
+                    $("#Account").val("");
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Text, id: item.Value }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Code', text: '@Model.Name' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                $("#Account").val(exercise.id);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadOpeningClosing(){
+       var url = '@Url.Action("GetAccountOpenClose")?Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&LocationCode=' + $('#LocationCode').val()+ '&Code=' + $('#Account').val();
+                $.ajax({
+                    async: false,
+                    cache: false,
+                    url: url,
+                    type: "GET",
+                    dataType: "json",
+                    cache: false,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        $('#Opening').html(data.mOpening);
+                        $('#Closing').html(data.mClosing);
+
+                    },
+                });
+    }
+
+    function Debitgridreload() {
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=' + '@Model.ViewDataId';
+        var sUrlpath = '@Url.Action("GetGridDataDebit")?Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&ViewDataId=' + '@Model.ViewDataId' + '&LocationCode=' + $('#LocationCode').val() + '&Code=' + $('#Account').val() + '&MainType=' + $('#hdnMType').val()+'&IsFormatSelected='+$('#includezero').is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: 100,
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                sortname: 'TableKey',
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: true,
+                shrinkToFit: false,
+                //height: $(window).height() - 111 - 35 - 50,
+                height: mheight, //top+header+debit info+grid+crinfo+grid+fixedbottom+2pagers
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#list1').jqGrid('clearGridData');
+                    $('#list1').jqGrid("GridUnload");
+                    $('#list1').trigger('reloadGrid');
+                    gridreload1($("#list").getCell(id, "TableKey"));
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var rowData = jQuery('#list').jqGrid('getRowData', rowId);
+                        var gridId = jQuery("#list").getDataIDs();
+                        //loop through grid rows
+                        for (var countRow = 0; countRow < gridId.length; countRow++) {
+                            var rowId = gridId[countRow];
+                            //check if Cell has value either 0 or 1(for true/false)
+                            if (jQuery("#list").getCell(rowId, "Select") == " " || jQuery("#list").getCell(rowId, "Select") == null || jQuery("#list").getCell(rowId, "Select") == "") {
+                                //checked control
+                                var beChecked = "<input type ='checkbox' value='"+jQuery("#list").getCell(rowId, "TableKey")+"' id ='chkADJ$" + jQuery("#list").getCell(rowId, "Pending Amt") + "|" + rowId + "^" + jQuery("#list").getCell(rowId, "TableKey") +"'  class='DebitGrid' name='DebitGrid'  style='margin-left: 14px;height: 27px;width: 19px;margin-top: 1px;' />";
+                                ////unchecked control
+                                var beNotChecked = "<input type ='checkbox' value='"+jQuery("#list").getCell(rowId, "TableKey")+"' id ='chkADJ$" + jQuery("#list").getCell(rowId, "Pending Amt") + "|" + rowId + "^" + jQuery("#list").getCell(rowId, "TableKey") +"'  class='DebitGrid' name='DebitGrid' style='margin-left: 14px;height: 27px;width: 19px;margin-top: 1px;' />";//onclick='checkCheckBoc(this);'
+                                ////check if control is to be checked or not
+                                //var inputControl = jQuery("#jqMyGrid").getCell(rowId, "COLUMN4") == 0 ? beNotChecked : beChecked;
+                                var inputControl = jQuery("#list").getCell(rowId, "Select") == "" ? beNotChecked : beChecked;
+                                //set the checkBox
+                                jQuery("#list").jqGrid('setRowData', rowId, { 'Select': inputControl });
+                            }
+                        }
+                    }
+                    var itemmygrid = $('#list');
+                    var itemrows = $(itemmygrid).getDataIDs();
+                    for (var i = 0; i < itemrows.length; i++) {
+                        var itemstatus = $(itemmygrid).getCell(itemrows[i], "Authorized PO No.");
+                        if (itemstatus == '') {
+                            $(itemmygrid).jqGrid('setRowData', itemrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#AED6F1' });
+                        }
+                    }
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, search: true, refresh: false, searchtext: "Search" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus ').css('background', 'skyblue');
+            $("#list").hideCol("TableKey");
+        };
+    };
+
+    function gridreload1(mDocument) {
+        var ColName, Coldata;
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("SubGrid")?ViewDataId=' + '@Model.ViewDataId';
+        var sUrlpath = '@Url.Action("GetTransactionGridData1")?Document=' + mDocument + '&Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&Type=' + '@Model.Type' + '&ViewDataId=' + '@Model.ViewDataId'+ '&TableKey=' + '@Model.TableKey';
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData2();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridData2() {
+            $('#list1').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                height: mheight, //top+header+debit info+grid+crinfo+grid+fixedbottom+2pagers
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            jQuery("#list1").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid ').addClass('clear-margin span12 ').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12 ').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div ').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus ').css('background', 'skyblue');
+
+        };
+    };
+
+    function Creditgridreload() {
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=' + '@Model.ViewDataId';
+        var sUrlpath = '@Url.Action("GetGridDataCredit")?Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&ViewDataId=' + '@Model.ViewDataId' + '&LocationCode=' + $('#LocationCode').val() + '&Code=' + $('#Account').val() + '&MainType=' + $('#hdnMType').val()+'&IsFormatSelected='+$('#includezero').is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#Creditlist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#Creditpager1'),
+                rowNum: 100,
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                sortname: 'TableKey',
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: true,
+                shrinkToFit: false,
+                //height: $(window).height() - 111 - 35 - 50,
+                height: mheight, //top+header+debit info+grid+crinfo+grid+fixedbottom+2pagers
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#Creditlist1').jqGrid('clearGridData');
+                    $('#Creditlist1').jqGrid("GridUnload");
+                    $('#Creditlist1').trigger('reloadGrid');
+                    gridreload2($("#Creditlist").getCell(id, "TableKey"));
+                    // $('#SelectedDocument').val($('#list').jqGrid('getCell', id, 'Document'));
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#Creditlist").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var rowData = jQuery('#Creditlist').jqGrid('getRowData', rowId);
+                        var gridId = jQuery("#Creditlist").getDataIDs();
+                        //loop through grid rows
+                        for (var countRow = 0; countRow < gridId.length; countRow++) {
+                            var rowId = gridId[countRow];
+                            //check if Cell has value either 0 or 1(for true/false)
+                            if (jQuery("#Creditlist").getCell(rowId, "Select") == " " || jQuery("#Creditlist").getCell(rowId, "Select") == null || jQuery("#Creditlist").getCell(rowId, "Select") == "") {
+                                //checked control
+                                var beChecked = "<input type ='checkbox' value='"+jQuery("#Creditlist").getCell(rowId, "TableKey")+"' id ='chkADJ$" + jQuery("#Creditlist").getCell(rowId, "Pending Amt") + "|" + rowId + "^" + jQuery("#Creditlist").getCell(rowId, "TableKey") +"' class='CreditGrid' name='CreditGrid'  style='margin-left: 14px;height: 27px;width: 19px;margin-top: 1px;' />";
+                                ////unchecked control
+                                var beNotChecked = "<input type ='checkbox' value='"+jQuery("#Creditlist").getCell(rowId, "TableKey")+"' id ='chkADJ$" + jQuery("#Creditlist").getCell(rowId, "Pending Amt") + "|" + rowId + "^" + jQuery("#Creditlist").getCell(rowId, "TableKey") +"' class='CreditGrid'  name='CreditGrid' style='margin-left: 14px;height: 27px;width: 19px;margin-top: 1px;' />";//onclick='checkCheckBoc(this);'
+                                ////check if control is to be checked or not
+                                //var inputControl = jQuery("#jqMyGrid").getCell(rowId, "COLUMN4") == 0 ? beNotChecked : beChecked;
+                                var inputControl = jQuery("#Creditlist").getCell(rowId, "Select") == "" ? beNotChecked : beChecked;
+                                //set the checkBox
+                                jQuery("#Creditlist").jqGrid('setRowData', rowId, { 'Select': inputControl });
+                            }
+                        }
+                    }
+                    var itemmygrid = $('#Creditlist');
+                    var itemrows = $(itemmygrid).getDataIDs();
+                    for (var i = 0; i < itemrows.length; i++) {
+                        var itemstatus = $(itemmygrid).getCell(itemrows[i], "Authorized PO No.");
+                        if (itemstatus == '') {
+                            $(itemmygrid).jqGrid('setRowData', itemrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#AED6F1' });
+                        }
+                    }
+                },
+            });
+            jQuery("#Creditlist").jqGrid('navGrid', "#Creditpager1",
+                { edit: false, add: false, del: false, search: true, refresh: false, searchtext: "Search" });
+            jQuery("#Creditlist").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus ').css('background', 'skyblue');
+            $("#Creditlist").hideCol("TableKey");
+        };
+    };
+
+    function gridreload2(mDocument) {
+        var ColName, Coldata;
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("SubGrid")?ViewDataId=' + '@Model.ViewDataId';
+        var sUrlpath = '@Url.Action("GetTransactionGridData1")?Document=' + mDocument + '&Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&Type=' + '@Model.Type' + '&ViewDataId=' + '@Model.ViewDataId'+ '&TableKey=' + '@Model.TableKey';
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData2();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridData2() {
+            $('#Creditlist1').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                height: mheight, //top+header+debit info+grid+crinfo+grid+fixedbottom+2pagers
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            jQuery("#Creditlist1").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid ').addClass('clear-margin span12 ').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12 ').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div ').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus ').css('background', 'skyblue');
+        };
+    };
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:5px;width:100%;margin-top:0%;height:66px;">
+    <div class="fixhead">
+        @*<button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color:#918e8e;background-color:transparent;border:none;font-size:18px;height:27px;margin-right:10px;" name="MyFavorites"></button>*@
+        <table border="0" style="width:100%;padding:0px;margin-top:-6px;height:46px;">
+            <tbody>
+                <tr style="height:50%;padding:0px">
+                    <td rowspan=2 style="width:15%;border:none;padding:0px">
+                        <b class="CodeSt" id="headercaption">@Model.Header</b>
+                    </td>
+                    <td rowspan=1 style="font-size:9pt;width:5%;border:none;padding-left:3px;padding-top:0px;padding-bottom:0px;vertical-align:central;color:#000000;">
+                        Branch:
+                    </td>
+                    <td rowspan=1 style="font-size:9pt;width:15%;border:none;padding-left:3px;padding-top:0px;padding-bottom:0px;vertical-align:central;color:#000000;">
+                        @Html.TextBoxFor(x => x.Branch, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "Branch", @name = "Branch" })
+                    </td>
+                    @*<td rowspan=1 style="font-size:9pt;width:5%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                        Location:
+                    </td>
+                    <td rowspan=1 style="font-size:9pt;width:15%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                        @Html.TextBoxFor(x => x.LocationCode, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "LocationCode", @name = "LocationCode" })
+                    </td>*@
+                    <td rowspan=1 style="font-size:9pt;width:5%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                        Period:
+                    </td>
+                    <td rowspan=1 style="font-size:smaller;width:25%;border:none;padding:3px;vertical-align:central;color:#000000;">
+                        <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                            <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                            <span class="input-group-addon">to</span>
+                            <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                        </div>
+                    </td>
+                    <td rowspan=1 style="font-size:9pt;width:10%;border:none;padding-left:0px;padding-top:0px;vertical-align:central;color:#000000;">
+                        <input title='Include Docs. with 0 Pending' type="checkbox" id="includezero" name="includezero" style="margin-top:6px;width:17px;height:17px;" />&nbsp;Include 0
+                    </td>
+                </tr>
+                <tr style="height:50%;padding:0px;margin-top:0px;">
+                    <td rowspan=1 style="font-size:9pt;width:5%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                        Party:
+                    </td>
+                    <td rowspan=1 style="font-size:9pt;width:15%;border:none;padding-left:3px;padding-top:0px;margin-top:0px;vertical-align:central;color:#000000;">
+                        @Html.TextBoxFor(x => x.Code, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "Account", @name = "Account" })
+                    </td>
+                    @*<td rowspan=1 style="font-size:9pt;width:5%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                            Address:
+                        </td>
+                        <td colspan=2 rowspan=1 style="font-size:9px;width:10%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                            <label id="Address"></label>
+                        </td>*@
+                    <td colspan=2 rowspan=1 style="font-size:9px;width:10%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                        Opening:  <label id="Opening"></label>
+                        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+                    </td>
+                    <td colspan=2 rowspan=1 style="font-size:9px;width:10%;border:none;padding-left:3px;padding-top:0px;vertical-align:central;color:#000000;">
+                        Closing: <label id="Closing"></label>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</header>
+
+@*<div class="Clear"></div>*@
+<div class="" id="DebitEntry" style="margin-top:5%;background-color:lightgray;width:100%;padding: 0px 10px;color: black;border-bottom: 1px solid black;font-size:11px;">
+    Debit Entries: (Selected #<span id="chkCount">0</span> / <span id="ChkAmt">0.00</span>)
+</div>
+@*<div class="Clear"></div>*@
+
+<section id="section1" class="panel" style="height:auto;padding-bottom:0px;">
+    <div id="panel1" class="panel-body" style="height:auto;padding-bottom:0px;">
+        <div class="row" style="height:auto;margin-top: -15px;">
+            <div class="col-md-9" style="height:auto;padding-left:0px;">
+                <div id="page-contentgrid">
+                    <div class="jqGrid">
+                        <table id="list" class="scroll " cellpadding="0" cellspacing="0" style="width:100%;border-collapse:unset;background-color:white;"></table>
+                        <div id="pager" style="height:31px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" style="height:auto;padding-left:0px;padding-right:0px;margin:0px;">
+                <div id="page-contentgrid">
+                    <div class="jqGrid">
+                        <table id="list1" class="scroll " cellpadding="0" cellspacing="0" style="width:100%;border-collapse:unset;"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@Html.HiddenFor(x => x.MainType, new { @Id = "hdnMType" })
+@*<div class="Clear"></div>*@
+
+<div class="" id="CreditEntry" style="margin-top:-20px;background-color:lightgray;width:100%;padding: 0px 10px;color: black;border-bottom: 1px solid black;border-top: 1px solid black;font-size:11px;">
+    Credit Entries: (Selected #<span id="chkCountC">0</span> / <span id="ChkAmtC">0.00</span>)
+</div>
+
+<section id="section2" class="panel" style="height:auto;padding-bottom:0px;">
+    <div id="panel2" class="panel-body" style="height:auto;padding-bottom:0px;">
+        <div class="row" style="margin-top: -15px;">
+            <div class="col-md-9" style="height:auto;padding-left:0px;">
+                <div id="page-contentgrid">
+                    <div class="jqGrid">
+                        <table id="Creditlist" class="scroll  " cellpadding="0" cellspacing="0" style="width:100%;border-collapse:unset;background-color:white;"></table>
+                        <div id="Creditpager1" style="height:31px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" style="height:auto;padding-left:0px;padding-right:0px;margin:0px;">
+                <div id="page-contentgrid">
+                    <div class="jqGrid">
+                        <table id="Creditlist1" class="scroll " cellpadding="0" cellspacing="0" style="width:100%;border-collapse:unset;"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="col-sm-4" style="padding-left:1px;">
+        <button class="btn btn-success" style="font-size:12px;height:27px;padding:3px 12px;margin-left:0;color:black;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i>&nbsp;&nbsp;Refresh</button>
+        <button class="btn btn-warning" style="font-size:12px;height:27px;padding:3px 12px;color:black;" id="btnFIFO" title='FIFO Adjust Only On Balance Documents.'>FIFO Adjust</button>
+        <button class="btn btn-warning" style="font-size:12px;height:27px;padding:3px 12px;color:black;" id="btnAdjust"  title='Adjust'>Manual Adjust</button>
+    </div>
+    <div class="col-sm-4" style="text-align:center;margin-top:4px;color:white;font-family:Tahoma;">
+        ALT AIR-3.0, Shruham Software
+    </div>
+    <div class="col-sm-4" style="padding-right:0px;">
+        <div class="pull-right">
+            <button class="btn btn-danger" style="font-size:12px;height:27px;padding:3px 12px;" id="btnRelease"  title='Release'>Release Doc.</button>
+            @*<button class="btn btn-danger" style="font-size:12px;height:27px;padding:3px 12px;" id="btnReleaseAll" disabled title='ReleaseAll'>Release ALL</button>*@
+        </div>
+    </div>
+</footer>

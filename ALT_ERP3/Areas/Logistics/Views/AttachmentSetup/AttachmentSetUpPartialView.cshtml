@@ -1,0 +1,187 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.AttachmentSetupVM
+@using Common;
+@{
+    ViewBag.Title = "LRSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+
+        $("#DeleteEveryOne").change(function () {
+            if (this.checked)
+            {
+                $("#DeleteEnteredOnly").prop("checked", false);
+            }
+            else
+            {
+                $("#DeleteEnteredOnly").prop("checked", false);
+            }
+        });
+        $("#DeleteEnteredOnly").change(function () {
+            if (this.checked) {
+                $("#DeleteEveryOne").prop("checked", false);
+            }
+            else {
+                $("#DeleteEveryOne").prop("checked", false);
+            }
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if ($("#DeleteEveryOne").prop("checked") == false && $("#DeleteEnteredOnly").prop("checked") == false) {
+                alert("Select Check Box Of Delete Option For Attachment...!");
+                return;
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            ModelData["DeleteEveryOne"] = $("#DeleteEveryOne").is(":checked");
+            ModelData["DeleteEnteredOnly"] = $("#DeleteEnteredOnly").is(":checked");
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/DashBoard/SetUP";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+</script>
+<style>
+
+    hr {
+        margin-top: 0%;
+        margin-bottom: 15px;
+        border: 0;
+        border-top: 2px solid #e0cbcb !important;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    legend {
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+</style>
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/DashBoard/SetUP" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">Setup Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <span class="tools pull-right" style="    margin-right: 15px;">
+
+        </span>
+    </div>
+</header>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LCSetupMaster" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+            <fieldset class=" col-md-12" style="margin-top:0%;">
+                <legend>@Model.Header</legend>
+                <div class="panel panel-default" style="height:450px;overflow:auto;">
+                    <div class="panel-body">
+                        <hr />
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Delete Attachment  :</label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.DeleteEveryOne, new { @class = "", @Value = Model.DeleteEveryOne, style = "height: 20px;width: 35px;" })
+                            </div>
+                            <label class=" control-label" style="font-size: 14px;font-weight: bold;color:red;"> ( Attachment Delete Any User...) </label>
+                        </div>
+                        <hr />
+                        <div class="form-group ">
+                            <div class="col-sm-2" style="width:210px;">
+                                <label class=" control-label" style="font-size: 14px;font-weight: bold;">Delete Attachment  :</label>
+                            </div>
+                            <div class="col-sm-2" style="width: auto;">
+                                @Html.CheckBoxFor(x => x.DeleteEnteredOnly, new { @class = "", @Value = Model.DeleteEnteredOnly, style = "height: 20px;width: 35px;" })
+                            </div>
+                            <label class=" control-label" style="font-size: 14px;font-weight: bold;color:red;"> ( Delete Only Own Attachment...) </label>
+                        </div>
+
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/DashBoard/SetUP" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>

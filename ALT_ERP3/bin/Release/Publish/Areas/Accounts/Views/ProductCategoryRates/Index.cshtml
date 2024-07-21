@@ -1,0 +1,158 @@
+﻿
+
+@model TFATERPWebApplication.Areas.Accounts.Models.ProductCatLinkVM
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}@using Common;
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#SaveData").click(function (event) {
+            event.preventDefault();
+            var NewItemList = [];
+            $('#catlinkgrid').find('tr[id="datacat"]').each(function () {
+                var $tds = $(this).find('td');
+                var myDets = {
+                    CatNo: $tds.eq(0).text(),
+                    Rate: $tds.eq(2).text(),
+                    Disc: $tds.eq(3).text(),
+                    DiscAmt: $tds.eq(4).text(),
+                    MRP: $tds.eq(5).text(),
+                    MRPDisc: $tds.eq(6).text(),
+                    SalesMargin: $tds.eq(7).text(),
+                    SalesMaxDisc: $tds.eq(8).text()
+                }
+                NewItemList.push(myDets);
+            });
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+            ModelData["NewItemList"] = NewItemList;
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == 'Success') {
+                        window.location.href = "/Accounts/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Item%20Master&Controller2=ItemMaster";
+                        //window.location.href = "/Transactions/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=&Controller2=@Model.Controller2"
+                    }
+                    else if (data.Status == 'Error') {
+                        alert(data.Message);
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Select Atleast One Record For Ledger.');
+                    }
+                    else {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+    });
+</script>
+
+<style>
+    .form-horizontal .control-label {
+        padding-top: 6px;
+        color: black;
+        text-align: left;
+    }
+
+    .headername {
+        font-size: medium;
+        font-family: Tahoma;
+        font-weight: 700;
+    }
+
+    /*.fixhead {
+        text-transform: uppercase;
+    }*/
+
+    .modal-dialog {
+        /*margin: 124px auto;*/
+        align-self: center;
+    }
+
+    .form-group {
+        margin-bottom: 5px;
+    }
+</style>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">Product wise Party Category Rates for item: @Model.Document</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Item%20Master&Controller2=ItemMaster" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+    </div>
+</header>
+
+<div class="panel" style="height:500px;">
+    <div class="panel-body" style="padding-left:3px;padding-right:3px;padding-top:12px;">
+        <div class="form-horizontal" id="frmcatlink" role="form" style="margin-top:32px;">
+            <div id="StatusDiv">
+                <table id="catlinkgrid" class="zui-table">
+                    <thead>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                            <th style="width:10%">Category</th>
+                            <th style="width:10%;">Category Description</th>
+                            <th style="width:10%">Rate</th>
+                            <th style="width:10%;">Disc%</th>
+                            <th style="width:10%;">Disc.Amt</th>
+                            <th style="width:10%">MRP</th>
+                            <th style="width:10%">MRP Disc%</th>
+                            <th style="width:10%">Sales Margin</th>
+                            <th style="width:10%">Sales Max.Disc</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.NewItemList != null)
+                        {
+                            foreach (var item in @Model.NewItemList.ToList())
+                            {
+                                <tr id="datacat" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                    <td style="width:10%;">@item.CatNo</td>
+                                    <td style="width:10%;">@item.CatName</td>
+                                    <td style="width:10%;" align="right" contenteditable="true">@item.Rate</td>
+                                    <td style="width:10%;" align="right" contenteditable="true">@item.Disc</td>
+                                    <td style="width:10%;" align="right" contenteditable="true">@item.DiscAmt</td>
+                                    <td style="width:10%;" align="right" contenteditable="true">@item.MRP</td>
+                                    <td style="width:10%;" align="right" contenteditable="true">@item.MRPDisc</td>
+                                    <td style="width:10%;" align="right" contenteditable="true">@item.SalesMargin</td>
+                                    <td style="width:10%;" align="right" contenteditable="true">@item.SalesMaxDisc</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4" style="padding-right:15px;">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SaveData">Save Data</button>
+                @*<button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="DeleteData">Delete</button>*@
+                <a href="~/Accounts/MasterGrid?ViewDataId=ItemMaster&Module=Inventory&TableName=ItemMaster&optiontype=M&optioncode=ProductMaster&Header=Item%20Master&Controller2=ItemMaster" style="font-size: 13px;padding:3px 12px;margin-right:10px;" class="btn btn-danger" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+@Html.HiddenFor(x => x.Document, new { @id = "hdnDocument" })

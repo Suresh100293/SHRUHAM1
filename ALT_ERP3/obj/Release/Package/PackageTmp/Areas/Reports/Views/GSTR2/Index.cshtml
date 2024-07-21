@@ -1,0 +1,1116 @@
+﻿@model GridOption
+
+@{
+    ViewBag.Title = "GSTR-2";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        $("#hdnformatname").val("");
+
+        $('#btnExcel').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcelGSTR")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked'), '_blank');
+        });
+
+        $('#btnPDF').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDFGSTR")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked'), '_blank');
+        });
+        // b2b, b2bur, imps, impg, cdnr,  cdnur, at, atadj,  exemp, itcr, hsnsum
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+            $('#b2b').jqGrid('clearGridData');
+            $("#b2b").jqGrid("GridUnload");
+            $('#b2b').trigger('reloadGrid');
+            gridb2b();
+            $('#b2bur').jqGrid('clearGridData');
+            $("#b2bur").jqGrid("GridUnload");
+            $('#b2bur').trigger('reloadGrid');
+            gridb2bur();
+            $('#imps').jqGrid('clearGridData');
+            $("#imps").jqGrid("GridUnload");
+            $('#imps').trigger('reloadGrid');
+            gridimps();
+            $('#impg').jqGrid('clearGridData');
+            $("#impg").jqGrid("GridUnload");
+            $('#impg').trigger('reloadGrid');
+            gridimpg();
+            $('#cdnr').jqGrid('clearGridData');
+            $("#cdnr").jqGrid("GridUnload");
+            $('#cdnr').trigger('reloadGrid');
+            gridcdnr();
+            $('#cdnur').jqGrid('clearGridData');
+            $("#cdnur").jqGrid("GridUnload");
+            $('#cdnur').trigger('reloadGrid');
+            gridcdnur();
+            $('#at').jqGrid('clearGridData');
+            $("#at").jqGrid("GridUnload");
+            $('#at').trigger('reloadGrid');
+            gridat();
+            $('#atadj').jqGrid('clearGridData');
+            $("#atadj").jqGrid("GridUnload");
+            $('#atadj').trigger('reloadGrid');
+            gridatadj();
+            $('#exemp').jqGrid('clearGridData');
+            $("#exemp").jqGrid("GridUnload");
+            $('#exemp').trigger('reloadGrid');
+            gridexemp();
+            $('#itcr').jqGrid('clearGridData');
+            $("#itcr").jqGrid("GridUnload");
+            $('#itcr').trigger('reloadGrid');
+            griditcr();
+            $('#hsnsum').jqGrid('clearGridData');
+            $("#hsnsum").jqGrid("GridUnload");
+            $('#hsnsum').trigger('reloadGrid');
+            gridhsnsum();
+            $("#hdnformatname").val("GSTR2-b2b");
+        });
+    });
+
+    @*function PrintGrid(mwhat) {
+        event.preventDefault();
+        $('.spinner').show();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetGridData")?mWhat=' + mwhat + '&Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked'), '_blank');
+        $.ajax({
+            url: sUrlpath,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+    }*@
+
+    @*chkReturnP = Consider Purchase Return in CDNR
+    chkReturnPR = Don't Consider Purchase Return in hsnsum Summary
+    chkShowPurRet = Consider Purchase Return in B2B
+    chkReturnSR = Don't Consider Sales Return in GSTR2
+    chkDontSRinCS = Don't Consider Sales Return in imps
+    chkPRRetDoc = Don't Consider Purchase Return in itcr*@
+    function gridb2b() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-b2b");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridb2b();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridb2b() {
+            $('#b2b').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerb2b'),
+                rowNum: 5000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerb2b').height = 5;
+                },
+            });
+            jQuery("#b2b").jqGrid('navGrid', "#pagerb2b",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#b2b").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    //b2bur
+    function gridb2bur() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-b2bur");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridb2bur();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridb2bur() {
+            $('#b2bur').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerb2bur'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerb2bur').height = 5;
+                },
+            });
+            jQuery("#b2bur").jqGrid('navGrid', "#pagerb2bur",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#b2bur").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //imps
+    function gridimps() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-imps");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridimps();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridimps() {
+            $('#imps').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerimps'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerimps').height = 5;
+                },
+            });
+            jQuery("#imps").jqGrid('navGrid', "#pagerimps",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#imps").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //cdnr
+    function gridcdnr() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-cdnr");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridcdnr();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridcdnr() {
+            $('#cdnr').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagercdnr'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagercdnr').height = 5;
+                },
+            });
+            jQuery("#cdnr").jqGrid('navGrid', "#pagercdnr",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#cdnr").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //cdnur
+    function gridcdnur() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-cdnur");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridcdnur();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridcdnur() {
+            $('#cdnur').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagercdnur'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagercdnur').height = 5;
+                },
+            });
+            jQuery("#cdnur").jqGrid('navGrid', "#pagercdnur",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#cdnur").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //impg
+    function gridimpg() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-impg");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridimpg();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridimpg() {
+            $('#impg').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerimpg'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerimpg').height = 5;
+                },
+            });
+            jQuery("#impg").jqGrid('navGrid', "#pagerimpg",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#impg").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //at
+    function gridat() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-at");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridat();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridat() {
+            $('#at').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerat'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerat').height = 5;
+                },
+            });
+            jQuery("#at").jqGrid('navGrid', "#pagerat",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#at").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //atadj
+    function gridatadj() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-atadj");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridatadj();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridatadj() {
+            $('#atadj').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pageratadj'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pageratadj').height = 5;
+                },
+            });
+            jQuery("#atadj").jqGrid('navGrid', "#pageratadj",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#atadj").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //exemp
+    function gridexemp() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-exemp");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridexemp();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridexemp() {
+            $('#exemp').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerexemp'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerexemp').height = 5;
+                },
+            });
+            jQuery("#exemp").jqGrid('navGrid', "#pagerexemp",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#exemp").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //hsnsum
+    function gridhsnsum() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-hsnsum");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategridhsnsum();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategridhsnsum() {
+            $('#hsnsum').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pagerhsnsum'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pagerhsnsum').height = 5;
+                },
+            });
+            jQuery("#hsnsum").jqGrid('navGrid', "#pagerhsnsum",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#hsnsum").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //itcr
+    function griditcr() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val("GSTR2-itcr");
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#hdnformatname").val() + '&xAdd=' + $("#chkReturnP").is(':checked') + '&xEdit=' + $("#chkReturnPR").is(':checked') + '&xDelete=' + $("#chkShowPurRet").is(':checked') + '&xView=' + $("#chkReturnSR").is(':checked') + '&IsFormatSelected=' + $("#chkDontSRinCS").is(':checked') + '&ComController=' + $("#chkPRRetDoc").is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                creategriditcr();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function creategriditcr() {
+            $('#itcr').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pageritcr'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 230,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    $('#pageritcr').height = 5;
+                },
+            });
+            jQuery("#itcr").jqGrid('navGrid', "#pageritcr",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#itcr").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-md-6" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <div class="col-md-3" style="padding-right:unset;">
+            <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;color:black;width:unset;">
+                Period:
+            </div>
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                <span class="input-group-addon">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+            </div>
+        </div>
+        <div class="col-md-3 pull-right" style="padding-top:-3px;float:right;align-items:flex-end;">
+            <button class="btn btn-info" style="font-family:Tahoma;font-size:10pt;height:27px;padding-top:3px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i>&nbsp;&nbsp;Refresh</button>
+            <button class="btn btn-success" style="font-family: Tahoma; font-size: 10pt; height: 27px;padding-top:3px;" id="btnExcel" title='Excel'><i class="fa ico-file-excel"></i>&nbsp;&nbsp;Excel</button>
+            <button class="btn btn-danger" style="font-family: Tahoma; font-size: 10pt; height: 27px;padding-top:3px;" id="btnPDF" title='PDF'><i class="fa ico-file-pdf"></i>&nbsp;&nbsp;PDF</button>
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:33px;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="tab">
+            <button class="tablinks" onclick="openTab(event, 'tabb2b')">b2b</button>
+            <button class="tablinks" onclick="openTab(event, 'tabb2bur')">b2bur</button>
+            <button class="tablinks" onclick="openTab(event, 'tabimps')">imps</button>
+            <button class="tablinks" onclick="openTab(event, 'tabimpg')">impg</button>
+            <button class="tablinks" onclick="openTab(event, 'tabcdnr')">cdnr</button>
+            <button class="tablinks" onclick="openTab(event, 'tabcdnur')">cdnur</button>
+            <button class="tablinks" onclick="openTab(event, 'tabat')">at</button>
+            <button class="tablinks" onclick="openTab(event, 'tabatadj')">atadj</button>
+            <button class="tablinks" onclick="openTab(event, 'tabexemp')">exemp</button>
+            <button class="tablinks" onclick="openTab(event, 'tabhsnsum')">hsnsum</button>
+            <button class="tablinks" onclick="openTab(event, 'tabitcr')">itcr</button>
+        </div>
+
+        <div id="tabb2b" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="b2b" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerb2b" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabb2bur" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="b2bur" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerb2bur" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabimps" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="imps" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerb2c2" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabcdnr" class="tabcontent" style="height:475px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="cdnr" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagercdnr" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabcdnur" class="tabcontent" style="height:470px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="cdnur" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagercdnur" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabimpg" class="tabcontent" style="height:470px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="impg" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerimpg" style="height:32px;"></div>
+            </div>
+        </div>
+        <div id="tabat" class="tabcontent" style="height:400px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="at" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerat" style="height:32px;"></div>
+            </div>
+        </div>
+        <div id="tabatadj" class="tabcontent" style="height:400px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="atadj" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pageratadj" style="height:32px;"></div>
+            </div>
+        </div>
+        <div id="tabexemp" class="tabcontent" style="height:400px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="exemp" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerexemp" style="height:32px;"></div>
+            </div>
+        </div>
+        <div id="tabhsnsum" class="tabcontent" style="height:400px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="hsnsum" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pagerhsnsum" style="height:32px;"></div>
+            </div>
+        </div>
+        <div id="tabitcr" class="tabcontent" style="height:400px;padding:0px 0px 0px 0px;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;">
+                <table id="itcr" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                <div id="pageritcr" style="height:32px;"></div>
+            </div>
+        </div>
+
+        <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+                if (tabName == "tabb2b") {
+                    $('#b2b').jqGrid('clearGridData');
+                    $("#b2b").jqGrid("GridUnload");
+                    $('#b2b').trigger('reloadGrid');
+                    gridb2b();
+                } else if (tabName == "tabb2bur") {
+                    $('#b2bur').jqGrid('clearGridData');
+                    $("#b2bur").jqGrid("GridUnload");
+                    $('#b2bur').trigger('reloadGrid');
+                    gridb2bur();
+                } else if (tabName == "tabimps") {
+                    $('#imps').jqGrid('clearGridData');
+                    $("#imps").jqGrid("GridUnload");
+                    $('#imps').trigger('reloadGrid');
+                    gridimps();
+                } else if (tabName == "tabcdnr") {
+                    $('#cdnr').jqGrid('clearGridData');
+                    $("#cdnr").jqGrid("GridUnload");
+                    $('#cdnr').trigger('reloadGrid');
+                    gridcdnr();
+                } else if (tabName == "tabcdnur") {
+                    $('#cdnur').jqGrid('clearGridData');
+                    $("#cdnur").jqGrid("GridUnload");
+                    $('#cdnur').trigger('reloadGrid');
+                    gridcdnur();
+                } else if (tabName == "tabimpg") {
+                    $('#impg').jqGrid('clearGridData');
+                    $("#impg").jqGrid("GridUnload");
+                    $('#impg').trigger('reloadGrid');
+                    gridimpg();
+                } else if (tabName == "tabat") {
+                    $('#at').jqGrid('clearGridData');
+                    $("#at").jqGrid("GridUnload");
+                    $('#at').trigger('reloadGrid');
+                    gridat();
+                } else if (tabName == "tabatadj") {
+                    $('#atadj').jqGrid('clearGridData');
+                    $("#atadj").jqGrid("GridUnload");
+                    $('#atadj').trigger('reloadGrid');
+                    gridatadj();
+                } else if (tabName == "tabexemp") {
+                    $('#exemp').jqGrid('clearGridData');
+                    $("#exemp").jqGrid("GridUnload");
+                    $('#exemp').trigger('reloadGrid');
+                    gridexemp();
+                } else if (tabName == "tabhsnsum") {
+                    $('#hsnsum').jqGrid('clearGridData');
+                    $("#hsnsum").jqGrid("GridUnload");
+                    $('#hsnsum').trigger('reloadGrid');
+                    gridhsnsum();
+                } else if (tabName == "tabitcr") {
+                    $('#itcr').jqGrid('clearGridData');
+                    $("#itcr").jqGrid("GridUnload");
+                    $('#itcr').trigger('reloadGrid');
+                    griditcr();
+                }
+            }
+            document.getElementById("options").click();
+        </script>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>

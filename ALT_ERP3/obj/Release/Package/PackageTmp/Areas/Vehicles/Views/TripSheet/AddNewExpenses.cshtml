@@ -1,0 +1,310 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common;
+
+<style>
+    .boldlabel {
+        font-weight: bold;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+        debugger;
+        document.getElementById("btnLRDesign").click();
+
+        @*if ("@Model.PartialDivName" == "LR") {
+            $('#LRDetailsDialog').removeClass("hidden");
+            $('#FMDetailsDialog').addClass("hidden");
+        }
+        else if ("@Model.PartialDivName" == "FM") {
+            $('#FMDetailsDialog').removeClass("hidden");
+            $('#LRDetailsDialog').addClass("hidden");
+        }*@
+        loadexpenseAc();
+        $("#AmountE").constrain({ allow: { regex: "[0-9.]" } });
+        $("#ExpensesAcE").change(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["Code"] = $("#ExpensesAcE").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("FetExpensesRetedDocType")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+
+                    $("#hdnPartialDivName").val(data.PartialDivName);
+                    $("#hdnCCAmtMatch").val(data.CostCenterTally);
+                    $('#LRDetailsDialog').html(data.LRDetails);
+                    $('#FMDetailsDialog').html(data.FMDetails);
+                    $("#RelatedToE").val(data.PartialDivName);
+                    $("#ExpensesAcNameE").val(data.Name);
+                    //if (data.PartialDivName == "LR" ) {
+
+                    //    $('#LRDetailsDialog').removeClass("hidden");
+                    //    $('#FMDetailsDialog').addClass("hidden");
+                    //}
+                    //else if (data.PartialDivName == "FM" ) {
+
+                    //    $('#FMDetailsDialog').removeClass("hidden");
+                    //    $('#LRDetailsDialog').addClass("hidden");
+                    //}
+                    //else {
+                    //    $('#FMDetailsDialog').addClass("hidden");
+                    //    $('#LRDetailsDialog').addClass("hidden");
+                    //}
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#btnAddExpenses').click(function (event) {
+            event.preventDefault();
+            debugger;
+            if ($('#ExpensesAcE').val() == '' || $('#ExpensesAcE').val() == '0') {
+                alert('Expenses Account Required...')
+                return;
+            }
+
+            var mlrqty = 0;
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                mlrqty = parseFloat(mlrqty) + parseFloat(tds.eq(3).text());
+            });
+            var mfmqty = 0;
+            $('#FMtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                mfmqty = parseFloat(mfmqty) + parseFloat(tds.eq(3).text());
+            });
+            if (($('#hdnCCAmtMatch').val() == "True" || $('#hdnCCAmtMatch').val() == "true")) {
+                if ((mfmqty + mlrqty) != parseFloat($("#AmountE").val())) {
+                    alert('FM Amount total does not Tally please check..');
+                    return;
+                }
+            }
+            var myBatchArray = [];
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempId: tds.eq(1).text(),
+                    LRNumber: tds.eq(2).text(),
+                    LRAmt: tds.eq(3).text(),
+                    ConsignmentKey: tds.eq(5).text(),
+                }
+                myBatchArray.push(myDets);
+            });
+
+            var myBatchArray2 = [];
+            $('#FMtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = {
+                    tempId: tds.eq(1).text(),
+                    FMNumber: tds.eq(2).text(),
+                    FMAmt: tds.eq(3).text(),
+                    FreightMemoKey: tds.eq(5).text(),
+                }
+                myBatchArray2.push(myDets2);
+            });
+            var otherExpenses = {
+                tempId: $("#tempIdE").val(),
+                ExpensesAc: $("#ExpensesAcE").val(),
+                ExpensesAcName: $("#ExpensesAcNameE").val(),
+                Amount: $("#AmountE").val(),
+                Narr: $("#NarrE").val(),
+                RelatedTo: $("#RelatedToE").val(),
+                FMDetailList: myBatchArray2,
+                LRDetailList: myBatchArray,
+                PartialDivName: $('#hdnPartialDivName').val(),
+                CostCenterTally: $("#hdnCCAmtMatch").val(),
+            };
+
+
+            var ModelData = {};
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["otherExpenses"] = otherExpenses;
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddEditSelectedExpenses")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage1').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message)
+                        return;
+                    }
+
+                    $('#addexpenses').modal('hide');
+                    $('#MainExpensesDiv').html(data.Html);
+                    CalculateNetAmount();
+
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });
+    function openCityNew(evt, cityName) {
+
+        $("#ErrorMessage1").hide();
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontentNew");
+        for (i = 0; i < tabcontent.length; i++) {
+
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("ItemDesign");
+        for (i = 0; i < tablinks.length; i++) {
+
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(cityName).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+    function loadexpenseAc() {
+        var url = '@Url.Action("GetTripDebitAcList")';
+        $('#ExpensesAcE').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.otherExpenses.ExpensesAc', text: '@Model.otherExpenses.ExpensesAcName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+</script>
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">@Model.Mode Record</h4>
+    </div>
+    <div class="modal-body">
+        <div class="form-horizontal" id="ProListupdate">
+            <div class="form-group col-sm-6">
+                <div class="form-group">
+                    <label class="col-sm-4 control-label boldlabel">Expenses Account:</label>
+                    <div class="col-sm-8">
+                        @Html.TextBoxFor(x => x.otherExpenses.ExpensesAc, new { @class = "input-large-query", @Name = "ExpensesAcE", @Id = "ExpensesAcE", @style = "text-align:right;width: 100%;", @value = Model.otherExpenses.ExpensesAc })
+                    </div>
+                    <div class="col-sm-4 hidden">
+                        @Html.TextBoxFor(x => x.otherExpenses.ExpensesAcName, new { @class = "form-control", @Name = "ExpensesAcNameE", @Id = "ExpensesAcNameE", @style = "text-align:right", @disabled = "disabled", @value = Model.otherExpenses.ExpensesAc })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label boldlabel">Amount:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.otherExpenses.Amount, new { @class = "form-control", @Name = "AmountE", @Id = "AmountE", @style = "width:100%;", @value = Model.otherExpenses.Amount })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label boldlabel">Narr:</label>
+                    <div class="col-sm-8">
+                        @Html.TextAreaFor(x => x.otherExpenses.Narr, new { @class = "form-control", @Name = "NarrE", @Id = "NarrE", @style = "width:100%;", @value = Model.otherExpenses.Narr })
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="max-height:300px;min-height:300px;overflow-y:scroll;width:100%; ">
+            <div class="tab">
+                <button class="tablinks ItemDesign LRTabDesign" onclick="openCityNew(event, 'TabdivLedgerTable1')" id="btnLRDesign">Lorry Receipt</button>
+                <button class="tablinks ItemDesign FMTabDesign" onclick="openCityNew(event, 'TabdivLedgerTable2')" id="btnFMDesign">Freight Memo</button>
+            </div>
+            <div id="TabdivLedgerTable1" class="tabcontent tabcontentNew" style="min-height:270px;max-height:270px;overflow-y:scroll;">
+                <div id="LRDetailsDialog" style="display:block;">
+                    @Html.Partial("LRDetails")
+                </div>
+            </div>
+            <div id="TabdivLedgerTable2" class="tabcontent tabcontentNew" style="min-height:270px;max-height:270px;overflow-y:scroll;">
+                <div id="FMDetailsDialog" style="display:block;">
+                    @Html.Partial("FMDetails")
+                </div>
+            </div>
+
+            @*<div id="LRDetailsDialog" class="hidden" >
+                @Html.Partial("LRDetails")
+            </div>
+
+            <br />
+
+            <div id="FMDetailsDialog" class="hidden" style="display:block;">
+                @Html.Partial("FMDetails")
+            </div>
+
+            <br />*@
+        </div>
+
+        </div>
+    <div class="modal-footer" style="background-color:#cccccc">
+        @if (Model.Mode == "Add")
+        {
+            <button type="button" class="btn btn-success" id="btnAddExpenses">Save</button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-success" id="btnAddExpenses">Update</button>
+        }
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.otherExpenses.tempId, new { @id = "tempIdE" })
+@Html.HiddenFor(x => x.otherExpenses.RelatedTo, new { @id = "RelatedToE" })
+@Html.HiddenFor(x => x.PartialDivName, new { @id = "hdnPartialDivName", @name = "hdnPartialDivName" })
+@Html.HiddenFor(x => x.CostCenterTally, new { @id = "hdnCCAmtMatch" })

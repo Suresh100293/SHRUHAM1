@@ -1,0 +1,2192 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common
+@{
+    ViewBag.Title = "Index";
+}
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            @if (Model.LedgerThrough)
+            {
+                <a href="" onclick="window.top.close();" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+            }
+            else
+            {
+                <a href="~/Vehicles/MasterGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+            }
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;" name="MyFavorites"></button>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <div class="form-horizontal" id="frmaddnewadvancebal" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none; padding:3px;"></div>
+            <div class="form-group">
+                <div class="col-sm-4" style="padding:0px!important;">
+                    <label class="col-sm-2 control-label">Doc.Serial:</label>
+                    <div class="col-sm-4">
+                        @if (Model.Mode == "Add")
+                        {
+                            @Html.TextBoxFor(x => x.TripSheetNo, new { @class = "form-control", @style = "height:28px;font-size:13pt;font-weight:bolder;", @Value = Model.TripSheetNo })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.TripSheetNo, new { @class = "form-control", @style = "height:28px;font-size:13pt;font-weight:bolder;", @Value = Model.TripSheetNo, @readonly = "readonly" })
+                        }
+                    </div>
+                    <label class="col-sm-2 control-label">Doc.Date:</label>
+                    <div class="col-sm-4">
+                        @Html.TextBoxFor(x => x.TripSheetDate, new { @type = "text", @class = "form-control", @style = "height:28px;font:size:13pt;font-weight:bolder;", @Value = Model.DocDate.ToString("dd/MM/yyyy") })
+                    </div>
+                </div>
+                <div class="col-sm-8" style="padding:0px!important;">
+                    <div class="col-sm-3" style="display: flex;">
+                        <input type="radio" class="form-control" name="TripCODE" id="rdbDriver" value="Driver" style="height:20px;width:35px;"><label class=" bold control-label"> Driver</label>
+                        <input type="radio" class="form-control" name="TripCODE" id="rdbVehicle" value="Vehicle" style="height:20px;width:35px;"><label class=" bold control-label"> Vehicle</label>
+                    </div>
+                    <label class="col-sm-1 control-label DriverCombo">Driver :</label>
+                    <div class="col-sm-3 DriverCombo">
+                        @Html.TextBoxFor(m => m.DriverCode, new { @class = "input-large-query", @style = "width:99%;margin-top:2px;", @Value = Model.DriverCode })
+                    </div>
+                    <label class="col-sm-1 control-label VehicleCombo">Vehicle :</label>
+                    <div class="col-sm-3 VehicleCombo">
+                        @Html.TextBoxFor(m => m.VehicleCode, new { @class = "input-large-query", @style = "width:99%;margin-top:2px;", @Value = Model.VehicleCode })
+                    </div>
+
+                    <label class="col-sm-1 control-label" style="width:auto;padding-right:0px;padding-left:0px;">Balance: <label id="lblBalance" style="margin-top:2px;font-weight:bolder;font-size:11pt;font-family:Verdana;">&nbsp;&nbsp;0</label></label>
+                    <label class="col-sm-1 control-label">Debit :</label>
+                    <div class="col-sm-2" style="height:0px;">
+                        @Html.TextBoxFor(m => m.TripDebitAc, new { @class = "input-large-query", @style = "width:99%;margin-top:2px;", @Value = Model.TripDebitAc })
+                    </div>
+
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-4" style="padding:0px!important;">
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.Pick_Financial_Document, new { @class = "", @Value = Model.Pick_Financial_Document, style = "height: 20px;width: 35px;", @title = "In Trip Sheet Fetch Document List From Particular Date Range." })
+                    </div>
+                    <label class="col-sm-2 control-label" style="width:auto;">Trip Date :</label>
+                    <div class="col-sm-4">
+                        @Html.TextBoxFor(m => m.FromDate, new { @class = "form-control", @placeholder = "Start From", @style = "width:100%;margin-top:2px;", @value = Model.FromDate })
+                    </div>
+                    @*<label class="col-sm-2 control-label">To Date:</label>*@
+                    <div class="col-sm-4">
+                        @Html.TextBoxFor(m => m.TODate, new { @class = "form-control", @placeholder = "End Upto", @style = "width:100%;margin-top:2px;", @value = Model.TODate })
+                    </div>
+                </div>
+                <div class="col-sm-7" style="padding:0px!important;">
+                    <div class="col-sm-4" style="display: flex;">
+                        <input type="radio" class="form-control" name="PickDoc" id="FreightMemo" value="FM" style="height:20px;width:35px;"><label class=" bold control-label"> Freight Memo</label>
+                        <input type="radio" class="form-control" name="PickDoc" id="LorryReceipt" value="LR" style="height:20px;width:35px;"><label class=" bold control-label"> Lorry Receipt</label>
+                    </div>
+                    <div class="col-sm-3">
+                        <button type="button" style="height:28px;padding-top:4px;" class="btn btn-primary" id="PickData">PickUp Document</button>
+                    </div>
+                    <label class="col-sm-2 control-label">Search Document :</label>
+                    <div class="col-sm-3" style="height:0px;">
+                        @Html.TextBoxFor(m => m.SearchFMNo, new { @class = "form-control", @placeholder = "Search Document NO", @style = "width:99%;margin-top:2px;" })
+                    </div>
+
+                </div>
+            </div>
+            <div class="container-fluid" style="padding-left:0px!important;padding-right:0px!important;">
+                <div class="tab">
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="List"> List</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable6')" style="width:140px;"> KM Wise Expenses</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable2')" style="width:140px;"> Other Expenses</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable3')" style="width:140px;">Other Deduction</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable7')" style="width:205px;">Ledger UnAdjust Debit (Adv)</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable9')" style="width:205px;">Ledger UnAdjust Credit (Bal)</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable8')" style="width:180px;">Deduction Cost Center</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable5')">TDS Details</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable4')">Summary</button>
+                </div>
+                <div id="divLedgerTable" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    @Html.Partial("DocumentList", Model)
+                </div>
+                <div id="divLedgerTable2" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    <div class="form-group col-sm-12" id="MainExpensesDiv">
+                        @Html.Partial("OtherExpensesList", Model)
+                    </div>
+                </div>
+                <div id="divLedgerTable3" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    <div class="form-group col-sm-12" id="MainDeductionDiv">
+                        @Html.Partial("OtherDeductionList", Model)
+                    </div>
+                </div>
+                <div id="divLedgerTable4" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    @Html.Partial("Summary", Model)
+                </div>
+                <div id="divLedgerTable5" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">TDS Cut?</label>
+                        <div class="col-sm-1">
+                            @Html.CheckBoxFor(x => x.CutTDS, new { @id = "addTDSFlag", @Name = "addTDSFlag", @Value = Model.CutTDS })
+                        </div>
+                        <label class="col-sm-1 control-label">Code</label>
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.TDSCode, new { @class = "input-large search-query", @id = "addTDSCode", @Name = "addTDSCode", @style = "width:99%;" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">TDS Rate</label>
+                        <div class="col-sm-1">
+                            @Html.TextBoxFor(x => x.TDSRate, new { @class = "form-control", @id = "addTDSRate", @Name = "addTDSRate", @Value = Model.TDSRate })
+                        </div>
+                        <label class="col-sm-1 control-label">TDS Amt</label>
+                        <div class="col-sm-1">
+                            @Html.TextBoxFor(x => x.TDSAmt, new { @class = "form-control", @id = "addTDSAmt", @disabled = "disabled", @Name = "addTDSAmt", @Value = Model.TDSAmt })
+                        </div>
+                    </div>
+                </div>
+
+                <div id="divLedgerTable7" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    <div class="form-group">
+                        <div class="col-sm-1" style="width:auto;">
+                            @Html.CheckBoxFor(x => x.Pick_Financial_Document, new { @class = "", @Value = Model.Pick_Financial_Document, style = "height: 20px;width: 35px;", @id = "ChkAdvDateRange", @title = "Fetch Ledger Debit(Adv) List From Particular Date Range." })
+                        </div>
+                        <div class="col-sm-4" style="padding:0px!important;">
+                            <label class="col-sm-2 control-label">Frm Date:</label>
+                            <div class="col-sm-4">
+                                @Html.TextBoxFor(m => m.AdvFromDate, new { @class = "form-control", @placeholder = "Start From", @style = "width:100%;margin-top:2px;", @value = Model.AdvFromDate })
+                            </div>
+                            <label class="col-sm-2 control-label">To Date:</label>
+                            <div class="col-sm-4">
+                                @Html.TextBoxFor(m => m.AdvTODate, new { @class = "form-control", @placeholder = "End Upto", @style = "width:100%;margin-top:2px;", @value = Model.AdvTODate })
+                            </div>
+                        </div>
+                        <div class="col-sm-1" style="width:auto;">
+                            <button class="btn btn-info" style="font-size:13pt;margin-top:2px;font-weight:bolder;padding:0px 0px;width:40px;" id="btnAdvRefresh" title='Refresh'><i style="color:black;" class="fa fa-refresh"></i></button>
+                        </div>
+                        @*<label class="col-sm-2 control-label" style="font-size: 13px;color: blue;">Adjust Total (Adv) Amt:&nbsp;&nbsp;&nbsp;<span style="color:red!important;" id="TotalAdv">0</span></label>*@
+                    </div>
+                    <div id="DivAdvLedger">
+                        @Html.Partial("SaveLedgerPaidSummary", Model)
+                    </div>
+                </div>
+                <div id="divLedgerTable9" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    <div class="form-group">
+                        <div class="col-sm-1" style="width:auto;">
+                            @Html.CheckBoxFor(x => x.Pick_Financial_Document, new { @class = "", @Value = Model.Pick_Financial_Document, style = "height: 20px;width: 35px;", @id = "ChkBalDateRange", @title = "Fetch Ledger Credit(Bal) List From Particular Date Range." })
+                        </div>
+                        <div class="col-sm-4" style="padding:0px!important;">
+                            <label class="col-sm-2 control-label">Frm Date:</label>
+                            <div class="col-sm-4">
+                                @Html.TextBoxFor(m => m.BalFromDate, new { @class = "form-control", @placeholder = "Start From", @style = "width:100%;margin-top:2px;", @value = Model.BalFromDate })
+                            </div>
+                            <label class="col-sm-2 control-label">To Date:</label>
+                            <div class="col-sm-4">
+                                @Html.TextBoxFor(m => m.BalTODate, new { @class = "form-control", @placeholder = "End Upto", @style = "width:100%;margin-top:2px;", @value = Model.BalTODate })
+                            </div>
+                        </div>
+                        <div class="col-sm-1" style="width:auto;">
+                            <button class="btn btn-info" style="font-size:13pt;margin-top:2px;font-weight:bolder;padding:0px 0px;width:40px;" id="btnBalRefresh" title='Refresh'><i style="color:black;" class="fa fa-refresh"></i></button>
+                        </div>
+
+                        @*<label class="col-sm-2 control-label" style="font-size: 13px;color: blue;">Adjust Total (Adv) Amt:&nbsp;&nbsp;&nbsp;<span style="color:red!important;" id="TotalBal">0</span></label>*@
+                    </div>
+                    <div id="DivBalLedger">
+                        @Html.Partial("SaveLedgerBalSummary", Model)
+                    </div>
+                </div>
+                <div id="divLedgerTable8" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    <div class="form-group">
+                        <div class="col-sm-4" style="padding:0px!important;">
+                            <label class="col-sm-2 control-label">Frm Date:</label>
+                            <div class="col-sm-4">
+                                @Html.TextBoxFor(m => m.CCFromDate, new { @class = "form-control", @placeholder = "Start From", @style = "width:100%;margin-top:2px;", @value = Model.CCFromDate })
+                            </div>
+                            <label class="col-sm-2 control-label">To Date:</label>
+                            <div class="col-sm-4">
+                                @Html.TextBoxFor(m => m.CCTODate, new { @class = "form-control", @placeholder = "End Upto", @style = "width:100%;margin-top:2px;", @value = Model.CCTODate })
+                            </div>
+                        </div>
+                        <div class="col-sm-1">
+                            <button class="btn btn-info" style="font-size:13pt;margin-top:2px;font-weight:bolder;padding:0px 0px;width:40px;" id="btnCCRefresh" title='Refresh'><i style="color:black;" class="fa fa-refresh"></i></button>
+                        </div>
+                        @*<label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">Deduction From Trip Charges:</label>
+                            <div class="col-sm-1" style="padding:0px;width:auto;">
+                                @Html.CheckBoxFor(x => x.CutCC, new { @id = "CutCC", @Name = "CutCC", @Value = Model.CutCC, @style = "height:20px;width:20px;" })
+                            </div>*@
+                        @*<label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">Cut From Summary:</label>
+                            <div class="col-sm-1" style="padding:0px;">
+                                @Html.CheckBoxFor(x => x.CCCutFromSummary, new { @id = "CCCutFromSummary", @Name = "CCCutFromSummary", @Value = Model.CCCutFromSummary, @style = "height:20px;width:20px;" })
+                            </div>*@
+                    </div>
+                    <div id="DivCCLedger">
+                        @Html.Partial("CCLedgerPaidSummary", Model)
+                    </div>
+                </div>
+                <div id="divLedgerTable6" class="tabcontent" style="height: 340px;border: 1px solid;">
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">From KM</label>
+                        <div class="col-sm-1">
+                            @Html.TextBoxFor(x => x.FromKM, new { @class = "form-control", @id = "FromKM", @Name = "FromKM", @Value = Model.FromKM })
+                        </div>
+                        <label class="col-sm-1 control-label">TO KM</label>
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.ToKM, new { @class = "form-control", @id = "ToKM", @Name = "ToKM", @Value = Model.ToKM })
+                        </div>
+                        <label class="col-sm-1 control-label">Running KM</label>
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.RunningKM, new { @class = "form-control", @id = "RunningKM", @Name = "RunningKM", @Value = Model.RunningKM, @disabled = "disabled" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-1 control-label">Per KM Chrg</label>
+                        <div class="col-sm-1">
+                            @Html.TextBoxFor(x => x.PerKMChrg, new { @class = "form-control", @id = "PerKMChrg", @Name = "PerKMChrg", @Value = Model.PerKMChrg })
+                        </div>
+                        <label class="col-sm-1 control-label">Total KM Expenses</label>
+                        <div class="col-sm-1">
+                            @Html.TextBoxFor(x => x.TripChrgKMExp, new { @class = "form-control", @id = "TripChrgKMExp", @disabled = "disabled", @Name = "TripChrgKMExp", @Value = Model.TripChrgKMExp })
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="container-fluid" style="padding-left:0px!important;padding-right:0px!important;border:1px solid;padding:5px!important;">
+                <label class="col-sm-1 control-label" style="padding-left:20px;font-weight:bold;">Remark:</label>
+                <div class="col-sm-7">
+                    @Html.TextAreaFor(m => m.Narr, new { @class = "form-control", @style = "width:100%;", @Value = Model.Narr, @maxlength = "250" })
+                </div>
+                <label class="col-sm-1 control-label" style="padding-top:4px;font-weight:bold;">Net Amt:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(m => m.NetAmt, new { @class = "form-control", @id = "NetAmt", @Name = "NetAmt", @disabled = "disabled", @style = "width:99%;", @Value = Model.NetAmt.ToString("F2") })
+                </div>
+                <label class="col-sm-1 control-label" style="padding-top:4px;font-weight:bold;">TDS Amt:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(m => m.TDSAmt, new { @class = "form-control", @id = "TDSAmt", @Name = "TDSAmt", @disabled = "disabled", @style = "width:99%;", @Value = Model.TDSAmt.ToString("F2") })
+                </div>
+            </div>
+            <script>
+                function openCity(evt, cityName) {
+                    if (cityName == "divLedgerTable4") {
+                        Summary();
+                    }
+                    var i, tabcontent, tablinks;
+                    tabcontent = document.getElementsByClassName("tabcontent");
+                    for (i = 0; i < tabcontent.length; i++) {
+                        tabcontent[i].style.display = "none";
+                    }
+                    tablinks = document.getElementsByClassName("tablinks");
+                    for (i = 0; i < tablinks.length; i++) {
+                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    }
+                    document.getElementById(cityName).style.display = "block";
+                    evt.currentTarget.className += " active";
+                }
+                document.getElementById("List").click();
+
+            </script>
+        </div>
+    </div>
+</section>
+
+<footer id="saveFooter" class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;margin-top:5px;">
+    <div class="row">
+        <div class="col-sm-5">
+
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.LAT ERP-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode == "Add")
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" disabled id="btnPrintOnly" data-toggle="tooltip" data-placement="top" title="Print Only">Print Only</button>
+                }
+                else
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPrintOnly" data-toggle="tooltip" data-placement="top" title="Print Only">Print Only</button>
+                }
+                @if (Model.Mode == "Add" || Model.Mode == "Edit")
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnSave">Save</button>
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPrint">Save & Print </button>
+
+                }
+                else
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPrintOnly" data-toggle="tooltip" data-placement="top" title="Print Only">Print Only</button>
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                }
+                @if (Model.LedgerThrough)
+                {
+                    <a href="" onclick="window.top.close();" class="btn btn-danger" style="margin-right:10px;font-size:13px;padding:3px 12px;" id="Cancel">Cancel</a>
+                }
+                else
+                {
+                    <a href="~/Vehicles/MasterGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="margin-right:10px;font-size:13px;padding:3px 12px;" id="Cancel">Cancel</a>
+                }
+            </div>
+        </div>
+    </div>
+</footer>
+<script>
+    var PrintLR = "";
+    function TDSCalculation() {
+        debugger;
+        $("#addTDSAmt").val(0);
+
+        if ($('#addTDSFlag').is(":checked")) {
+            var rate1 = (parseFloat($("#addTDSRate").val()));
+            var amt1 = parseFloat($("#NetAmt").val());
+            var AmtTDS = Math.round((rate1 * amt1) / 100);
+            $('#addTDSAmt').val(AmtTDS);
+            $('#TDSAmt').val(AmtTDS);
+        }
+        else {
+            $('#addTDSAmt').val(0);
+            $('#TDSAmt').val(0);
+        }
+    }
+    function loadTDSCodeList() {
+        var url = '@Url.Action("GetTDSList")'
+         $('#addTDSCode').select2({
+             minimumInputLength: 0,
+             placeholder: 'Search',
+             ajax: {
+                 url: url,
+                 dataType: 'json',
+                 quietMillis: 100,
+                 enableFiltering: true,
+                 allowClear: true,
+                 minimumInputLength: 0,
+                 multiple: true,
+                 width: 300,
+                 data: function (term, page) {
+                     return {
+                         types: ["exercise"],
+                         limit: -1,
+                         term: term
+                     };
+                 },
+                 results: function (data, page) {
+                     clientObj = JSON.stringify(data);
+                     return {
+                         results: $.map(data, function (item) {
+                             return {
+                                 text: item.Name,
+                                 id: item.Code
+                             }
+                         })
+                     };
+                 }
+             },
+             initSelection: function (element, callback) {
+                 var data = { id: '@Model.TDSCode', text: '@Model.TDSCodeName' };
+                 callback(data);
+             },
+             formatResult: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+             formatSelection: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+         })
+    };
+    $(document).ready(function ()
+    {
+        GetMyFavorites('@Model.ViewDataId');
+
+        if ('@Model.FMOrNOt' == "True" || '@Model.FMOrNOt' == "true") {
+            $("#FreightMemo").prop("checked", true);
+            $("#LorryReceipt").prop("checked", false);
+        }
+        else
+        {
+            $("#FreightMemo").prop("checked", false);
+            $("#LorryReceipt").prop("checked", true);
+        }
+
+        if ('@Model.VehicleFlag' == "True" || '@Model.VehicleFlag' == "true") {
+            $("#rdbDriver").prop("checked", false);
+            $("#rdbVehicle").prop("checked", true);
+            $(".VehicleCombo").removeClass("hidden");
+            $(".DriverCombo").addClass("hidden");
+        }
+        else
+        {
+            $("#rdbDriver").prop("checked", true);
+            $("#rdbVehicle").prop("checked", false);
+            $(".VehicleCombo").addClass("hidden");
+            $(".DriverCombo").removeClass("hidden");
+        }
+        $('#rdbDriver').change(function () {
+            if (this.checked) {
+                $(".VehicleCombo").addClass("hidden");
+                $(".DriverCombo").removeClass("hidden");
+            }
+        });
+        $('#rdbVehicle').change(function () {
+            if (this.checked) {
+                $(".VehicleCombo").removeClass("hidden");
+                $(".DriverCombo").addClass("hidden");
+            }
+        });
+
+        if ('@Model.Mode' == "Add") {
+            $('#FromDate').change(function () {
+                $("#AdvFromDate,#BalFromDate,#CCFromDate").val($('#FromDate').val());
+            });
+
+            $('#TODate').change(function () {
+                $("#AdvTODate,#BalTODate,#CCTODate").val($('#TODate').val());
+            });
+        }
+
+
+        @*if ('@Model.Mode' != "Add") {
+            var TotalAdv = 0;
+            $("#Ledgertabledata > tbody  > tr").each(function () {
+                var Row = $(this).closest('tr');
+                if (Row.find('input[type=checkbox]').prop("checked") == true) {
+                    var tds = $(this).find('td');
+                    TotalAdv += parseFloat(tds.eq(3).text());
+                }
+            });
+            $('#TotalAdv').text(TotalAdv);
+
+        }*@
+
+        if ('@Model.Mode' == 'View' || '@Model.Mode' == 'Delete') {
+            $('#frmaddnewadvancebal :input').prop("disabled", true);
+            $('.footer-section :input').prop("disabled", true);
+            $('#fixedbottom :input').prop("disabled", true);
+            $('#btnPrintOnly').prop("disabled", false);
+            $('#btnDelete').prop("disabled", false);
+        }
+        if ('@Model.Mode' == "Edit" || '@Model.Mode' == "Delete")
+        {
+            if ('@Model.LockAuthorise' == "True")
+            {
+                var Message = $("#ErrorMessage").text() + "<br>Document Lock In @Model.Mode Mode As Per The Authentication Rule...";
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").html(Message);
+                $('#frmaddnewadvancebal :input').prop("disabled", true);
+                $('.footer-section :input').prop("disabled", true);
+                $('#fixedbottom :input').prop("disabled", true);
+                $('#btnPrintOnly').prop("disabled", false);
+            }
+        }
+        if ('@Model.PeriodLock' == "True")
+        {
+            var Message = $("#ErrorMessage").text() + "<br>This Document Lock By Author....!";
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").html(Message);
+            $('#frmaddnewadvancebal :input').prop("disabled", true);
+            $('.footer-section :input').prop("disabled", true);
+            $('#fixedbottom :input').prop("disabled", true);
+            $('#btnPrintOnly').prop("disabled", false);
+        }
+        if ('@Model.RefDocument' == "True")
+        {
+            var Message = $("#ErrorMessage").text() + "<br>This Document Created By Another Module.<br> So, Not Allow To Any Activity Against This Document....!";
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").html(Message);
+            $('#frmaddnewadvancebal :input').prop("disabled", true);
+            $('.footer-section :input').prop("disabled", true);
+            $('#fixedbottom :input').prop("disabled", true);
+            $('#btnPrintOnly').prop("disabled", false);
+        }
+        $('.tablinks').prop("disabled", false);
+        $('#changebranch :input').prop("disabled", false);
+        $('#changeperiod :input').prop("disabled", false);
+        $('#printpostmodel :input').prop("disabled", false);
+
+        loadDriver();
+        loadVehicle();
+        loadDebit();
+        loadTDSCodeList();
+        $("#SearchFMNo,#FromKM,#ToKM").constrain({ allow: { regex: "[0-9]" } });
+        $("#PerKMChrg").constrain({ allow: { regex: "[0-9.]" } });
+
+        if ('@Model.ChangeAC' != "True")
+        {
+            $("#TripDebitAc").prop("disabled", true);
+        }
+
+        $('#FromDate,#TODate,#AdvTODate,#AdvFromDate,#BalFromDate,#BalTODate,#CCFromDate,#CCTODate').datepicker({
+            format: 'dd/mm/yyyy',
+            autoclose: true,
+        });
+
+        $("#TODate").datepicker().on("changeDate", function (e) {
+            var ModelData = {};
+            ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+            ModelData["FromDate"] = $("#FromDate").val();
+            ModelData["TODate"] = $("#TODate").val();
+            ModelData["DriverCode"] = $("#DriverCode").val();
+            ModelData["VehicleCode"] = $("#VehicleCode").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("CheckDriverTripDates")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $("#ErrorMessage").hide();
+                    if (data.DuplicateDateFound == true) {
+                        $('.footer-section :input').prop("disabled", true);
+                        if ($("#ConfirmDupDateOfTrip").val() == "true" || $("#ConfirmDupDateOfTrip").val() == "True") {
+                            var result = confirm("Found Another Trip Based On From Date And To Date.\n Are you sure you want to Create This TripSheet ?");
+                            if (result) {
+                                $('.footer-section :input').prop("disabled", false);
+                            } else {
+                                location.reload(true);
+                            }
+                        }
+                        else
+                        {
+                            
+                            $("#ErrorMessage").show();
+                            $("#ErrorMessage").text("Found Another Trip Based On From Date And To Date.\n We Cannot Allow Duplicate Date In Tripsheet Of Driver / Vehicle.");
+                            //alert("Found Another Trip Based On From Date And To Date.\n We Cannot Allow Duplicate Date In Tripsheet Of Driver / Vehicle.");
+                            $('.footer-section :input').prop("disabled", true);
+                        }
+
+                    } else {
+                        $('.footer-section :input').prop("disabled", false);
+                    }
+
+                    //$("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+        var mstartdate = $('#hdnStartDate').val();
+        var menddate = $('#hdnEndDate').val();
+        $('#TripSheetDate').datepicker({
+            format: 'dd/mm/yyyy',
+            autoclose: true,
+            startDate: new Date(mstartdate),
+            endDate: new Date(menddate)
+        });
+
+
+
+        $('input[type=radio][name=PickDoc]').change(function () {
+            if (this.value == 'LR') {
+                $("#FMOrNOt").val(false);
+            }
+            else if (this.value == 'FM') {
+                $("#FMOrNOt").val(true);
+            }
+        });
+
+        $('#addTDSCode').change(function () {
+            var url = '@Url.Action("GetTDSRateDetail")?TDSCode=' + $('#addTDSCode').val() + '&TripSheetDate=' + $('#TripSheetDate').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addTDSRate').val(data.TDSRate);
+                    TDSCalculation();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#addTDSRate').focusout(function () {
+            TDSCalculation();
+        });
+
+        $('#FromKM,#ToKM,#PerKMChrg').focusout(function () {
+            CalculateNetAmount();
+        });
+        $('#DriverCode,#VehicleCode,#rdbDriver,#rdbVehicle').change(function (event)
+        {
+            var ModelData = {};
+            ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+            ModelData["TripSheetDate"] = $("#TripSheetDate").val();
+            ModelData["DriverCode"] = $("#DriverCode").val();
+            ModelData["VehicleCode"] = $("#VehicleCode").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("ChangeDriver")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+
+
+
+                    $('#lblBalance').html(data.Balance);
+
+                    var BillListDiv = $("#divLedgerTable");
+                    BillListDiv.html('');
+                    BillListDiv.html(data.Html);
+
+                    var BillListDiv = $("#DivAdvLedger");
+                    BillListDiv.html('');
+                    BillListDiv.html(data.Advhtml);
+
+                    var BillListDiv = $("#DivCCLedger");
+                    BillListDiv.html('');
+                    BillListDiv.html(data.CChtml);
+
+                    $("#CutAdv").prop("checked", false);
+                    $("#CutCC").prop("checked", false);
+
+                    if (data.CutTDS == true) {
+                        $("#addTDSFlag").prop("checked", true);
+                    }
+                    else {
+                        $("#addTDSFlag").prop("checked", false);
+                    }
+                    if (data.TDSCode == "0" || data.TDSCode == "") {
+                        $('#addTDSCode').select2('data', { id: '', text: '' });
+                        $('#addTDSRate').val("0");
+
+                    }
+                    else {
+                        $('#addTDSCode').select2('data', { id: data.TDSCode, text: data.TDSName });
+                        $('#addTDSRate').val(data.TDSRate);
+                    }
+                    CalculateNetAmount();
+
+                    if (data.HireBlackList == true) {
+                        $("#hdnBlackListDriver").val("T");
+                    } else {
+                        $("#hdnBlackListDriver").val("F");
+                    }
+                    if (data.HireBlackList == true || data.HireSpcl == true) {
+                        //VehicleRemarkModal
+                        if (data.HireSpcl == true) {
+                            //SpclRemarkDiv SpclRMK
+                            $("#DriverSpclRMK").html(data.HireSpclRemark);
+                            $("#DriverSpclRemarkDiv").show();
+                        }
+                        else {
+                            $("#DriverSpclRemarkDiv").hide();
+                        }
+                        if (data.HireBlackList == true) {
+                            //BlackListRemarkDiv BlackLStRMK
+                            $("#DriverBlackLStRMK").html(data.HireBlackListRemark);
+                            $("#DriverBlackListRemarkDiv").show();
+                        }
+                        else {
+                            $("#DriverBlackListRemarkDiv").hide();
+                        }
+                        $('#DriverTicklerModal').modal('show');
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#CutAdv').change(function (event) {
+            CalculateNetAmount();
+        });
+        $('#Pick_Financial_Document').change(function (event) {
+            $("#ChkBalDateRange,#ChkAdvDateRange").prop("checked", $(this).is(':checked'));
+        });
+
+        $('#btnBalRefresh').click(function () {
+
+            if ($("#rdbVehicle").is(":checked")) {
+                if ($("#VehicleCode").val() == '' || $("#VehicleCode").val() == null) {
+                    alert('Please Select Vehicle.....!');
+                    return;
+                }
+
+            } else {
+                if ($("#DriverCode").val() == '' || $("#DriverCode").val() == null) {
+                    alert('Please Select Driver.....!');
+                    return;
+                }
+            }
+            if ($("#ChkBalDateRange").is(":checked")) {
+                if ($("#BalFromDate").val() == '' || $("#BalFromDate").val() == null) {
+                    alert('Please Select From Date Of Balance.....!');
+                    return;
+                }
+                if ($("#BalTODate").val() == '' || $("#BalTODate").val() == null) {
+                    alert('Please Select TO Date Of Balance.....!');
+                    return;
+                }
+            }
+
+
+            var ModelData = {};
+            ModelData["Pick_Financial_Document"] = $("#ChkBalDateRange").is(":checked");
+            ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+            ModelData["VehicleCode"] = $("#VehicleCode").val();
+            ModelData["DriverCode"] = $("#DriverCode").val();
+            ModelData["BalFromDate"] = $("#BalFromDate").val();
+            ModelData["BalTODate"] = $("#BalTODate").val();
+            ModelData["Document"] = $("#Document").val();
+            var ledgers = [];
+            $("#BalLedgertabledata > tbody  > tr").each(function () {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    TableKey: tds.eq(8).text(),
+                    Branch: tds.eq(9).text(),
+                    Credit: tds.eq(4).text(),
+                }
+                ledgers.push(myDets);
+            });
+
+            ModelData["Balledgers"] = ledgers;
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("GetBalList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                   // $('#DivBalLedger').html(data.Html);
+                    $('#AdvanceList').modal('show');
+                    $('#advancelist').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#btnAdvRefresh').click(function () {
+
+            if ($("#rdbVehicle").is(":checked")) {
+                if ($("#VehicleCode").val() == '' || $("#VehicleCode").val() == null) {
+                    alert('Please Select Vehicle.....!');
+                    return;
+                }
+
+            } else {
+                if ($("#DriverCode").val() == '' || $("#DriverCode").val() == null) {
+                    alert('Please Select Driver.....!');
+                    return;
+                }
+            }
+
+            if ($("#ChkAdvDateRange").is(":checked")) {
+                if ($("#AdvFromDate").val() == '' || $("#AdvFromDate").val() == null) {
+                    alert('Please Select From Date Of Advance.....!');
+                    return;
+                }
+                if ($("#AdvTODate").val() == '' || $("#AdvTODate").val() == null) {
+                    alert('Please Select TO Date Of Advance.....!');
+                    return;
+                }
+            }
+
+
+
+            var ModelData = {};
+            ModelData["Pick_Financial_Document"] = $("#ChkAdvDateRange").is(":checked");
+            ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+            ModelData["VehicleCode"] = $("#VehicleCode").val();
+            ModelData["DriverCode"] = $("#DriverCode").val();
+            ModelData["AdvFromDate"] = $("#AdvFromDate").val();
+            ModelData["AdvTODate"] = $("#AdvTODate").val();
+            ModelData["Document"] = $("#Document").val();
+            var ledgers = [];
+            $("#Ledgertabledata > tbody  > tr").each(function () {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    TableKey: tds.eq(8).text(),
+                    Branch: tds.eq(9).text(),
+                    Debit: tds.eq(4).text(),
+                }
+                ledgers.push(myDets);
+            });
+
+            ModelData["Advledgers"] = ledgers;
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("GetAdvanceList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    //$('#DivAdvLedger').html(data.Html);
+                    $('#AdvanceList').modal('show');
+                    $('#advancelist').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#CutCC').change(function (event) {
+            CalculateNetAmount();
+        });
+        $('#btnCCRefresh').click(function () {
+            if ($("#rdbVehicle").is(":checked")) {
+                if ($("#VehicleCode").val() == '' || $("#VehicleCode").val() == null) {
+                    alert('Please Select Vehicle.....!');
+                    return;
+                }
+
+            } else {
+                if ($("#DriverCode").val() == '' || $("#DriverCode").val() == null) {
+                    alert('Please Select Driver.....!');
+                    return;
+                }
+            }
+            if ($("#CCFromDate").val() == '' || $("#CCFromDate").val() == null) {
+                alert('Please Select From Date Of Cost Center.....!');
+                return;
+            }
+            if ($("#CCTODate").val() == '' || $("#CCTODate").val() == null) {
+                alert('Please Select TO Date Of Cost Center.....!');
+                return;
+            }
+            var ModelData = {};
+            ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+            ModelData["VehicleCode"] = $("#VehicleCode").val();
+            ModelData["DriverCode"] = $("#DriverCode").val();
+            ModelData["CCFromDate"] = $("#CCFromDate").val();
+            ModelData["CCTODate"] = $("#CCTODate").val();
+            ModelData["Document"] = $("#Document").val();
+            var ledgers = [];
+            $("#CCLedgertabledata > tbody  > tr").each(function () {
+                var Row = $(this).closest('tr');
+                if (Row.find('input[type=checkbox]').prop("checked") == true) {
+                    var tds = $(this).find('td');
+                    var myDets =
+                    {
+                        Debit: tds.eq(4).text(),
+                        RefDoc: tds.eq(7).text(),
+                        TDSFlag: Row.find('input[class=DedChk]').prop("checked"),
+                        Reminder: Row.find('input[class=CutTripDedChk]').prop("checked"),
+                        AUTHORISE: tds.eq(8).text(),
+                        AUTHIDS: tds.eq(9).text(),
+                        TableKey: tds.eq(11).text(),
+                        Branch: tds.eq(12).text(),
+
+                    }
+                    ledgers.push(myDets);
+                }
+            });
+
+            ModelData["CCledgers"] = ledgers;
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("GetCCList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivCCLedger').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#PickData').click(function (event)
+        {
+            debugger;
+            event.preventDefault();
+            var url = '@Url.Action("GetFMList")';
+
+            if ($("#FMOrNOt").val() == "False" || $("#FMOrNOt").val() == "false")
+            {
+                url = '@Url.Action("GetLRList")';
+            }
+
+            if ($("#rdbVehicle").is(":checked"))
+            {
+                if ($("#VehicleCode").val() == '' || $("#VehicleCode").val() == null) {
+                    alert('Please Select Vehicle.....!');
+                    return;
+                }
+
+            } else {
+                if ($("#DriverCode").val() == '' || $("#DriverCode").val() == null) {
+                    alert('Please Select Driver.....!');
+                    return;
+                }
+            }
+            if ($("#Pick_Financial_Document").is(":checked")) {
+                if ($("#FromDate").val() == '' || $("#FromDate").val() == null) {
+                    alert('Please Select From Date.....!');
+                    return;
+                }
+                if ($("#TODate").val() == '' || $("#TODate").val() == null) {
+                    alert('Please Select TO Date.....!');
+                    return;
+                }
+            }
+
+            var ModelData = {};
+            ModelData["Pick_Financial_Document"] = $("#Pick_Financial_Document").is(":checked");
+            ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+            ModelData["VehicleCode"] = $("#VehicleCode").val();
+            ModelData["DriverCode"] = $("#DriverCode").val();
+            ModelData["FromDate"] = $("#FromDate").val();
+            ModelData["TODate"] = $("#TODate").val();
+            ModelData["FMOrNOt"] = $("#FMOrNOt").val();
+
+            var DTO = { mModel: ModelData };
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#pickuplist').modal('show');
+                    $('#PickUpList').html(data.Html);
+                    //$('#divLedgerTable7').html(data.ledgerhtml);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#SearchFMNo').blur(function (event)
+        {
+            debugger;
+            event.preventDefault();
+            if (!(parseInt($("#SearchFMNo").val()) > 0)) {
+                return;
+            }
+            var url = '@Url.Action("SearchFMList")';
+
+            if ($("#FMOrNOt").val() == "False" || $("#FMOrNOt").val() == "false")
+            {
+                url = '@Url.Action("SearchLRList")';
+            }
+            var ModelData = {};
+            ModelData["SearchFMNo"] = $("#SearchFMNo").val();
+
+            var DTO = { mModel: ModelData };
+            //var url = '@Url.Action("SearchFMList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#pickuplist').modal('show');
+                    $('#PickUpList').html(data.Html);
+                    $("#SearchFMNo").val("");
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var ModelData = {};
+            ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+            ModelData["Document"] = $("#Document").val();
+            ModelData["NetAmt"] = $("#NetAmt").val();
+
+            ModelData["Header"] = '@Model.Header';
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveData")';
+
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == 'Success') {
+
+                        window.location.href = "/Vehicles/MasterGrid?ViewDataId=@Model.ViewDataId&MainType=@Model.MainType&Module=@Model.Module&TableName=@Model.TableName&optiontype=@Model.OptionType&optioncode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2"
+                    }
+                    else {
+                        //$('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+        $('#btnSave').click(function (event) {
+            event.preventDefault();
+            event.preventDefault();
+            if ('@Model.Mode' == "Delete")
+            {
+                var result = confirm("Are you sure you want to Delete This TripSheet ?");
+                if (result)
+                {
+                    SaveTripSheet();
+                }
+            }
+            else
+            {
+                //CHeckLrNoExistOrNot("FMMaster");
+                GetLedgerPosting();
+            }
+        });
+        $('#btnPrint').click(function (event) {
+            event.preventDefault();
+
+            PrintLR = "SavePrint";
+            GetLedgerPosting();
+
+        });
+        $('#btnPrintOnly').click(function (event) {
+            event.preventDefault();
+            debugger;
+            PrintLR = "OnlyPrint";
+            $('#printpostmodel').modal('show');
+        });
+    });
+    function GetLedgerPosting()
+    {
+        debugger;
+        if ($("#rdbVehicle").is(":checked"))
+        {
+            if ($("#VehicleCode").val() == '' || $("#VehicleCode").val() == null) {
+                alert('Please Select Vehicle.....!');
+                return;
+            }
+            if ($("#hdnBlackListDriver").val() == "T") {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text($('#VehicleCode').select2('data').text + ' This Vehicle Activity Hold By Master.. Please Change Vehicle....!');
+                return;
+            }
+        }
+        else
+        {
+            if ($("#DriverCode").val() == '' || $("#DriverCode").val() == null) {
+                alert('Please Select Driver.....!');
+                return;
+            }
+            if ($("#hdnBlackListDriver").val() == "T") {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text($('#DriverCode').select2('data').text + ' This Driver Activity Hold By Master.. Please Change Driver....!');
+                return;
+            }
+        }
+
+        var ModelData = {};
+
+        var fMMasters = [];
+        $("#tabledata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "TotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    RefTablekey: Row.find('.EditRefTablekey').val(),
+                    FMNo: tds.eq(4).text(),
+                    Date: tds.eq(5).text(),
+                    VehicleNo: tds.eq(6).text(),
+                    Driver: tds.eq(7).text(),
+                    From: tds.eq(8).text(),
+                    To: tds.eq(9).text(),
+                    RouteVia: tds.eq(10).text(),
+                    Tripchages: Row.find(".ttxtTripCharge").val(),
+                    LocalCharges: Row.find(".ttxtLocalCharges").val(),
+                    ViaCharges: Row.find(".ttxtViaCharges").val(),
+                    Total: Row.find(".ttxtTotal").val(),
+                }
+                fMMasters.push(myDets);
+            }
+        });
+        if ($("#NoDocumentReq").val() == "true" || $("#NoDocumentReq").val() == "True") {
+
+        }
+        else
+        {
+            if (fMMasters.length == 0) {
+                alert('Please Select Document ....');
+                return;
+            }
+        }
+
+
+
+
+        var expenseslist = [];
+        $("#tableexpensesdata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "ExpensesTotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    ExpensesAc: tds.eq(3).attr("id"),
+                    ExpensesAcName: tds.eq(3).text(),
+                    DocNo: tds.eq(4).text(),
+                    Amount: tds.eq(5).text(),
+                }
+                expenseslist.push(myDets);
+            }
+        });
+        var deductionlist = [];
+        $("#tabledeductiondata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "DeductionTotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    ExpensesAc: tds.eq(3).attr("id"),
+                    ExpensesAcName: tds.eq(3).text(),
+                    DocNo: tds.eq(4).text(),
+                    Amount: tds.eq(5).text(),
+                }
+                deductionlist.push(myDets);
+            }
+        });
+
+        var ledgers = [];
+        $("#Ledgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            var myDets =
+            {
+                TableKey: tds.eq(8).text(),
+                Branch: tds.eq(9).text(),
+                Debit: tds.eq(4).text(),
+            }
+            ledgers.push(myDets);
+        });
+        ModelData["Advledgers"] = ledgers;
+
+        var balledgers = [];
+        $("#BalLedgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            var myDets =
+            {
+                TableKey: tds.eq(8).text(),
+                Branch: tds.eq(9).text(),
+                Credit: tds.eq(4).text(),
+            }
+            balledgers.push(myDets);
+        });
+        ModelData["Balledgers"] = balledgers;
+
+        var CCledgers = [];
+        $("#CCLedgertabledata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.find('input[type=checkbox]').prop("checked") == true) {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    Debit: tds.eq(4).text(),
+                    RefDoc: tds.eq(7).text(),
+                    TDSFlag: Row.find('input[class=DedChk]').prop("checked"),
+                    Reminder: Row.find('input[class=CutTripDedChk]').prop("checked"),
+                    AUTHORISE: tds.eq(8).text(),
+                    AUTHIDS: tds.eq(9).text(),
+                    TableKey: tds.eq(11).text(),
+                    Branch: tds.eq(12).text(),
+                }
+                CCledgers.push(myDets);
+            }
+
+        });
+        ModelData["CCledgers"] = CCledgers;
+
+
+        ModelData["FromDate"] = $("#FromDate").val();
+        ModelData["TODate"] = $("#TODate").val();
+        ModelData["FromKM"] = $("#FromKM").val();
+        ModelData["ToKM"] = $("#ToKM").val();
+        ModelData["PerKMChrg"] = $("#PerKMChrg").val();
+
+        ModelData["AdvFromDate"] = $("#AdvFromDate").val();
+        ModelData["AdvTODate"] = $("#AdvTODate").val();
+        ModelData["CutAdv"] = $('#CutAdv').is(":checked");
+
+        ModelData["BalFromDate"] = $("#BalFromDate").val();
+        ModelData["BalTODate"] = $("#BalTODate").val();
+
+        ModelData["CCFromDate"] = $("#CCFromDate").val();
+        ModelData["CCTODate"] = $("#CCTODate").val();
+        ModelData["CutCC"] = $('#CutCC').is(":checked");
+
+        ModelData["FMOrNOt"] = $("#FMOrNOt").val();
+        ModelData["fMMasters"] = fMMasters;
+        ModelData["expenseslist"] = expenseslist;
+        ModelData["deductionlist"] = deductionlist;
+        ModelData["TDSAmt"] = $("#TDSAmt").val();
+        ModelData["CutTDS"] = $('#addTDSFlag').is(":checked");
+        ModelData["TripSheetDate"] = $("#TripSheetDate").val();
+        ModelData["TripChrgKMExp"] = $("#TripChrgKMExp").val();
+
+
+        ModelData["Document"] = $("#Document").val();
+        ModelData["TripSheetNo"] = $("#TripSheetNo").val();
+        ModelData["TripDebitAc"] = $("#TripDebitAc").val();
+        ModelData["DriverCode"] = $("#DriverCode").val();
+        ModelData["VehicleCode"] = $("#VehicleCode").val();
+        ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("GetPostingNew")';
+        $.ajax({
+            async: false,
+            cache: false,
+            url: url,
+            data: JSON.stringify(DTO),
+            type: "POST",
+            dataType: "json",
+            cache: false,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                debugger;
+                if (data.Status == "Success")
+                {
+                    $('#ledpostmodel').modal('show');
+                    $('#ledpostingmodel').html(data.Html);
+                }
+                else if (data.Status == "CancelError")
+                {
+                    alert(data.Message)
+                }
+                else if (data.Status == "ValidError")
+                {
+                    alert(data.Message)
+                }
+            },
+        });
+    }
+
+    function SaveTripSheet()
+    {
+        debugger;
+        var url = '@Url.Action("SaveData")';
+        var ModelData = {};
+
+        var fMMasters = [];
+        $("#tabledata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "TotalRow") {
+                var tds = $(this).find('td');
+                debugger;
+                var myDets =
+                {
+                    RefTablekey: Row.find('.EditRefTablekey').val(),
+                    FMNo: tds.eq(4).text(),
+                    Date: tds.eq(5).text(),
+                    VehicleNo: tds.eq(6).text(),
+                    Driver: tds.eq(7).attr("id"),
+                    From: tds.eq(8).attr("id"),
+                    To: tds.eq(9).attr("id"),
+                    RouteVia: tds.eq(10).attr("id"),
+                    Tripchages: Row.find(".ttxtTripCharge").val(),
+                    LocalCharges: Row.find(".ttxtLocalCharges").val(),
+                    ViaCharges: Row.find(".ttxtViaCharges").val(),
+                    Total: Row.find(".ttxtTotal").val(),
+                }
+                fMMasters.push(myDets);
+            }
+        });
+
+        if ($("#NoDocumentReq").val() == "true" || $("#NoDocumentReq").val() == "True") {
+
+        }
+        else
+        {
+            if (fMMasters.length == 0) {
+                alert('Please Select Document ....');
+                return;
+            }
+        }
+
+
+        var expenseslist = [];
+        $("#tableexpensesdata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "ExpensesTotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    ExpensesAc: tds.eq(3).attr("id"),
+                    ExpensesAcName: tds.eq(3).text(),
+                    DocNo: tds.eq(4).text(),
+                    Amount: tds.eq(5).text(),
+                    RelatedTo: tds.eq(6).text(),
+                }
+                expenseslist.push(myDets);
+            }
+        });
+        var deductionlist = [];
+        $("#tabledeductiondata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "DeductionTotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    ExpensesAc: tds.eq(3).attr("id"),
+                    ExpensesAcName: tds.eq(3).text(),
+                    DocNo: tds.eq(4).text(),
+                    Amount: tds.eq(5).text(),
+                    RelatedTo: tds.eq(6).text(),
+                }
+                deductionlist.push(myDets);
+            }
+        });
+
+        var myLederArray = [];
+        $('#LedgerPostgrid tbody').find('tr').each(function () {
+            var tds = $(this).find('td');
+
+            var myDets = {
+                tempId: tds.eq(0).text(),
+                Code: tds.eq(1).text(),
+                AccountName: tds.eq(2).text(),
+                Debit: tds.eq(3).text(),
+                Credit: tds.eq(4).text(),
+                RefDoc: tds.eq(5).text(),
+                TDSFlag: tds.eq(6).text(),
+                DelyCode: tds.eq(7).text()
+            }
+            myLederArray.push(myDets);
+        });
+        debugger;
+        var ledgers = [];
+        $("#Ledgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            var myDets =
+            {
+                TableKey: tds.eq(8).text(),
+                Branch: tds.eq(9).text(),
+                Debit: tds.eq(4).text(),
+            }
+            ledgers.push(myDets);
+        });
+        ModelData["Advledgers"] = ledgers;
+
+        var balledgers = [];
+        $("#BalLedgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            var myDets =
+            {
+                TableKey: tds.eq(8).text(),
+                Branch: tds.eq(9).text(),
+                Credit: tds.eq(4).text(),
+            }
+            balledgers.push(myDets);
+        });
+        ModelData["Balledgers"] = balledgers;
+
+        var CCledgers = [];
+        $("#CCLedgertabledata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.find('input[type=checkbox]').prop("checked") == true) {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    Debit: tds.eq(4).text(),
+                    RefDoc: tds.eq(7).text(),
+                    TDSFlag: Row.find('input[class=DedChk]').prop("checked"),
+                    Reminder: Row.find('input[class=CutTripDedChk]').prop("checked"),
+                    AUTHORISE: tds.eq(8).text(),
+                    AUTHIDS: tds.eq(9).text(),
+                    TableKey: tds.eq(11).text(),
+                    Branch: tds.eq(12).text(),
+
+                }
+                CCledgers.push(myDets);
+            }
+
+        });
+        ModelData["CCledgers"] = CCledgers;
+
+
+        ModelData["LedgerPostList"] = myLederArray;
+        ModelData["fMMasters"] = fMMasters;
+        ModelData["expenseslist"] = expenseslist;
+        ModelData["deductionlist"] = deductionlist;
+
+        ModelData["TDSAmt"] = $("#TDSAmt").val();
+        ModelData["CutTDS"] = $('#addTDSFlag').is(":checked");
+        ModelData["TDSCode"] = $("#addTDSCode").val();
+
+        ModelData["FromDate"] = $("#FromDate").val();
+        ModelData["TODate"] = $("#TODate").val();
+        ModelData["FromKM"] = $("#FromKM").val();
+        ModelData["ToKM"] = $("#ToKM").val();
+        ModelData["PerKMChrg"] = $("#PerKMChrg").val();
+        ModelData["TripChrgKMExp"] = $("#TripChrgKMExp").val();
+
+        ModelData["AdvFromDate"] = $("#AdvFromDate").val();
+        ModelData["AdvTODate"] = $("#AdvTODate").val();
+        ModelData["CutAdv"] = $('#CutAdv').is(":checked");
+
+        ModelData["BalFromDate"] = $("#BalFromDate").val();
+        ModelData["BalTODate"] = $("#BalTODate").val();
+
+        ModelData["CCFromDate"] = $("#CCFromDate").val();
+        ModelData["CCTODate"] = $("#CCTODate").val();
+        ModelData["CutCC"] = $('#CutCC').is(":checked");
+
+        ModelData["FMOrNOt"] = $("#FMOrNOt").val();
+        ModelData["Document"] = $("#Document").val();
+        ModelData["TripSheetNo"] = $("#TripSheetNo").val();
+        ModelData["TripSheetDate"] = $("#TripSheetDate").val();
+        ModelData["TripDebitAc"] = $("#TripDebitAc").val();
+        ModelData["VehicleCode"] = $("#VehicleCode").val();
+        ModelData["DriverCode"] = $("#DriverCode").val();
+        ModelData["VehicleFlag"] = $("#rdbVehicle").is(":checked");
+        ModelData["NetAmt"] = $("#NetAmt").val();
+
+        ModelData["Narr"] = $("#Narr").val();
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                debugger;
+                if (data.Status == 'Success')
+                {
+                    $("#Document").val(data.NewSrl);
+                    if (PrintLR == "SavePrint") {
+                        $('.spinner').hide();
+                        $('#printpostmodel').modal('show');
+                    } else {
+                        window.location.href = "/Vehicles/MasterGrid?ViewDataId=@Model.ViewDataId&MainType=@Model.MainType&Module=@Model.Module&TableName=@Model.TableName&optiontype=@Model.OptionType&optioncode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2"
+                    }
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+
+
+
+    function loadDriver()
+    {
+        var url = '@Url.Action("GetDriverList")';
+        $('#DriverCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength:0,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DriverCode', text: '@Model.DriveName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function loadVehicle()
+    {
+        var url = '@Url.Action("GetVehicle")';
+        $('#VehicleCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength:0,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehicleCode', text: '@Model.VehicleName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function loadDebit() {
+        var url = '@Url.Action("GetTripDebitAcList")';
+        $('#TripDebitAc').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength:0,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TripDebitAc', text: '@Model.TripDebitAcName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function loadExpenses() {
+        var url = '@Url.Action("GetTripDebitAcList")';
+        $('#OtherExpAc').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength:0,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.OtherExpAc', text: '@Model.OtherExpAcName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function loadDeduction() {
+        var url = '@Url.Action("GetTripDebitAcList")';
+        $('#OtherDeductnAc').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax:
+                {
+                    url: url,
+                    dataType: 'json',
+                    quietMillis: 100,
+                    enableFiltering: true,
+                    allowClear: true,
+                    minimumInputLength:0,
+                    multiple: true,
+                    width: 300,
+                    data: function (term, page) {
+                        return {
+                            types: ["exercise"],
+                            limit: -1, term: term
+                        };
+                    },
+                    results: function (data, page) {
+                        clientObj = JSON.stringify(data);
+                        return {
+                            results: $.map(data, function (item) {
+                                return {
+                                    text: item.Name, id: item.Code
+                                }
+                            })
+                        };
+                    }
+                },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.OtherDeductnAc', text: '@Model.OtherDeductnAcName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function Summary()
+    {
+        var ModelData = {};
+        var fMMasters = [];
+        $("#tabledata > tbody  > tr").each(function ()
+        {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "TotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    FMNo: tds.eq(4).text(),
+                    Date: tds.eq(5).text(),
+                    VehicleNo: tds.eq(6).text(),
+                    Driver: tds.eq(7).text(),
+                    From: tds.eq(8).text(),
+                    To: tds.eq(9).text(),
+                    RouteVia: tds.eq(10).text(),
+                    Tripchages: Row.find(".ttxtTripCharge").val(),
+                    LocalCharges: Row.find(".ttxtLocalCharges").val(),
+                    ViaCharges: Row.find(".ttxtViaCharges").val(),
+                    Total: Row.find(".ttxtTotal").val(),
+                    DieselLtr: Row.find(".ttxtDiesel").val(),
+                    RunningKM: Row.find(".ttxtTotalRunning").val(),
+                }
+                fMMasters.push(myDets);
+            }
+        });
+        var expenseslist = [];
+        $("#tableexpensesdata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "ExpensesTotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    ExpensesAc: tds.eq(3).attr("id"),
+                    ExpensesAcName: tds.eq(3).text(),
+                    DocNo: tds.eq(4).text(),
+                    Amount: tds.eq(5).text(),
+                }
+                expenseslist.push(myDets);
+            }
+        });
+        var deductionlist = [];
+        $("#tabledeductiondata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "DeductionTotalRow") {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+                    ExpensesAc: tds.eq(3).attr("id"),
+                    ExpensesAcName: tds.eq(3).text(),
+                    DocNo: tds.eq(4).text(),
+                    Amount: tds.eq(5).text(),
+                }
+                deductionlist.push(myDets);
+            }
+        });
+        var ledgers = [];
+        $("#Ledgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            var myDets =
+            {
+                TableKey: tds.eq(8).text(),
+                Branch: tds.eq(9).text(),
+                Debit: tds.eq(4).text(),
+            }
+            ledgers.push(myDets);
+        });
+        var balledgers = [];
+        $("#BalLedgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            var myDets =
+            {
+                TableKey: tds.eq(8).text(),
+                Branch: tds.eq(9).text(),
+                Credit: tds.eq(4).text(),
+            }
+            balledgers.push(myDets);
+        });
+
+        var ccledgers = [];
+        $("#CCLedgertabledata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.find('input[class=CutTripDedChk]').prop("checked") == true || Row.find('input[class=DedChk]').prop("checked") == true) {
+                var tds = $(this).find('td');
+                var myDets =
+                {
+
+                    Debit: tds.eq(4).text(),
+                    RefDoc: tds.eq(7).text(),
+                    TDSFlag: Row.find('input[class=DedChk]').prop("checked"),
+                    Reminder: Row.find('input[class=CutTripDedChk]').prop("checked"),
+                    AUTHORISE: tds.eq(8).text(),
+                    AUTHIDS: tds.eq(9).text(),
+                    TableKey: tds.eq(11).text(),
+                    Branch: tds.eq(12).text(),
+                }
+                ccledgers.push(myDets);
+            }
+
+        });
+
+        ModelData["Advledgers"] = ledgers;
+        ModelData["Balledgers"] = balledgers;
+        ModelData["CCledgers"] = ccledgers;
+        ModelData["fMMasters"] = fMMasters;
+        ModelData["expenseslist"] = expenseslist;
+        ModelData["deductionlist"] = deductionlist;
+        ModelData["TDSAmt"] = $("#TDSAmt").val();
+        ModelData["RunningKM"] = $("#RunningKM").val();
+        ModelData["TripChrgKMExp"] = $("#TripChrgKMExp").val();
+        ModelData["FMOrNOt"] = $("#FMOrNOt").val();
+        ModelData["CutAdv"] = $("#CutAdv").prop("checked");
+        ModelData["CutCC"] = $("#CutCC").prop("checked");
+        ModelData["FromDate"] = $("#FromDate").val();
+        ModelData["TODate"] = $("#TODate").val();
+        ModelData["DriverCode"] = $("#DriverCode").val();
+
+
+
+
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("Summary")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#ErrorMessage').hide();
+                $('#divLedgerTable4').html(data.Html);
+
+            },
+            error: function () {
+                alert("Error occured while processing your request.");
+            }
+        });
+    }
+
+    //function CalculateKMAmount()
+    //{
+    //    var NetAmt = 0;
+
+    //    $("#tabledata > tbody  > tr").each(function () {
+    //        debugger;
+    //        var Row = $(this).closest('tr');
+    //        if (Row.attr("id") != "TotalRow") {
+    //            NetAmt += parseFloat(Row.find(".ttxtTotal").val());
+    //        }
+    //    });
+
+    //    var FromKM = parseInt($("#FromKM").val());
+    //    var ToKM = parseInt($("#ToKM").val());
+    //    var RunningKM = parseInt($("#RunningKM").val());
+    //    var PerKMChrg = parseFloat($("#PerKMChrg").val());
+
+    //    if (FromKM != 0 && ToKM!=0) {
+    //        if (FromKM < ToKM) {
+    //            var Diff = ToKM - FromKM;
+    //            var Amt = ((Diff * PerKMChrg) ).toFixed(2);
+    //            NetAmt += parseFloat(Amt);
+
+    //            $("#RunningKM").val(Diff);
+    //            $("#TripChrgKMExp").val(Amt);
+    //            $("#NetAmt").val(NetAmt);
+
+    //        } else {
+    //            $("#NetAmt").val(NetAmt);
+    //        }
+    //    } else {
+    //        $("#NetAmt").val(NetAmt);
+    //    }
+
+
+    //}
+
+    function CalculateNetAmount()
+    {
+        debugger;
+
+        var TripCharges = 0, Expenses = 0, Deduction = 0,AdvAmt=0,CCamt=0,TotalAdv=0,TotalCr=0,KMAmt=0;
+
+        //Trip Charges
+        $("#tabledata > tbody  > tr").each(function ()
+        {
+            debugger;
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "TotalRow") {
+                TripCharges += parseFloat(Row.find(".ttxtTotal").val());
+            }
+        });
+
+        ////KM Charges
+        var FromKM = parseInt($("#FromKM").val());
+        var ToKM = parseInt($("#ToKM").val());
+        var PerKMChrg = parseFloat($("#PerKMChrg").val());
+
+        if (FromKM != 0 && ToKM != 0) {
+            if (FromKM < ToKM) {
+                var Diff = ToKM - FromKM;
+                KMAmt = parseFloat((Diff * PerKMChrg));
+
+                $("#RunningKM").val(Diff);
+                $("#TripChrgKMExp").val(KMAmt);
+            } else {
+                $("#RunningKM").val(0);
+                $("#TripChrgKMExp").val(0);
+            }
+        } else {
+            $("#RunningKM").val(0);
+            $("#TripChrgKMExp").val(0);
+        }
+
+        //Expenses Charges
+        $("#tableexpensesdata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "ExpensesTotalRow") {
+                var tds = $(this).find('td');
+                Expenses += parseFloat(tds.eq(5).text());
+            }
+        });
+
+        //Deduction Charges
+        $("#tabledeductiondata > tbody  > tr").each(function () {
+            var Row = $(this).closest('tr');
+            if (Row.attr("id") != "DeductionTotalRow") {
+                var tds = $(this).find('td');
+                Deduction += parseFloat(tds.eq(5).text());
+            }
+        });
+
+        //Advance Charges
+        $("#Ledgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            TotalAdv += parseFloat(tds.eq(4).text());
+
+        });
+        if ($("#CutAdv").is(':checked')) {
+            AdvAmt = TotalAdv;
+        }
+        //$('#TotalAdv').text(TotalAdv);
+
+        //Balance Charges
+        $("#BalLedgertabledata > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+            TotalCr += parseFloat(tds.eq(4).text());
+        });
+        //$('#TotalBal').text(TotalCr);
+
+        //CC Charges
+        $("#CCLedgertabledata > tbody  > tr").each(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            if (Row.find('input[class=CutTripDedChk]').prop("checked") == true) {
+                var tds = $(this).find('td');
+                CCamt += parseFloat(tds.eq(4).text());
+            }
+        });
+
+        var Total = (TripCharges + Expenses + KMAmt ) - ( Deduction + AdvAmt + CCamt);
+
+        $("#NetAmt").val(Total);
+
+        if ($('#addTDSFlag').is(":checked")) {
+            var rate1 = (parseFloat($("#addTDSRate").val()));
+            var amt1 = parseFloat($("#NetAmt").val());
+            var AmtTDS = Math.round((rate1 * amt1) / 100);
+            $('#addTDSAmt').val(AmtTDS);
+            $('#TDSAmt').val(AmtTDS);
+        }
+        else {
+            $('#addTDSAmt').val(0);
+            $('#TDSAmt').val(0);
+        }
+    }
+</script>
+
+<input type="hidden" id="hdnBlackListDriver" />
+@Html.HiddenFor(x => x.ChangeCharge)
+@Html.HiddenFor(x => x.ChangeCharge)
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.FMOrNOt)
+@Html.HiddenFor(x => x.NoDocumentReq)
+@Html.HiddenFor(x => x.ConfirmDupDateOfTrip)
+@Html.HiddenFor(x => x.RestrictDupDateOfTrip)
+@Html.HiddenFor(x => x.StartDate, new { @id = "hdnStartDate" })
+@Html.HiddenFor(x => x.EndDate, new { @id = "hdnEndDate" })
+@Html.HiddenFor(x => x.ConsignmentKey)
+@Html.HiddenFor(x => x.FreightMemoKey)
+
+<!--Driver Tickler Modal -->
+<div class="example-modal">
+    <div id="DriverTicklerModal" class="modal modal-default" style="margin-top: 1%;">
+        <div class="modal-dialog modal-lg">
+            <div id="">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Tickler Information</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group " id="DriverSpclRemarkDiv">
+                                <label style="font-weight:bold;color:black;">Remark :-&nbsp;&nbsp;</label><label id="DriverSpclRMK" style="font-weight:bold;color:black;"></label>
+                            </div>
+                            <div class="form-group " id="DriverBlackListRemarkDiv">
+                                <label style="font-weight:bold;color:black;">Hold Remark :-&nbsp;&nbsp;</label><label id="DriverBlackLStRMK" style="font-weight:bold;color:red;"></label>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Document List -->
+<div class="example-modal">
+    <div id="pickuplist" class="modal modal-default">
+        <div class="modal-dialog modal-lg" style="width:100%;height:500px;margin-top:3%;">
+            <div id="PickUpList">
+                @*@Html.Partial("PickUp")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Consignment Multi Document Modal -->
+<div class="example-modal">
+    <div id="ConsignmentModels" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="consignmentmodels">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Freight Memo Multi Document Modal -->
+<div class="example-modal">
+    <div id="FreightMemoModels" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="freightmemomodels">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Ledger Advance List -->
+<div class="example-modal">
+    <div id="AdvanceList" class="modal modal-default">
+        <div class="modal-dialog modal-lg" style="width:100%;height:500px;margin-top:3%;">
+            <div id="advancelist">
+                @*@Html.Partial("PickUp")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Print Option -->
+<div class="example-modal">
+    <div id="printpostmodel" class="modal modal-primary" style="margin-top:1%;">
+        <div class="modal-dialog" style="width:700px;">
+            <div id="Printmodel">
+                @Html.Partial("ReportPrintOptions")
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Ledger Posting -->
+<div class="example-modal">
+    <div id="ledpostmodel" class="modal modal-primary">
+        <div class="modal-dialog" style="width:700px;">
+            <div id="ledpostingmodel">
+                @Html.Partial("LedgerPosting")
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+
+
+
+
+

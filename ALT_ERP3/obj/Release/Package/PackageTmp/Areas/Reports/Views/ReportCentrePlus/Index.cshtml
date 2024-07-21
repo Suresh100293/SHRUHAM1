@@ -1,0 +1,802 @@
+﻿@model GridOption
+@using Common
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script type="text/javascript">
+    var mcurrentcol = 0;
+    var ColTypes;
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $("#hdnisreportplus").val('!!!');
+        $("#viewcode").val('@Model.ViewDataId');
+        $("#hdnformatname").val('@Model.ViewDataId');
+        $("#hdnoptioncode").val('@Model.OptionCode');
+        //$('#Fromdate').val('@Model.FromDate');
+        if ("@ViewBag.PeriodType" != "S")
+        {
+            $('#Fromdate').val('@Model.FromDate');
+        }else{
+            $('#Fromdate').val('01-01-2000');
+        }
+        $('#ToDate').val('@Model.ToDate');
+        $('#dialogpara').modal('show');
+        //$('#formatname').val('View :' + $("#hdnformatname").val());
+        GetColumnsList($("#viewcode").val());
+        $('#list2').hide();
+        //$(document).on("keypress", function (e) {
+        //    if (e.which && e.keyCode== ;
+        //});
+    });
+
+    // for stockmovement
+    @*function buttonClick(maction) {
+        $('.spinner').show();
+        var itemlist = [];
+        var ids = jQuery("#reportgrid").jqGrid('getDataIDs');
+        for (var i = 0; i < ids.length; i++) {
+            var rowId = ids[i];
+            var mqty = parseFloat($('#reportgrid').jqGrid('getCell', rowId, 'Required Qty'));
+            var mydata = {
+                Code: $('#reportgrid').jqGrid('getCell', rowId, 'Document'),
+                Balance: mqty,
+                xAdd: $('#chkpo' + rowId).is(':checked'),       // po
+                xEdit: $('#chkwo' + rowId).is(':checked'),      // wo
+            }
+            itemlist.push(mydata);
+        }
+
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: '@Url.Action("UpdateData")?mWhat=' + maction + '&list=' + itemlist,
+            contentType: "application/json;charset=utf-8",
+            success: function (result) {
+                $('.spinner').hide();
+                alert(result.Message);
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }*@
+
+    //function clickGridSummary() {
+    //    var mytrxgrid = $('#reportgrid');
+    //    mytrxgrid.setGridParam({ rowNum: 50000 });
+    //    var cm = $('#reportgrid').jqGrid('getGridParam', 'colModel');
+    //    var mcurrentname = cm[mcurrentcol].name;
+    //    $('#reportgrid').jqGrid('sortGrid', mcurrentname, true, 'asc');
+    //    for (var mcol = 0, l = cm.length; mcol < l; mcol++) {
+    //        if (ColTypes[mcol] != "Num" && mcurrentcol != mcol) {
+    //            mytrxgrid.jqGrid('hideCol', cm[mcol].name);
+    //        } else if (mcurrentcol != mcol) {
+
+    //        }
+    //    }
+    //    //debugger;
+    //    var marr = Array(15);
+    //    var trxrows = $('#reportgrid').getDataIDs();
+    //    //var dataArray = mytrxgrid.jqGrid('getGridParam', 'data'), indexes = mytrxgrid.jqGrid('getGridParam', '_index');
+    //    for (var mrow = 0; mrow < trxrows.length; mrow++) {
+    //        var mrowid = trxrows[mrow];
+    //        var mval = $('#reportgrid').jqGrid('getCell', mrowid, mcurrentname);
+    //            //$(mytrxgrid).getCell(mrowid, mcurrentname);
+    //        for (var x = 0; x < marr.length; x++) {
+    //            marr[x] = 0;
+    //        }
+    //        for (var mrow2 = mrow; mrow2 < trxrows.length; mrow2++) {
+    //            var mrowid2 = trxrows[mrow2];
+    //            var mval2 = $('#reportgrid').jqGrid('getCell', mrowid2, mcurrentname);
+    //            //var mval2 = $(mytrxgrid).getCell(mrowid2, mcurrentname);
+    //            if (mval == mval2) {
+    //                for (var x = 0; x < marr.length; x++) {
+    //                    if (ColTypes[x] == "Num" && mcurrentcol != x) {
+    //                        marr[x] = marr[x] + parseFloat($(mytrxgrid).getCell(mrowid2, cm[x].name));
+    //                        $('#reportgrid').jqGrid('setCell', mrowid2, cm[x].name, 0);// init the cell data to ''
+    //                        //dataArray[indexes[mrowid2]][cm[x].name] = '';
+    //                        var ind = mytrxgrid.getInd(mrowid2);
+    //                        var localRowData = mytrxgrid.jqGrid('getLocalRow', ind);
+    //                        localRowData[cm[x].name] = 0;
+    //                    }
+    //                }
+    //            } else {
+    //                for (var x = 0; x < marr.length; x++) {
+    //                    if (ColTypes[x] == "Num" && mcurrentcol != x) {
+    //                        $('#reportgrid').jqGrid('setCell', mrowid, cm[x].name, marr[x]); // paste data into original row
+    //                        //dataArray[indexes[mrowid]][cm[x].name] = marr[x];// paste data into original row
+    //                        var ind = mytrxgrid.getInd(mrowid);
+    //                        var localRowData = mytrxgrid.jqGrid('getLocalRow', ind);
+    //                        localRowData[cm[x].name] = marr[x];
+    //                    }
+    //                }
+    //                break;
+    //            }
+    //        }
+    //        // hide duplicate rows
+    //        for (var x = mrow + 1; x <= mrow2 - 1; x++) {
+    //            mrowid2 = trxrows[x];
+    //            $("#" + mrowid2, mytrxgrid).hide();
+    //        }
+    //        mrow = mrow2 - 1;
+    //    }
+    //    alert("Data is Summarised..");
+    //}
+
+    //function ExportGridExcel() {
+    //    $("#reportgrid").jqGrid("exportToPdf", {
+    //        includeLabels: true,
+    //        includeGroupHeader: true,
+    //        includeFooter: true,
+    //        fileName: $("#viewcode").val() + ".xls",
+    //        maxlength: 40 // maxlength for visible string data 
+    //    })
+    //}
+
+    function clickGridSummary() {
+        if ($('#searchField').val() == "" || $('#searchField').val() == null) {
+            alert("Can't Summarise on this Column");
+            return;
+        }
+        $('#reportgrid').jqGrid('clearGridData');
+        $("#reportgrid").jqGrid("GridUnload");
+        $('#reportgrid').trigger('reloadGrid');
+
+        var ColName, ColData;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSummary")?searchtype=^S&mVar1=' + $('#searchField').val() + '&ViewDataId=' + $("#viewcode").val();
+        var sUrlpath = '@Url.Action("GetGridDataSummary")?searchtype=^S&searchField=' + $('#searchField').val() + '&Date=' + mDate + '&ViewDataId=' + $("#viewcode").val();
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                ColData = obj[1];
+                $('#searchField').val("");
+                CreateGridDataSumm();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridDataSumm() {
+            $('#reportgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: ColData,
+                rowNum: 50000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 111 - 85 - 20,/*38 for search panel*/
+                //height: $(window).height() - 111 - 35 - 50,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            jQuery("#reportgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    }
+
+    function clickRefreshSearch() {
+        //$('#formatname').val('View: ' + $("#viewcode").val());
+        GetDrillQuery();
+        $('#reportgrid').jqGrid('clearGridData');
+        $("#reportgrid").jqGrid("GridUnload");
+        $('#reportgrid').trigger('reloadGrid');
+        GridReload();
+    }
+
+    function clickRefresh() {
+        //$('#formatname').val('View: ' + $("#viewcode").val());
+        GetColumnsList($("#viewcode").val());
+        GetDrillQuery();
+        $('#reportgrid').jqGrid('clearGridData');
+        $("#reportgrid").jqGrid("GridUnload");
+        $('#reportgrid').trigger('reloadGrid');
+        GridReload();
+    }
+
+    @*function clickExcel() {
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val(), '_blank');
+    };*@
+
+    function clickPrint() {
+        $("#hdnformatname").val($("#viewcode").val());
+        if ('@Model.MainType' != '') {
+            $("#hdnparastring").val("&mParaString=MainType^" + '@Model.MainType' + '&searchField=' + $('#searchField').val() + '&searchString=' + $('#searchString').val() + '&searchOper=' + $('#searchOper').val());
+        } else {
+            $("#hdnparastring").val('&searchField=' + $('#searchField').val() + '&searchString=' + $('#searchString').val() + '&searchOper=' + $('#searchOper').val());
+        }
+        $('#dialogprint').modal('show');
+        @*var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sUrlpath = window.open('@Url.Action("GetPDF")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val() + '&mWhat=' + mwhat, '_blank');*@
+    };
+
+    //function PrintReport() {
+    //    var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+    //    var murl="/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=" + $("#viewcode").val();
+    //    window.open(murl,'_blank');
+    //};
+
+    //function EmailReport() {
+    //    var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+    //    //var murl="/SendEmail/Index?Date=" + mDate + "&ViewDataId=" + $("#viewcode").val();
+    //    window.open("/SendEmail/Index?Date=" + mDate + "&ViewDataId=" + $("#viewcode").val(),'_blank');
+    //};
+
+    function clickPara() {
+        $('#dialogpara').modal('show');
+        //GetColumnsList($("#viewcode").val());
+        //$('#formatname').val('format:' + $("#viewcode").val());
+    };
+
+    function GetColumnsList(mformat) {
+        $('#searchField').empty();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: '@Url.Action("GetColumnsList")?mformat=' + mformat,
+            contentType: "application/json;charset=utf-8",
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#searchField").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#searchField').val('@Model.searchField').attr("selected", "selected");
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function GetDrillQuery() {
+        var mURL = '@Url.Action("GetDrillQuery")?ViewDataId=' + $("#viewcode").val();
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $('#hdnsubgrid').val(result.query);
+                if (result.query != "")
+                {
+                    document.getElementById("leftdiv").style.width = '75%';
+                    document.getElementById("rightdiv").style.width = '25%';
+                    $('#list2').show();
+                } else {
+                    document.getElementById("leftdiv").style.width = '100%';
+                    document.getElementById("rightdiv").style.width = '0%';
+                    $('#list2').hide();
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+
+    function GetURL(mdocument) {
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var mURL = '@Url.Action("GetURLReports")?mDate=' + mDate + '&mdocument=' + mdocument;
+        $.ajax({
+            type: 'POST',
+            url: mURL,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $('.spinner').hide();
+                if (result.url != "") {
+                    window.open(result.url,'_blank');
+                } else {
+                    alert("Error! Can't Zoom into the Transaction!");
+                }
+            },
+            error: function (ex) {
+                alert("Error! Can't Open the Transaction" + ex);
+            }
+        });
+        return false;
+    };
+
+    $('#btnopnFormat').click(function (event) {
+        event.preventDefault();
+        var ModelData = {};
+        ModelData["ViewDataId"] = $("#viewcode").val();
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("GetReportFormat")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                //$("#ErrorMessage").hide();
+                $('.spinner').hide();
+                $('#updTfatsearch').modal('show');
+                $('#updTfatsearchDiv').html(data.Html);
+            },
+            error: function () {
+                alert("Error occured while processing your request.");
+            }
+        });
+    });
+
+    function GridReload() {
+        event.preventDefault();
+        var ColName, ColData, ColorData;
+        $('.spinner').show();
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + encodeURIComponent($("#viewcode").val());
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + encodeURIComponent($("#viewcode").val()) + '&searchField=' + $('#searchField').val() + '&searchString=' + $('#searchString').val() + '&searchOper=' + $('#searchOper').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                ColData = obj[1];
+                ColorData = obj[2].split(",");
+                ColTypes = obj[3].split(",");
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("Error Generating the Report.");
+            }
+        });
+
+        function CreateGridData() {
+            var mgroupby = $('#hdngroupby').val() ?? "";
+            var misgroup = mgroupby == "" ? false : true;
+            $('#reportgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: ColData,
+                pager: $('#pagerrep'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 3000, 5000, 10000, 50000],
+                height: $(window).height() - 111 - 85-22,/*38 for search panel*/
+                //height: $(window).height() - 111 - 108,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                cellEdit: false,
+                autoencode: true,
+                search: true,
+                grouping: misgroup,
+                groupingView: {
+                    groupField: [mgroupby],
+                    groupColumnShow: [true],
+                    groupText: ["<b>{0}</b>"],
+                    groupOrder: ["asc"],
+                    groupSummary: [true],
+                    groupCollapse: false
+                },
+                //footerrow : true,
+                //userDataOnFooter : true,
+                onCellSelect: function (row, col, content, event) {
+                    mcurrentcol = col;
+                    var cm = jQuery("#reportgrid").jqGrid("getGridParam", "colModel");
+                    $('#searchField').val(cm[col].index).attr("selected", "selected");
+                },
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    var mdoc = "";
+                    if ($('#hdnsubgrid').val() != '') {
+                        mdoc = $('#reportgrid').jqGrid('getCell', id, $('#hdnsubgrid').val());
+                        $('#list2').jqGrid('clearGridData');
+                        $('#list2').jqGrid('GridUnload');
+                        $('#list2').trigger('reloadGrid');
+                        GridReload2(mdoc);
+                    } else {
+                        mdoc = $('#reportgrid').jqGrid('getCell', id, 'Document');
+                    }
+                    $('#SelectedDocument').val(mdoc);
+                },
+                ondblClickRow: function (id)
+                {
+                    var myGrid = $('#reportgrid');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    GetURL(cellVal);
+                },
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadError : function(jqXHR, textStatus, errorThrown) {
+                    var mmsg=jqXHR.responseText.replace('{','').replace('}','');
+                    mmsg=mmsg.replace('"Message":"','');
+                    mmsg=mmsg.replace('"','')
+                    alert('Error!\n' + mmsg);
+                },
+                gridComplete: function () {
+                    //$("tr.jqgrow:odd").css("background", "#EAEAEA");
+                    //var ids = jQuery("#reportgrid").jqGrid('getDataIDs');
+                    //for (var i = 0; i < ids.length; i++) {
+                    //    var rowId = ids[i];
+                    //    var ra1 = "<input id='chkindent" + rowId + "' type='checkbox' name='checkboxobject' Class='example1' style='margin-left: 6px;height: 19px;width: 19px;margin-top: 3px;' />";
+                    //    var ra2 = "<input id='chkwo" + rowId + "' type='checkbox' name='checkboxobject' Class='example2' style='margin-left: 6px;height: 19px;width: 19px;margin-top: 3px;' />";
+                    //    //set the checkBox
+                    //    jQuery("#reportgrid").jqGrid('setRowData', rowId, { 'Procure': ra1 });
+                    //    $('#chkindent' + rowId).attr('disabled', false);
+                    //    jQuery("#reportgrid").jqGrid('setRowData', rowId, { 'Mfg': ra2 });
+                    //    $('#chkwo' + rowId).attr('disabled', false);
+                    //}
+
+                    var mcolindex = -1;
+                    var mwidth = 0;
+                    var cm = $('#reportgrid').jqGrid('getGridParam', 'colModel');
+                    var trxrows = $('#reportgrid').getDataIDs();
+                    for (var mcol = 0, l = cm.length; mcol < l; mcol++) {
+                        if (cm[mcol].name == 'Balances') {
+                            mcolindex = mcol;
+                            mwidth = parseInt(cm[mcol].width, 10);
+                        }
+                        try {
+                            var mclr = ColorData[mcol];
+                            if (mclr != "") {
+                                //var trxrows = $('#reportgrid').getDataIDs();
+                                for (var mrow = 0; mrow <= trxrows.length; mrow++) {
+                                    jQuery("#reportgrid").jqGrid('setCell', mrow + 1, mcol, "", { 'background-color': mclr, 'background-image': 'none' });
+                                }
+                            }
+                            if (ColTypes[mcol] == "Chk") {
+                                //var trxrows = $('#reportgrid').getDataIDs();
+                                for (var mrow2 = 0; mrow2 <= trxrows.length; mrow2++) {
+                                    var rowId = trxrows[mrow2];
+                                    var mobj = "<input id='btnchk" + mcol + '_' + (rowId) + "' type='checkbox' name='checkboxobject' Class='example2' style='margin-left: 14px;height: 27px;width: 19px;margin-top: 1px;' />";
+                                    //set the checkBox
+                                    jQuery("#reportgrid").jqGrid('setCell', rowId, mcol, mobj);
+                                }
+                            }
+                        } catch (e) {
+                            alert(e);
+                        }
+                    }
+
+                    //if ($("#hdnoptioncode").val('StockMovementStatus')) {
+                    //    for (var i = 0; i < trxrows.length; i++) {
+                    //        var rowId = trxrows[i];
+                    //        var ra2 = "<input id='chkpo" + rowId + "' type='checkbox' name='checkboxobject' Class='example2' style='margin-left: 6px;height: 19px;width: 19px;margin-top: 3px;' />";
+                    //        var ra3 = "<input id='chkwo" + rowId + "' type='checkbox' name='checkboxobject' Class='example3' style='margin-left: 6px;height: 19px;width: 19px;margin-top: 3px;' />";
+                    //        //set the checkBox
+                    //        var mqty = parseFloat($('#reportgrid').jqGrid('getCell', rowId, 'Required Qty'));
+                    //        jQuery("#reportgrid").jqGrid('setRowData', rowId, { 'Procure': ra2 });
+                    //        jQuery("#reportgrid").jqGrid('setRowData', rowId, { 'Mfg': ra3 });
+                    //        if (mqty > 0) {
+                    //            var mfld = $('#reportgrid').jqGrid('getCell', rowId, 'canmfg');
+                    //            if (mfld == 'True') {
+                    //                $('#chkwo' + rowId).attr('disabled', false);
+                    //                $('#chkwo' + rowId).prop('checked', true);
+                    //            } else {
+                    //                $('#chkwo' + rowId).attr('disabled', true);
+                    //                $('#chkwo' + rowId).prop('checked', false);
+                    //            }
+                    //            var mfld2 = $('#reportgrid').jqGrid('getCell', rowId, 'canpurch');
+                    //            if (mfld2 == 'True') {
+                    //                $('#chkpo' + rowId).attr('disabled', false);
+                    //                if (mfld == "False") {
+                    //                    $('#chkpo' + rowId).prop('checked', true);
+                    //                }
+                    //            } else {
+                    //                $('#chkpo' + rowId).attr('disabled', true);
+                    //                $('#chkpo' + rowId).prop('checked', false);
+                    //            }
+                    //        } else {
+                    //            $('#chkpo' + rowId).attr('disabled', true);
+                    //            $('#chkpo' + rowId).prop('checked', false);
+                    //            $('#chkwo' + rowId).attr('disabled', true);
+                    //            $('#chkwo' + rowId).prop('checked', false);
+                    //        }
+                    //    }
+                    //}
+
+                    if (mcolindex != -1) {
+                        $('tr.jqgrow td:nth-child(' + (mcolindex + 1) + ')').each(function (index, value) {
+                            try {
+                                if (mwidth == 0) mwidth = 100;
+                                $(this).sparkline($.parseJSON('[' + $(this).text() + ']'), { type: 'line', minSpotColor: 'red', maxSpotColor: 'green', spotColor: false, width: mwidth });
+                                //$(this).sparkline($.parseJSON('[' + $(this).text() + ']'), { type: 'bar', barWidth: mwidth/13, width: mwidth }); // /12 months and some margin so /13
+
+                                //#F47922-orange, #7C167F-purple (two values x and 100-x)
+                                //$(this).sparkline($.parseJSON('[' + Number($(this).text()) + ',' + (100 - Number($(this).text())) + ']'), { type: 'pie', sliceColors: ['#F47922', '#7C167F'], borderWidth: 0.4 });
+                                // box plot
+                                //$(this).sparkline($.parseJSON('[' + Number($(this).text()) + ',' + (100 - Number($(this).text())) + ']'), { type: 'pie', sliceColors: ['#F47922', '#7C167F'], borderWidth: 0.4 });
+                            } catch (e) {
+                            }
+                        });
+                    }
+                    $('.spinner').hide();
+                },
+            });
+            jQuery("#reportgrid").jqGrid('navGrid', "#pagerrep",
+                { edit: false, add: false, del: false, print: true, search: false, refresh: true, searchtext: "Search"});
+            jQuery("#reportgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function GridReload2(mDocument) {
+        var ColName, ColData;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetSubGridStructureRep")?ViewDataId=' + $("#viewcode").val();
+        var sUrlpath = '@Url.Action("GetSubGridDataRep")?Document=' + mDocument + '&Date=' + mDate + '&ViewDataId=' + $("#viewcode").val();
+        var sidix = "";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                ColData = obj[1];
+                CreateGridData2();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error Found..");
+            }
+        });
+
+        function CreateGridData2() {
+            $('#list2').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: ColData,
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                height: $(window).height() - 111 - 85 - 20,/*38 for search panel*/
+                //height: $(window).height() - 111 - 35 - 50,
+                sortname: sidix,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                ondblClickRow: function (id)
+                {
+                    var myGrid = $('#list2');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    GetURL(cellVal);
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                }
+            });
+            jQuery("#list2").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-md-5" style="padding-left:unset;padding-top:3px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <div class="col-md-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt;color:black; width:unset;text-align:right">
+            Period:
+        </div>
+        <div class="col-md-3">
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                @*@if (Model.PeriodType == null || Model.PeriodType == "" || Model.PeriodType == "D")*@
+                @if (ViewBag.PeriodType != "S")
+                {
+                    <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                    <span class="input-group-addon" style="border:solid 1px;border-color:darkgray;">to</span>
+                    <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                }
+                else
+                {
+                    <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;border:solid 1px;border-color:darkgray;">
+                }
+            </div>
+        </div>
+        <div class="col-md-3 pull-right" style="padding-top:-3px;float:right;width:230px;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="clickRefresh()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;padding-right:15px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="clickPara()" class="fa fa-cogs" style="font-size:20px;cursor:pointer" title="Parameters"></a>
+            </div>
+            <div class="col-sm-1"></div>
+            <button class="btn btn-success" onclick="clickPrint()" style="font-size:14px;padding:3px 12px;" id="btnPrint">Print / Export</button>
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:46px;height:auto;padding:0px;">
+        <div class="form-horizontal" id="searchpanel" role="form" style="margin-top:5px;">
+            <div class="form-group" style="margin-left:0px;margin-right:0px;margin-bottom:3px;">
+                <div class="col-sm-1 control-label" style="text-align:left;padding-top:2px;">Search Column:</div>
+                <div class="col-sm-2" style="padding-left:0px;">
+                    @Html.DropDownListFor(x => x.searchField, DropdownHelper.EmptyList(), new { @class = "form-control", @id = "searchField", @Name = "searchField", @style = "width:100%;margin-bottom:2px;height:22px;padding:0px 2px 0px 6px;" })
+                    @*@Html.TextBoxFor(x => x.searchField, new { @MaxLength = 100, @class = "form-control", @id = "searchField", @Name = "searchField", @Value = Model.searchField, @style = "border-color:darkgray;color:black;font-weight:bolder;" })*@
+                </div>
+                <div class="col-sm-2" style="padding-left:0px;width:170px;">
+                    <select id="searchOper" name="searchOper" class="form-control" style="background-color:#e4e4e4;height:22px;padding:0px 2px 0px 6px;">
+                        <option value="eq">Equals to</option>
+                        <option value="ne">Not Equal to</option>
+                        <option value="bw">Begins With</option>
+                        <option value="bn">Does not Begin With</option>
+                        <option value="ew">Ends With</option>
+                        <option value="en">Does not End With</option>
+                        <option value="cn" selected="selected">Contains</option>
+                        <option value="nc">Does not Contain</option>
+                        <option value="in">Is in</option>
+                        <option value="ni">Is Not in</option>
+                    </select>
+                </div>
+
+                <div class="col-sm-1 control-label" style="width:100px;text-align:left;padding-left:5px;padding-top:2px;">Search Text:</div>
+                <div class="col-sm-2" style="padding-left:0px;">
+                    @Html.TextBoxFor(x => x.searchString, new { @MaxLength = 100, @class = "form-control", @id = "searchString", @Name = "searchString", @Value = Model.searchString, @style = "border-color:darkgray;color:black;font-weight:bolder;height:22px;padding:0px 2px 0px 6px;" })
+                </div>
+                <div class="col-sm-1" style="padding-right:5px;padding-left:3px;font-family:Verdana;padding-top:0px;font-size:9pt; width:unset;text-align:right">
+                    <a onclick="clickRefreshSearch()" class="fa fa-search" style="font-size:20px;cursor:pointer" title="Apply Search Criteria to View"></a>
+                </div>
+                <div class="col-sm-1" style="padding-right:5px;padding-left:3px;font-family:Verdana;padding-top:0px;font-size:9pt; width:unset;text-align:right">
+                    <a onclick="clickGridSummary()" class="fa fa-list" style="font-size:20px;cursor:pointer" title="Summarise the Report on the Selected Column"></a>
+                </div>
+                <div class="col-sm-2 pull-right">
+                    <input type="text" id="formatname" alt="" class="form-control" style="background-color:transparent; border:none; width:100%;text-align:right;font-weight:bolder;height:22px;color:darkslategrey;" disabled="disabled" />
+                </div>
+                @*<div class="col-sm-1" style="padding-right:5px;padding-left:3px;font-family:Verdana;padding-top:0px;font-size:9pt; width:unset;text-align:right">
+            <a onclick="ExportGridExcel()" class="fa fa-plane" style="font-size:20px;cursor:pointer" title="Export the Current Grid view to Excel"></a>
+        </div>*@
+            </div>
+        </div>
+
+        <div class="col-sm-9" id="leftdiv" style="width:100%;padding-left:0px;padding-right:0px;">
+            @*<div class="panel-body" style="margin-top:32px;padding-left:0px;padding-right:0px;">*@
+            <div id="page-contentgrid">
+                <div class="jqGrid">
+                    <table id="reportgrid" class="scroll" cellpadding="0" cellspacing="0"></table>
+                    <div id="pagerrep" style="height:31px;"></div>
+                </div>
+            </div>
+            @*</div>*@
+        </div>
+        <div class="col-sm-3" id="rightdiv" style="padding-left:0px;padding-right:0px;">
+            <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;width:100%;">
+                <div class="col-sm-12" style="padding-left:0px;padding-right:0px;overflow:scroll;">
+                    <div id="page-contentgridright">
+                        <div class="jqGrid">
+                            <table id="list2" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;height:33px;">
+    <div class="col-sm-4" style="padding-left:3px;">
+        @*@if (Model.OptionCode == "StockMovementStatus")
+            {
+                <button class="btn btn-info" onclick="buttonClick('F')" id="btnfsn" style="padding-top:3px; font-size:13px;height:27px;margin-left:0;width:150px;" name="Command">Update FSN</button>
+                <button class="btn btn-primary" onclick="buttonClick('I')" id="btnindent" style="padding-top:3px; font-size:13px;height:27px;margin-left:0;width:150px;" name="Command">Generate Indent</button>
+                <button class="btn btn-warning" onclick="buttonClick('O')" id="btnpo" style="padding-top:3px; font-size:13px;height:27px;margin-left:0;width:150px;" name="Command">Generate PO</button>
+                <button class="btn btn-danger" onclick="buttonClick('P')" id="btnplan" style="padding-top:3px; font-size:13px;height:27px;margin-left:0;width:150px;" name="Command">Generate Prod.Plan</button>
+            }*@
+    </div>
+    <div class="col-sm-4" style="margin-top:5px;text-align:center;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>
+
+<div class="example-modal">
+    <div id="dialogpara" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:1000px;">
+            <div id="Dialog">
+                @Html.Partial("ReportParametersPlus")
+            </div>
+        </div>
+    </div>
+</div>
+<div class="example-modal">
+    <div id="dialogprint" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:600px;">
+            <div id="dialogtoprint">
+                @Html.Partial("ReportPrintOptions")
+            </div>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="SelectedDocument" />
+@*<input type="hidden" id="hdnformatname" />*@
+<input type="hidden" id="hdnparastring" />
+<input type="hidden" id="hdnoptioncode" />
+<input type="hidden" id="hiddenvalues" />
+<input type="hidden" id="hdnisreportplus" />
+@Html.HiddenFor(x => x.query, new { @Id = "hdnsubgrid" })
+@Html.HiddenFor(x => x.MainType, new { @Id = "hdnmaintype" })
+@Html.HiddenFor(x => x.ParaReport, new { @Id = "hdngroupby" })

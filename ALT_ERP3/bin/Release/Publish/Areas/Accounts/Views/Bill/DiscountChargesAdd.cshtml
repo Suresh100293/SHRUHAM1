@@ -1,0 +1,95 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+@using Common;
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Additional Charges - Discount</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" id="AddlDiscChargesTable" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+                <table id="addldiscchargesgrid" class="zui-table" style="width:100%;">
+                    <thead>
+                    </thead>
+                    <tbody>
+                        @if (Model.DiscChargeList != null)
+                        {
+                            foreach (var item in @Model.DiscChargeList.ToList())
+                            {
+                                <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                    <td style="width:5%;" hidden="hidden">@item.tempid</td>
+                                    <td style="width:5%;">@item.DiscCaption</td>
+                                    <td style="width:15%;" contenteditable="true">@item.Disc</td>
+                                    <td style="width:1%;">@item.AddLess</td>
+                                    <td style="width:1%;">@item.CalcOn</td>
+                                    <td hidden="hidden">@item.DiscAmt</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <button type="button" class="btn btn-warning" data-dismiss="modal" id="dicchrgcalc">Save</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $("#dicchrgcalc").click(function (event) {
+            event.preventDefault();
+            CalcAddlDiscChargesFn();
+            $("#hdnAddDisChgSvd").val("1");
+        });
+    });
+
+    function CalcAddlDiscChargesFn() {
+        var DCSerial = [];
+        $('#addldiscchargesgrid tbody tr').each(function () {
+            var tds = $(this).find('td');
+            var myDets = {
+                Disc: tds.eq(2).text(),
+                DiscCaption: tds.eq(1).text(),
+                AddLess: tds.eq(3).text(),
+                CalcOn: tds.eq(4).text(),
+            }
+            DCSerial.push(myDets);
+        });
+        var ModelData = {};
+        ModelData["DiscChargeList"] = DCSerial;
+        ModelData["MainType"] = $("#hdnMType").val();
+        ModelData["ChangeLog"] = $("#hdnchangelog").val();
+        ModelData["Type"] = $("#hdnType").val();
+        ModelData["Qty"] = $("#txtQty").val();
+        ModelData["Rate"] = $("#txtRate").val();
+        ModelData["RateOn2"] = $('#RateOn2').is(':checked');
+        ModelData["Qty2"] = $('#txtQty2').val();
+        ModelData["DiscNotAllowed"] = $('#hdnDiscNotAllowed').val();
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("CalDiscountCharges")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforesend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#discchargeDialog').html(data.Html)
+                $('#hdnDiscChargeAmt').val(parseFloat(data.DiscAmt).toFixed(2))
+                Calculation()
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("error occured while processing your request.");
+            }
+        });
+    }
+</script>

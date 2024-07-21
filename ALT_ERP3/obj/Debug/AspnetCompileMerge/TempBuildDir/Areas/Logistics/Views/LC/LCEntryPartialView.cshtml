@@ -1,0 +1,697 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.LCVM
+@using Common;
+@{
+    ViewBag.Title = "Consigner Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+
+<script type="text/javascript">
+    var isTreeOpen = false;
+    var lrNo = false;
+
+    $(document).ready(function () {
+
+
+        FillTreeView();
+        LoadTo();
+        LoadFrom();
+
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        
+        $('#btnGetLcCHK').click(function (event) {
+            event.preventDefault();
+            debugger;
+            //PartialView_Lc
+            var favorite = [];
+            //Loop through all checked CheckBoxes in GridView.
+            $("#updTfatsearchDiv input[type=checkbox]:checked").each(function () {
+                favorite.push(this.id);
+                //alert(this.id);
+            });
+            
+            //Display selected Row data in Alert Box.
+             var url = '@Url.Action("ShowSelectedLR")';
+            //var ModelData = {};
+            //ModelData["To"] = $("#To").val();
+
+            //ModelData["From"] = $("#From").val();
+
+            //ModelData["Area"] = $("#hdnAreaID").val();
+            var DTO = { mModel: favorite };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('hide');
+                    $('#PartialView_Lc').html(data.Html);
+
+                },
+            });
+        });
+
+        $('#LoadLC').click(function (event) {
+            event.preventDefault();
+
+                //Logic to delete the item
+
+
+            if ($("#Date").val() == '') {
+                   $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Date is required..');
+                   return;
+            } else {
+                CheckLCDateFormat();
+            }
+
+            if ($("#From").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('From is required..');
+                return;
+
+            }
+            if ($("#To").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To is required..');
+                return;
+
+            }
+
+            var url = '@Url.Action("GetLCS")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["To"] = $("#To").val();
+
+            ModelData["From"] = $("#From").val();
+
+            ModelData["Area"] = $("#hdnAreaID").val(); 
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    var LoadDownLoadFiles = $("#updTfatsearchDiv");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+              
+                },
+            });
+
+
+
+        });
+
+
+
+
+        $('#GetArea').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var divId = [];
+            $("#treeviewcontrol").jstree("get_selected").each(function (key, value) {
+                divId.push(this.id);
+            });
+            if (divId == '') { return; }
+            $('#hdnAreaID').val(divId);
+            //alert(divId);
+        });
+
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+
+            var result = confirm("Are you sure you want to delete?");
+            if (result) {
+                //Logic to delete the item
+               
+                var url = '@Url.Action("SaveData")';
+               // PartialView_Lc
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+
+
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+            } else {
+                $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+            }
+
+
+        });
+
+        $("Date").blur(function (event) {
+            event.preventDefault();
+
+            CheckLCDateFormat();
+
+
+
+
+        });
+
+
+
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            debugger;
+
+            if ($("#hdnAreaID").val() == null || $("#hdnAreaID").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Select Branch..');
+                return;
+
+            }
+
+            
+
+            var date = $("#Date").val();
+            var regex = /(((0|1)[0-9]|2[0-9]|3[0-1])\.(0[1-9]|1[0-2])\.((19|20)\d\d))$/;
+            if (!(regex.test(date))) {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please provide valid date in format dd.mm.yyyy, including leading zero. Exapmle: 01.02.2015');
+                return;
+            }
+
+            if ($("#From").val() == '') {
+                debugger;
+
+                    $("#ErrorMessage").show();
+                $("#ErrorMessage").text('From is required..');
+                    return;
+
+            }
+            if ($("#To").val() == '') {
+                debugger;
+
+                    $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To is required..');
+                    return;
+
+            }
+
+
+
+            debugger;
+            var arrData = [];
+            var LRNOLIST="", QtyLIST="";
+            // loop over each table row (tr)
+            $("#PartialView_Lc tbody tr").each(function () {
+                var currentRow = $(this);
+                debugger;
+                var col1_value = currentRow.find("td:eq(0)").text();
+                var col2_value = currentRow.find("td:eq(1)").text();
+                var col3_value = currentRow.find("td:eq(2)").text();
+                var col4_value = currentRow.find("td:eq(3)").text();
+
+                //var obj = {};
+                //obj.col1 = col1_value;
+                //obj.col2 = col2_value;
+                //obj.col3 = col3_value;
+
+                //arrData.push(obj);
+                LRNOLIST = LRNOLIST + col1_value + ",";
+                QtyLIST = QtyLIST + col4_value + ",";
+
+            });
+
+            LRNOLIST = LRNOLIST.substring(0, (LRNOLIST.length)-1);
+            QtyLIST = QtyLIST.substring(0, (QtyLIST.length)-1);
+            //var subStr = myStr.substring(4, 20);
+
+
+
+
+
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+
+
+            ModelData["LCNo"] = $("#LCNo").val();
+            ModelData["Date"] = $("#Date").val();
+            
+            ModelData["From"] = $("#From").val();
+            ModelData["To"] = $("#To").val();
+            ModelData["LrNo"] = LRNOLIST;
+            ModelData["Qty"] = QtyLIST;
+            
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Area"] = $("#hdnAreaID").val();
+
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+
+        $('#expandall').click(function () {
+            debugger;
+
+            ExpandOrCollapse();
+
+        });
+
+    });
+
+    function CheckLCDateFormat() {
+        $("#ErrorMessage").hide();
+        var date = $("#Date").val();
+        var regex = /(((0|1)[0-9]|2[0-9]|3[0-1])\.(0[1-9]|1[0-2])\.((19|20)\d\d))$/;
+        if (!(regex.test(date))) {
+            //$("#From_Date").css("background-color", "red");
+
+
+
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Please provide valid date in format dd.mm.yyyy, including leading zero. Exapmle: 01.02.2015');
+            return;
+        }
+    }
+
+
+
+
+
+    function LoadFrom() {
+        var url = '@Url.Action("From")'
+        $('#From').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.From', text: '@Model.From_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+
+
+
+
+
+    function LoadTo() {
+        var url = '@Url.Action("To")'
+        $('#To').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        From: $('#From').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.To', text: '@Model.To_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+
+
+
+
+
+    function myFunction() {
+        debugger;
+        if ($("#hdnAreaID").val() == null || $("#hdnAreaID").val() == '') {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Select Branch..');
+            return;
+
+        }
+    }
+
+
+
+
+
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+
+    function ExpandOrCollapse() {
+        debugger;
+        if (isTreeOpen == false) {
+            $("#treeviewcontrol").jstree("open_all", "#0");
+            isTreeOpen = true;
+
+
+        } else {
+            $("#treeviewcontrol").jstree("close_all", "#0");
+            isTreeOpen = false;
+        }
+    }
+
+    function FillTreeView() {
+        $("#treeviewcontrol").jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/LR/TreeView",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: false,
+                checked_parent_open: false
+            },
+            plugins: ["themes", "json_data", "ui", ""]
+        });
+    };
+
+
+</script>
+
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">LC Entry</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <span class="tools pull-right" style="    margin-right: 15px;">
+            <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#exampleModal">
+                Select Branch
+            </button>
+        </span>
+    </div>
+</header>
+
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:30px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            @*<fieldset class="col-md-offset-2 col-md-8" style="margin-top: 0px;">
+                    <legend>Basic Details</legend>
+
+
+
+                </fieldset>*@
+
+            <fieldset class=" col-md-12" style="margin-top: 15px;">
+                <legend>Lorry Challan Details</legend>
+
+                <div class="panel panel-default">
+                    <div class="panel-body">
+
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">LC No:</label>
+                            <div class="col-sm-2">
+                                @Html.TextBoxFor(x => x.LCNo, new { @class = "form-control", @Value = Model.LCNo })
+                                @*@Html.TextBoxFor(x => x.LRNo, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.From_code })*@
+
+                            </div>
+
+                            <label class="col-sm-offset-2 col-sm-1 control-label">LC Date:</label>
+                            <div class="col-sm-2">
+                                @Html.TextBoxFor(x => x.Date, new { @class = "form-control", @Value = Model.Date })
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">From:</label>
+                            <div class="col-sm-2">
+                                @Html.TextBoxFor(x => x.From, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.From })
+                            </div>
+                            <label class="col-sm-offset-2 col-sm-1 control-label">To:</label>
+                            <div class="col-sm-2">
+                                @Html.TextBoxFor(x => x.To, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @Value = Model.To })
+                            </div>
+                            <div class="col-sm-offset-0 col-sm-2">
+                                <button type="button" class="btn btn-danger" id="LoadLC">GET LC</button>
+
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <div class="panel panel-default col-md-12">
+                    <div class="panel-body scroll" style="height:400px;overflow:scroll">
+
+                        <div id="PartialView_Lc">
+
+                            @if (Model.Mode != "Add")
+                            {
+                                @Html.Partial("_SelectedLrList", Model.list)
+                            }
+                        </div>
+
+
+
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="hdnAreaID" />
+@Html.HiddenFor(x => x.Document)
+
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" style="margin-top: 60px;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="text-align: center;">
+                <h5 class="modal-title" id="exampleModalLabel">Select Area</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="margin-top: 9px;">
+                <div id="treeviewcontrol">
+
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" style="float: left;font-size: 13px;padding:3px 12px;" id="expandall">Expand All / Collapse All</button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="GetArea">Save changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="exampleModal1" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" style="margin-top: 60px;">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header" style="text-align: center;">
+                <h5 class="modal-title" id="exampleModalLabel1">Select Lorry Challans</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" style="margin-top: 9px;">
+                <div id="GetLCView">
+
+                </div>
+            </div>
+            <div class="modal-footer">
+
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnGetLc">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="updTfatsearch" class="modal modal-default">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="updTfatsearchDiv" style="color: blanchedalmond;margin-top: 30%;">
+                @*@Html.Partial("ImageView")*@
+            </div>
+        </div>
+    </div>
+</div>

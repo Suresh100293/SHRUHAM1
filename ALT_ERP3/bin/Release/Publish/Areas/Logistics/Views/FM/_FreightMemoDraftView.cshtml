@@ -1,0 +1,376 @@
+﻿
+@model TFATERPWebApplication.Areas.Accounts.Models.GridOption
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    //Layout = "~/Views/Shared/_NewLayoutMenu.cshtml";
+}
+
+<style>
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+        /*Suresh*/
+        text-align: center;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .btncolor {
+        background-color: slategray;
+        color: white;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        Loadformats();
+        //FillTreeView();
+        gridreload();
+
+        $('#btnopnFormat').click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["ViewDataId"] = $("#formats").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetReportFormat")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch').modal('show');
+                    $('#updTfatsearchDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+    });
+    function AddNewEntry() {
+
+         window.location.href = "/Logistics/FM/DraftIndex?TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Add&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+    }
+
+    function EditEntry() {
+
+        var GetLR = $('#GetCurrent_LRNo').val();
+
+        location.href = "/Logistics/FM/DraftIndex?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Edit&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+    }
+
+    function DeleteEntry() {
+
+        var GetLR = $('#GetCurrent_LRNo').val();
+
+        //location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index1?Document=" + GetLR.toString() + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Edit&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+        location.href = "/Logistics/FM/DraftIndex?Document=" + GetLR.toString()  + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+
+    }
+    function Loadformats() {
+
+        var url = "/Logistics/MasterGridd/GetFormats1";
+        $('#formats').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Name, id: item.Code }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@ViewBag.ViewDataId', text: '@ViewBag.ViewDataId' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function gridreload() {
+
+        //event.preventDefault();
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+
+        var sPathUrl = "/Logistics/MasterGrid/GetGridStructureRecords/?id=FMMaster_Draft&TableName=FMMaster_Draft" + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Logistics/MasterGrid/GetMasterGridData/?ViewDataId=FMMaster_Draft&TableName=FMMaster_Draft"+ '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list1').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowlist1: [10, 15, 20, 50, 100, 500],
+                //height: $(window).height() - 111 - 35 - 68,
+                //height: $(window).height() - 111 - 75,
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+
+                    e.preventDefault();
+                    //$('#SelectedDocument').val($('#list1').jqGrid('getCell', id, 'Document'));
+
+                    //var ff = $('#list1').jqGrid('getCell', id, 'Document');
+                    //$("#GetCurrent_LRNo").val(ff);
+                    @*if ("@ViewBag.DrillQuery" !=""){
+                        $('#list12').jqGrid('clearGridData');
+                        $('#list12').jqGrid("GridUnload");
+                        $('#list12').trigger('reloadGrid');
+                        gridreload2($('#list1').jqGrid('getCell', id, 'Document'));
+                    }*@
+                    $('.spinner').hide();
+
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#list1');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    //location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index2?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Select&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                    location.href = "/Logistics/FM/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=D&Mode=Select&Header=FMMaster_Draft&ViewDataId=FMMaster_Draft&Controller2=FM&Module=Transactions&optiontype=D&optioncode=FMMaster_Draft";
+
+                },
+
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#list1").jqGrid('getDataIDs');
+                    //$("#pager").height(25);
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var rowData = jQuery('#list1').jqGrid('getRowData', rowId);
+                        var ed = "<button id='btnDraftEdit" + rowId + "' value='" + rowId + "' Class='edit' tooltip='Edit' , title='Edit' , attr='" + rowId + "' />";
+                        var del = "<button id='btnDraftDelete" + rowId + "' type='button' value='" + rowId + "' Class='delete' tooltip='Delete' , title='Delete' />";
+                        var view = "<button id='btnDraftView" + rowId + "' type='button' value='" + rowId + "' Class='view' tooltip='View' , title='View' />";
+                        var print = "<button id='btnDraftPrint" + rowId + "' type='button' value='" + rowId + "' Class='print' tooltip='Print' , title='Print' />";
+                        jQuery("#list1").jqGrid('setRowData', rowId, { Delete: del });
+                        jQuery("#list1").jqGrid('setRowData', rowId, { Edit: ed });
+                        jQuery("#list1").jqGrid('setRowData', rowId, { View: view });
+                        jQuery("#list1").jqGrid('setRowData', rowId, { Print: print });
+                    }
+                    $('.edit').html('<img src="/Content/Images/Edit.ico" />');
+                    $('.delete').html('<img src="/Content/Images/Delete.ico" />');
+                    $('.view').html('<img src="/Content/Images/FindOrFilter.ico" />');
+                    $('.print').html('<img src="/Content/Images/Print.ico" />');
+                    @*$("button").click(function (event) {
+                        
+                        event.preventDefault();
+                        var btnname = this.id;
+                        if (btnname != "btnAttachment") {
+                        var curRowId = this.value;
+                        var celValue = jQuery("#list1").jqGrid('getCell', 'Document');
+                        var btncode = btnname.replace(/\D/g, '');
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#list1');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        var abc = rowData.KeyCol;
+                        var btnmode = "";
+                        switch (btntype) {
+                            case "btnDraftEdit":
+                                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index2?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Edit&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                            case "btnDraftDelete":
+                                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index2?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode' + '&Draft=true';
+                                break;
+                            case "btnDraftView":
+                                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index2?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=View&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                            }
+                        }
+                    });*@
+                },
+            });
+            jQuery("#list1").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list1").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+</script>
+
+
+
+
+<header class="header fixed-top col-sm-12" style="background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-sm-3">
+            <b class="CodeSt">@ViewBag.Header</b>
+        </div>
+
+        <div class="col-sm-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" tooltip="Add" onclick=AddNewEntry();>Add New</button>
+        </div>
+
+        <div class="col-sm-1 pull-right" style="padding-left:0px;font-family:Tahoma;padding-top:6px;font-size:9pt; width:unset;color:black;">
+            Set Default
+        </div>
+        <div class="col-sm-1 pull-right" style="padding-left:6px;width:30px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+            <input title='Set this View as Default' type="checkbox" id="isdefault" name="isdefault" style="margin-top:2px; width:17px;height:17px;" />
+        </div>
+        <div class="col-sm-3 pull-right">
+            @Html.TextBoxFor(x => x.ViewDataId, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "formats", @name = "formats" })
+        </div>
+        <div class="col-sm-1 pull-right" style="padding-left:6px;padding-right:0px;font-family:Tahoma;padding-top:6px;font-size:9pt; width:unset;color:black;">
+            <a id="btnopnFormat" href=""><i class="fa fa-edit" style="color:blue;"></i> View:</a>
+        </div>
+
+    </div>
+</header>
+
+<section class="panel">
+
+    <div class="panel-body" style="margin-top:29px;height:auto;padding-left:0px;padding-right:0px;">
+        <div id="page-contentgrid">
+            <div class="jqGrid" style="margin-top: 1px;">
+                <table id="list1" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                <div id="pager" style="height:34px;"></div>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<div class="example-modal">
+    <div id="updTfatsearch" class="modal modal-default">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="updTfatsearchDiv">
+                @Html.Partial("TfatSearchUpdate")
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<input type="hidden" name="action" id="GetCurrent_LRNo" />
+

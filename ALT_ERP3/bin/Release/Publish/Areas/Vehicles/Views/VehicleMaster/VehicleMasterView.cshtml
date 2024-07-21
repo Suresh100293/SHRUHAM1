@@ -1,0 +1,720 @@
+﻿@model TFATERPWebApplication.Areas.Vehicles.Models.VehicleMasterVM
+@using Common;
+@{
+    ViewBag.Title = "Vehicle Master";
+    Layout = null;
+}
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+
+<style>
+    .multiselect-search {
+        height: 31px !important;
+    }
+
+    .jstree a {
+        color: black !important;
+        font-weight: bold !important;
+    }
+
+    .jstree-default a.jstree-search {
+        color: #ff0779 !important;
+        font-weight: bold !important;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        LoadCurrCategory();
+        LoadBroker();
+        LoadDriver();
+        LoadVehicleGroupStatus();
+        FillTreeView();
+
+        //$('#chkSelectAll').change(function () {
+
+        //});
+
+
+        $('#chkSelectAll').change(function () {
+            if ($('#chkSelectAll').is(":checked")) {
+                CheckUncheckTree('Check');
+            }
+            else {
+                CheckUncheckTree('UnCheck');
+            }
+        });
+        $('#search').keyup(function () {
+            $('#treeviewcontrol').jstree('search', $(this).val());
+        });
+
+        //var values = $('#hdnAppBranch').val();
+        //$("#hdnBranchCodeArray").val(values);
+        //if (values == "") {
+        //}
+        //else {
+        //    $.each(values.split(","), function (i, e) {
+        //        $(".listbox option[value='" + e + "']").prop("selected", true);
+        //    });
+        //}
+
+        //$(".listbox").change(function () {
+        //    $('#hdnBranchCodeArray').val('');
+        //    var selected = [];
+        //    $(".listbox :selected").each(function () {
+        //        selected.push($(this).val());
+        //    });
+        //    $('#hdnBranchCodeArray').val(selected)
+        //    return false;
+        //});
+        //$('.listbox').multiselect({
+        //    //includeSelectAllOption: true
+        //    includeSelectAllOption: true,         /*To enable the Select all Option*/
+        //    selectAllValue: 'multiselect-all',     /*The value used for the select all option can be configured using the selectAllValue*/
+        //    enableFiltering: true,   /*A filter input will be added to dynamically filter all the options*/
+        //    enableCaseInsensitiveFiltering: true,  /*To enable Case Insenstitive Filtering (Upper and Lower Case Letters)*/
+        //    maxHeight: '300',
+        //    buttonWidth: '235',
+        //})
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        $('#Vehicle_No').blur(function () {
+            CheckName();
+        });
+
+        $('#Purchase_Date').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#Date').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#Last_Emi_Date').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        //$('#ServiceMaster').validate({
+        //    onfocusout: false,
+        //    errorLabelContainer: $('#ErrorMessage'),
+        //    wrapper: "li",
+        //    rules: {
+        //        ChargeType: {required: true,},
+        //        ShortName: {required: true,},
+        //       },
+        //    messages: {
+        //        ChargeType: { required: 'Charge Type is Required',},
+        //        ShortName: { required: 'Short Name is Required',},
+        //    }
+        //});
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        //$("#ChargeType").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+        //$("#ShortName").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+
+
+        $("#PayLoad").constrain({ allow: { regex: "[0-9]" } });
+        $("#KM").constrain({ allow: { regex: "[0-9]" } });
+
+        //$("#TfatState_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#TfatState_Code").constrain({ allow: { regex: "[0-9.-]" } });
+        //$("#TfatState_Country").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            //if ($("#StateMaster").validate().form() == false)
+            //    return;
+            var result = confirm("Are you sure you want to delete?");
+            if (result) {
+                //Logic to delete the item
+            //    if ($("#VehicleCategory").val() == null || $("#VehicleCategory").val() == '')
+            //{
+            //    $("#ErrorMessage").show();
+            //        $("#ErrorMessage").text('Vehicle Category Name is Required..');
+            //    return;
+            //}
+                //var emailReg = /^([\w-\.]+@@([\w-]+\.)+[\w-]{2,4})?$/;
+            //    
+            //    var emailReg =/(([a-zA-Z\-0-9\.]+@@)([a-zA-Z\-0-9\.]+)[;]*)+/g;
+            //    if (!emailReg.test($("#EmailId").val())) {
+            //        
+            //        $("#ErrorMessage").text('Please Enter Valid Email Id With ; Seperated is Required..');
+            //        return;
+            //}
+
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+
+            //ModelData["VehicleCategory"] = $("#VehicleCategory").val();
+
+
+
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+            } else {
+                $('.spinner').hide();
+                window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+            }
+
+
+        });
+        $('#expandall').click(function () {
+            ExpandOrCollapse();
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //var TruckStatus = "";
+            //if ($("#StateMaster").validate().form() == false)
+            //    return;
+
+            if ($("#Vehicle_No").val() == null || $("#Vehicle_No").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Vehicle_No is Required..');
+                return;
+            }
+            //if ($("#Driver_Name").val() == null || $("#Driver_Name").val() == '')
+            //{
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Driver_Name is Required..');
+            //    return;
+            //}
+
+
+            if ($("#VehicleGroup").val() == null || $("#VehicleGroup").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Truck Status is Required..');
+                return;
+
+            }
+            if ($("#Vehicle_Category").val() == null || $("#Vehicle_Category").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Vehicle_Category is Required..');
+                return;
+            }
+            if ($("#VehicleGroup").val() == null || $("#VehicleGroup").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('VehicleGroup is Required..');
+                return;
+            }
+            if ($("#vehicleReportingSt").val() == null || $("#vehicleReportingSt").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Vehicle Current Status is Required..');
+                return;
+            }
+            if ($("#PayLoad").val() == null || $("#PayLoad").val() == '' || $("#PayLoad").val() == '0')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('PayLoad is Required..');
+                return;
+            }
+            if ($("#Broker_Name").val() == null || $("#Broker_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Broker is Required..');
+                return;
+            }
+
+            if ($("#KM").val() == null || $("#KM").val() == '' || $("#KM").val() == '0')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('KM is Required..');
+                return;
+            }
+
+
+
+            
+            var BranchList = "";
+            $('#treeviewcontrol').each(function () {
+                $(this).find('li').each(function () {
+                    var current = $(this);
+                    if (current.hasClass("jstree-checked")) {
+                        BranchList += current.context.id + ",";
+                    }
+                });
+            });
+            BranchList = BranchList.substr(0, BranchList.length - 1);
+            if (BranchList == '' || BranchList == null) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select Branch.....!');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+
+            ModelData["Vehicle_No"] = $("#Vehicle_No").val();
+            ModelData["Owner_Name"] = $("#Owner_Name").val();
+            ModelData["Chassis_No"] = $("#Chassis_No").val();
+            ModelData["Driver_Name"] = $("#Driver_Name").val();
+            ModelData["Purchase_Date"] = $("#Purchase_Date").val();
+            ModelData["BillOrInvoice_No"] = $("#BillOrInvoice_No").val();
+            ModelData["Chassis_Cost"] = $("#Chassis_Cost").val();
+            ModelData["Financer_Name"] = $("#Financer_Name").val();
+            ModelData["Agreement_Amount"] = $("#Agreement_Amount").val();
+            ModelData["Intrest_Rate"] = $("#Intrest_Rate").val();
+            ModelData["Insurance_Co"] = $("#Insurance_Co").val();
+            ModelData["Insured_Amount"] = $("#Insured_Amount").val();
+            ModelData["VehicleGroup"] = $("#VehicleGroup").val();
+            //ModelData["Truck_Status"] = Truck_Status;
+            ModelData["Vehicle_Category"] = $("#Vehicle_Category").val();
+            ModelData["PayLoad"] = $("#PayLoad").val();
+            //ModelData["Vehicle_Category_Name"] = $("#Vehicle_Category_Name").val();
+            ModelData["Broker_Name"] = $("#Broker_Name").val();
+            ModelData["Permit_No"] = $("#Permit_No").val();
+            ModelData["Engine_No"] = $("#Engine_No").val();
+            ModelData["Dealer_Name"] = $("#Dealer_Name").val();
+            ModelData["Invoice_Amount"] = $("#Invoice_Amount").val();
+            ModelData["Body_Cost"] = $("#Body_Cost").val();
+            ModelData["Agreement_nature"] = $("#Agreement_nature").val();
+            ModelData["Financed_Amount"] = $("#Financed_Amount").val();
+            ModelData["Date"] = $("#Date").val();
+            ModelData["Intrest_Amount"] = $("#Intrest_Amount").val();
+            ModelData["Policy_No"] = $("#Policy_No").val();
+            ModelData["Premium_Amount"] = $("#Premium_Amount").val();
+            ModelData["Last_Emi_Date"] = $("#Last_Emi_Date").val();
+            ModelData["Pick_Vehicle_Rate_From_Category"] = $("#Pick_Vehicle_Rate_From_Category").val();
+            ModelData["vehicleReportingSt"] = $("#vehicleReportingSt").val();
+            ModelData["KM"] = $("#KM").val();
+            //ModelData["Branch"] = $("#hdnBranchCodeArray").val();
+            ModelData["Branch"] = BranchList;
+            ModelData["AcitveorNot"] = $("#Acitve").is(":checked");
+            ModelData["ScheduleDate_Time"] = $("#ScheduleDate_Time").is(":checked");
+            ModelData["ScheduleKM"] = $("#ScheduleKM").is(":checked");
+
+
+
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        if ('@Model.ShortCutKey'=="True") {
+                            //window.location.href = "~/Logistics/FM/Index1?TableName=&MainType=&Mode=Add&Header=Freight%20Memo&ViewDataId=FMMaster&Controller2=FM&Module=Transactions&optiontype=&optioncode=FM";
+                            window.close();
+                        } else {
+                            window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        }
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+
+    function LoadBroker() {
+        var url = '@Url.Action("GetBroker")'
+        $('#Broker_Name').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Broker_Name', text: '@Model.Broker' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function ExpandOrCollapse() {
+
+        if ($("#treeviewcontrol>ul>li").hasClass("jstree-open")) {
+            $("#treeviewcontrol").jstree("close_all", "#0");
+        }
+        else {
+            $("#treeviewcontrol").jstree("open_all", "#0");
+        }
+    }
+    function FillTreeView() {
+        var Document = $("#Document").val();
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/VehicleMaster/TreeView?Mode=@Model.Mode&Document=" + Document,
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+        });
+
+    }
+    function CheckUncheckTree(check) {
+        var tree = $("#treeviewcontrol");
+        tree.jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/VehicleMaster/CheckUncheckTree?Check=" + check,
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: true,
+                checked_parent_open: false
+            },
+            //search: {
+            //    case_insensitive: true,
+            //    show_only_matches: true
+            //},
+            plugins: ["themes", "json_data", "ui", "checkbox", "search"]
+        }).bind("loaded.jstree", function (event, data) {
+            $('#treeviewcontrol').jstree('check_node', 'li[selected=selected]');
+            $(this).jstree("open_all");
+        });
+
+    }
+    function LoadVehicleGroupStatus() {
+
+            var url = '@Url.Action("GetVehicleGroupStatus")'
+            $('#VehicleGroup').select2({
+                minimumInputLength: 0,
+                placeholder: 'Search',
+                ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+                initSelection: function (element, callback) {
+                    var data = { id: '@Model.VehicleGroup', text: '@Model.VehicleGroup_Name' };
+                    callback(data);
+                },
+
+                formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+                formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            })
+    };
+
+
+    function LoadDriver() {
+        var url = '@Url.Action("GetDriver")'
+        $('#Driver_Name').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Driver_Name', text: '@Model.Driver' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadCurrCategory() {
+        var url = '@Url.Action("AutoCompleteVehicleCategory")'
+        $('#Vehicle_Category').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Vehicle_Category', text: '@Model.Vehicle_Category_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function CheckName() {
+        
+            NameFlag = "False";
+        var currValue = $('#Vehicle_No').val()
+        var url = '@Url.Action("CheckExist")';
+        if (currValue != null || currValue != "") {
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                //url: "/Base/CheckExist",
+                url: url,
+                data: { TableName: "VehicleMaster", Colfield: "[Vehicle No]", Value: $('#Vehicle_No').val(), SkipColumnName: "RecordKey", PKValue: '@Model.Document' },
+                success: function (result) {
+                    if (result.Message == "F") {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Vehicle_No is Exist Please Change The Vehicle_No..');
+                        $('#Submit').prop('disabled', true);
+                        return;
+                    } else {
+                        $("#ErrorMessage").hide();
+                        $('#Submit').prop('disabled', false);
+                    }
+                }
+            });
+        }
+    }
+</script>
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div id="DataEntry" class="col-sm-9" style="margin-bottom:20px;">
+
+                @Html.Partial("_VehicleMasterPartialView", Model)
+                @* iX9: -- Code for Header Ends -- *@
+            </div>
+            <div class="col-sm-3" style="font-family:Tahoma;font-size:12px;border-left:double;">
+                <div class="panel panel-default">
+                    <div class="panel-heading">
+                        <div class="input-group" style="display:flex;">
+
+                            <label class="control-label" style="font-size: 14px;font-weight: bold;padding-right:10px;">Select All</label>
+                            <div style="padding-right:40px;"><input type="checkbox" class="checkbox" id="chkSelectAll" style="width:22px;" /></div>
+                            <input type="text" class="form-control" style="width:150px;" placeholder="Search Node ..." id="search" />
+                        </div>
+                    </div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <div id="treeviewcontrol" style=" min-height:400px;overflow-y:auto;max-height:400px;position: relative;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right" style="padding-left:5px;">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="expandall">Expand All / Collapse All</button>
+            </div>
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@*<input type="hidden" id="controllername" />*@
+@Html.HiddenFor(x => x.Document)
+@*@Html.HiddenFor(x => x.Branch, new { @id = "hdnAppBranch" })
+    <input type="hidden" id="hdnBranchCodeArray" />*@

@@ -1,0 +1,1754 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.OrderRequestVM
+@using Common;
+@{
+    ViewBag.Title = "Consigner Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+<link href="~/Content/js/iCheck/skins/minimal/minimal.css" rel="stylesheet" />
+<script src="~/Content/js/iCheck/jquery.icheck.js"></script>
+<script src="~/Content/js/icheck-init.js"></script>
+
+<style>
+    .bold {
+        font-weight: bold !important;
+    }
+
+    hr {
+        border: 1px solid #dec0c0;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    /*legend {
+        margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;
+    }*/
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: #dec0c0;
+        width: auto;
+        z-index: auto;
+    }
+
+    .legend2 {
+        color: black;
+        position: absolute;
+        margin: -40px 0% 0% 25%;
+        /*margin: -2.2% 0% 0% 20%;*/
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: #53bee6;
+        width: auto;
+    }
+</style>
+<style>
+
+    #menu li {
+        list-style: none;
+        text-align: center;
+        color: black;
+        margin-left: 0px;
+        position: relative;
+    }
+
+    #menu ul li:hover {
+        cursor: pointer;
+        background-color: coral;
+        padding: 2px 0px 2px 0px;
+        text-align: center;
+        color: white;
+    }
+
+    /*#menu ul li:hover a {
+            color: white !important;
+        }*/
+
+    ul, .list-unstyled {
+        padding-left: 0px;
+    }
+</style>
+
+<script type="text/javascript">
+    var OrderBrachTextStore = "";
+    $(document).ready(function ()
+    {
+        if ('@Model.Mode'=='Add') {
+            if ('@Model.PickOrderSetup.Colln' == 'Yes')
+            {
+                $("#Yes").prop("checked", true);
+            } else {
+                $("#No").prop("checked", true);
+            }
+
+            if ('@Model.PickOrderSetup.Del' == 'D')
+            {
+                $("#Door").prop("checked", true);
+            } else {
+                $("#Godown").prop("checked", true);
+            }
+        }
+        else
+        {
+            if ('@Model.Colln' == 'Yes')
+            {
+                $("#Yes").prop("checked", true);
+            } else {
+                $("#No").prop("checked", true);
+            }
+
+            if ('@Model.Del' == 'D')
+            {
+                $("#Door").prop("checked", true);
+            } else {
+                $("#Godown").prop("checked", true);
+            }
+
+        }
+
+
+        
+        $('#OrderDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+            startDate: "+0d",
+        });
+
+
+        $("#ChargeDiv :text").each(function () {
+            $(this).focus(function () {
+                if ($(this).val() == "0") {
+                    $(this).val("");
+                }
+            });
+            $(this).blur(function () {
+                if ($(this).val() == "" || $(this).val() == null) {
+                    $(this).val("0");
+                }
+            });
+        });
+
+        $('#ChargeDiv :text').blur(function () {
+            var amt = 0;
+            $("#ChargeDiv :text").each(function () {
+                amt += parseFloat($(this).val());
+            });
+            $("#Amt").val((amt.toFixed(2)).toString());
+        });
+
+        $('#ActWt').blur(function () {
+            $("#ChgWt").val($("#ActWt").val());
+        });
+
+        $("input[name$='Collection']").change(function () {
+
+            if ($("#Yes").is(":checked") == true) {
+                $("#No").prop("checked", false);
+                $("#CollnArea").prop("disabled", false);
+                $("#CollNAreaTxt").prop("disabled", false);
+                $("#ColareaChk").prop("disabled", false);
+            }
+            else {
+                $("#Yes").prop("checked", false);
+                $("#CollnArea").prop("disabled", true);
+                $("#CollNArea1").prop("disabled", true);
+                $("#ColareaChk").prop("disabled", true);
+            }
+        });
+
+        if ($("#Yes").is(":checked") == true) {
+            $("#No").prop("checked", false);
+            $("#CollnArea").prop("disabled", false);
+            $("#CollNAreaTxt").prop("disabled", false);
+            $("#ColareaChk").prop("disabled", false);
+        }
+
+        @*if ('@Model.ColareaChk'=='True') {
+            $("#CollnArea").addClass("hidden");
+            $("#CollNAreaTxt").removeClass("hidden");
+        } else {
+            $("#CollNAreaTxt").addClass("hidden");
+            $("#CollnArea").removeClass("hidden");
+        }*@
+
+        //$('#ColareaChk').change(function () {
+        //    if (this.checked) {
+        //        $("#CollnArea").addClass("hidden");
+        //        $("#CollNAreaTxt").removeClass("hidden");
+        //    } else {
+        //        $("#CollNAreaTxt").addClass("hidden");
+        //        $("#CollnArea").removeClass("hidden");
+        //    }
+        //});
+
+        $("input[name$='Delivery']").change(function () {
+            if ($("#Door").is(":checked") == true) {
+                $("#Godown").prop("checked", false);
+                $("#DelAt").prop("disabled", false);
+                $("#DeliveryAtTxt").prop("disabled", false);
+                $("#DeliveryChk").prop("disabled", false);
+            }
+            else {
+                $("#Door").prop("checked", false);
+                $("#DelAt").prop("disabled", true);
+                $("#DeliveryAtTxt").prop("disabled", true);
+                $("#DeliveryChk").prop("disabled", true);
+            }
+        });
+
+        if ($("#Door").is(":checked") == true) {
+            $("#Godown").prop("checked", false);
+            $("#DelAt").prop("disabled", false);
+            $("#DeliveryAtTxt").prop("disabled", false);
+            $("#DeliveryChk").prop("disabled", false);
+        }
+
+        @*if ('@Model.DeliveryChk'=='True') {
+            $("#DelAt").addClass("hidden");
+            $("#DeliveryAtTxt").removeClass("hidden");
+        } else {
+            $("#DeliveryAtTxt").addClass("hidden");
+            $("#DelAt").removeClass("hidden");
+        }
+
+        $('#DeliveryChk').change(function () {
+            if (this.checked) {
+                $("#DelAt").addClass("hidden");
+                $("#DeliveryAtTxt").removeClass("hidden");
+            } else {
+                $("#DeliveryAtTxt").addClass("hidden");
+                $("#DelAt").removeClass("hidden");
+            }
+        });
+
+        $('#DescrChk').change(function () {
+            if (this.checked) {
+
+                $("#Descr").addClass("hidden");
+                $("#DescrTxt").removeClass("hidden");
+
+            } else {
+
+                $("#DescrTxt").addClass("hidden");
+                $("#Descr").removeClass("hidden");
+
+            }
+        });
+        if ('@Model.DescrChk'=='True') {
+            $("#Descr").addClass("hidden");
+            $("#DescrTxt").removeClass("hidden");
+        } else {
+            $("#DescrTxt").addClass("hidden");
+            $("#Descr").removeClass("hidden");
+        }*@
+
+
+        LoadLRType();
+        LoadServiceType();
+        LoadConsigner();
+        LoadConsignee();
+        LoadBillingParty();
+        LoadFrom();
+        LoadTo();
+        LoadBillAt();
+        LoadBillOrder();
+        LoadUnit();
+        LoadParticular();
+        LoadChargeType();
+        LoadDelivery();
+        LoadCollArea();
+
+
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        $(".CalculationTxt").constrain({ allow: { regex: "[0-9]" } });
+        //$("#ShortName").constrain({ allow: { regex: "[a-zA-Z0-9() ]" } });
+
+        //$("input[name=setRegex]").constrain({ allow: { regex: "[0-9]" } });
+        $("#Name").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        $("#Contact_Person").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        $("#Contact_Person1").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        // $("#Contact_Person #Contact_Person1").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Address").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#City").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Pincode").constrain({ allow: { regex: "[0-9]" } });
+        $("#District").constrain({ allow: { regex: "[a-zA-Z" } });
+        $("#Contact_No #Contact_No1").constrain({ allow: { regex: "[0-9]" } });
+        $("#Fax").constrain({ allow: { regex: "[0-9+]" } });
+
+
+        $('#btnDelete').click(function (event)
+        {
+            event.preventDefault();
+            var result = confirm("Are you sure you want to delete?");
+            if (result)
+            {
+                var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = '@Model.Mode';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        if (data.Status == 'Success')
+                        {
+                            $('.spinner').hide();
+                            window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                            $("#ErrorMessage").hide();
+                        }
+                        else
+                        {
+                            $('.spinner').hide();
+                            alert(data.Message);
+                        }
+                    },
+                });
+            } else {
+                $('.spinner').hide();
+                window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                $("#ErrorMessage").hide();
+            }
+        });
+
+
+
+        $('#Submit').click(function (event) {
+
+            if ($("#OrderDate").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('OrderDate is required..');
+                return;
+            }
+
+            //if ($("#Ordertype").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Ordertype is required..');
+            //    return;
+            //}
+
+            //if ($("#ServiceType").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('ServiceType is required..');
+            //    return;
+            //}
+
+            if ($("#BillBranchOrder").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('BranchOrder is required..');
+                return;
+            }
+
+            if ($("#CustomerName").val() == '') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Customer Name is required..');
+                return;
+            }
+
+
+            //if ($("#RecCode").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Consigner is required..');
+            //    return;
+            //}
+
+
+            //if ($("#SendCode").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Consignee is required..');
+            //    return;
+            //}
+
+
+            //if ($("#BillParty").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('BillParty is required..');
+            //    return;
+            //}
+            debugger;
+            if ('@Model.PickOrderSetup.FromC' == 'True') {
+                debugger;
+                if ($("#Source").val() == '') {
+
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('From is required..');
+                    return;
+                }
+                if ($("#Dest").val() == '') {
+
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('To is required..');
+                    return;
+                }
+            }
+            
+
+            
+
+            //if ($("#BillBran").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('BillBran is required..');
+            //    return;
+            //}
+
+            if ($("#Yes").is(":checked") == true) {
+                if (($("#CollnArea").val() == '') ) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Colln Area is required..');
+                    return;
+                }
+            }
+
+            if ($("#Door").is(":checked") == true) {
+                if (($("#DelAt").val() == '') ) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Delivery Area is required..');
+                    return;
+                }
+            }
+
+            if ($("#PackQty").val() == '0') {
+
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('PackQty is required..');
+                return;
+            }
+
+            //if ($("#UnitCode").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Unit is required..');
+            //    return;
+            //}
+
+            //if ($("#ActWt").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Actual Wt is required..');
+            //    return;
+            //}
+
+            //if ($("#ChgWt").val() == '') {
+
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Charged Wt is required..');
+            //    return;
+            //}
+
+
+
+
+            event.preventDefault();
+             var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+            ModelData["OrderNo"] = $("#OrderNo").val();
+            ModelData["RequestDate"] = $("#RequestDate").val();
+            ModelData["OrderDate"] = $("#OrderDate").val();
+            ModelData["Ordertype"] = $("#Ordertype").val();
+            ModelData["ServiceType"] = $("#ServiceType").val();
+            ModelData["BillBranchOrder"] = $("#BillBranchOrder").val();
+            ModelData["CustomerName"] = $("#CustomerName").val();
+            ModelData["ContactPersonMobileNo"] = $("#ContactPersonMobileNo").val();
+            ModelData["ContactPersonName"] = $("#ContactPersonName").val();
+            ModelData["RecCode"] = $("#RecCode").val();
+            ModelData["RecCodeInfo"] = $("#RecCodeInfo").val();
+            ModelData["SendCode"] = $("#SendCode").val();
+            ModelData["SendCodeInfo"] = $("#SendCodeInfo").val();
+            ModelData["BillParty"] = $("#BillParty").val();
+            ModelData["BillPartyInfo"] = $("#BillPartyInfo").val();
+            ModelData["Source"] = $("#Source").val();
+            ModelData["Source1"] = $("#Source1").val();
+            ModelData["Dest"] = $("#Dest").val();
+            ModelData["Dest1"] = $("#Dest1").val();
+            ModelData["BillBran"] = $("#BillBran").val();
+            ModelData["BillBran1"] = $("#BillBran1").val();
+            ModelData["CollNAreaTxt"] = $("#CollNAreaTxt").val();
+            ModelData["DeliveryAtTxt"] = $("#DeliveryAtTxt").val();
+            if ($("#Yes").is(":checked") == true) {
+                ModelData["Colln"] = "Yes";
+                ModelData["CollnArea"] = $("#CollnArea").val();
+            } else {
+                ModelData["Colln"] = "No";
+                ModelData["CollnArea"] = null;
+            }
+            if ($("#Door").is(":checked") == true) {
+                ModelData["Del"] = "D";
+                ModelData["DelAt"] = $("#DelAt").val();
+                
+            } else {
+                ModelData["Del"] = "G";
+                ModelData["DelAt"] = null;
+            }
+
+            
+            
+
+            ModelData["PackQty"] = $("#PackQty").val();
+            ModelData["UnitCode"] = $("#UnitCode").val();
+            ModelData["ActWt"] = $("#ActWt").val();
+            ModelData["ChgWt"] = $("#ChgWt").val();
+            ModelData["Narr"] = $("#Narr").val();
+            ModelData["ChgType"] = $("#ChgType").val();
+
+            ModelData["Descr"] = $("#Descr").val();
+
+
+            ModelData["DescrTxt"] = $("#DescrTxt").val();
+            ModelData["PartyRef"] = $("#PartyRef").val();
+            ModelData["PartyInvoice"] = $("#PartyInvoice").val();
+            ModelData["DecVal"] = $("#DecVal").val();
+            ModelData["GSTNO"] = $("#GSTNO").val();
+            ModelData["EwayBill"] = $("#EwayBill").val();
+            ModelData["VehicleNo"] = $("#VehicleNo").val();
+
+
+
+            ModelData["Document"] = $("#Document").val();
+            var Val = "";
+            var amt=0;
+            $("#ChargeDiv :text").each(function () {
+                Val += $(this).val() + "^";
+                amt += parseFloat($(this).val());
+            });
+
+            ModelData["Amt"] =(amt.toFixed(2)).toString();
+            ModelData["Val1"] = Val.substring(0, (Val.length-1));;
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+
+
+
+    });
+
+
+
+
+
+    function LoadFrom() {
+
+        var flag = false;
+
+        var url = '@Url.Action("From")'
+        $('#Source').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Flag: flag
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Source', text: '@Model.Source_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadChargeType() {
+
+        var url = '@Url.Action("ChargeType")'
+        $('#ChgType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ChgType', text: '@Model.ChgType_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadUnit() {
+
+        var url = '@Url.Action("GetUnit")'
+        $('#UnitCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.UnitCode', text: '@Model.UnitCode_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadParticular() {
+
+        var url = '@Url.Action("GetParticulars")'
+        $('#Descr').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Descr', text: '@Model.Descr_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadLRType() {
+
+        var url = '@Url.Action("GetOrderType")'
+        $('#Ordertype').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Ordertype', text: '@Model.Ordertype_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadServiceType() {
+
+        var url = '@Url.Action("GetServiceType")'
+        $('#ServiceType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ServiceType', text: '@Model.ServiceType_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadDelivery() {
+        var url = '@Url.Action("LoadDeliveryAtSearch")'
+        $('#DelAt').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        From: $('#Source').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DelAt', text: '@Model.DelAt_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadBillAt() {
+        var url = '@Url.Action("BillatBranch")'
+        $('#BillBran').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BillBran', text: '@Model.BillBran_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadBillOrder() {
+        var url = '@Url.Action("BillatBranch")'
+        $('#BillBranchOrder').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BillBranchOrder', text: '@Model.BillBranchOrder_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                if ('@Model.PickOrderSetup.FromC' == 'True') {
+                    OrderBrachTextStore = exercise.text;
+                    AutoSelectFrom();
+                }
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function AutoSelectFrom() {
+
+        $('#Source').select2('data', { id: $("#BillBranchOrder").val(), text: OrderBrachTextStore });
+
+    }
+    function LoadTo() {
+        var url = '@Url.Action("To")'
+        $('#Dest').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        From: $('#Source').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Dest', text: '@Model.Dest_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+     function LoadCollArea() {
+        var url = '@Url.Action("CollArea")'
+         $('#CollnArea').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                        //From: $('#Source').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CollnArea', text: '@Model.CollnArea_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadConsigner() {
+        var url = '@Url.Action("GetConsigner")'
+        $('#RecCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.RecCode', text: '@Model.RecCode_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                GetAddress();
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+
+            },
+        })
+    };
+
+    function LoadBillingParty() {
+        var url = '@Url.Action("GetConsigner")'
+        $('#BillParty').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BillParty', text: '@Model.BillParty_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                GetAddress();
+                //CheckName();
+                //$('#Submit').prop('disabled', true);
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+
+    function LoadConsignee() {
+
+        var url = '@Url.Action("GetConsignee")'
+        $('#SendCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Consigner: $('#Consigner').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.SendCode', text: '@Model.SendCode_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                GetAddress();
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function myFunction() {
+
+        if ($("#hdnAreaID").val() == null || $("#hdnAreaID").val() == '') {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Select Branch..');
+            return;
+
+        }
+    }
+
+
+
+
+
+    function GetAddress() {
+
+
+        var Consigner = $('#RecCode').val();
+        var Consignee = $('#SendCode').val();
+        var BillParty = $('#BillParty').val();
+
+        var url = '@Url.Action("GetAddress")';
+
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                //url: "/Base/CheckExist",
+                url: url,
+                data: { Consigner: Consigner, Consignee: Consignee, BillingParty: BillParty},
+                success: function (result) {
+
+                    $("#RecCodeAddr").val(result.Message);
+                    $("#SendCodeAddr").val(result.Message1);
+                    $("#BillPartyAddr").val(result.Message2);
+
+
+                }
+            });
+    }
+
+
+
+
+
+
+
+
+
+
+</script>
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <span class="tools pull-right" style="    margin-right: 15px;">
+
+        </span>
+    </div>
+</header>
+
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:30px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+            <fieldset class=" col-md-12" style="margin-top: 15px;">
+                <legend style="color: black;">@Model.Header</legend>
+
+                @*<button type="button" class="btn btn-info btn-lg legend2" data-toggle="modal" data-target="#myModal">Pick From Draft</button>*@
+
+                <div class="panel panel-default">
+                    <div class="panel-body " style="padding-left: 20px;">
+                        <div class="col-md-9">
+                            <div class="form-group" style="margin-top: 0px;">
+                                <label class=" bold   col-md-1 control-label">Order No :</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.OrderNo, new { @class = "form-control", @style = "width:50px;", @Value = Model.OrderNo, @readonly = "readonly" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Request Date :</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.RequestDate, new { @class = "form-control", @style = "width:150px;", @Value = Model.RequestDate, @readonly = "readonly" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Order Date :</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.OrderDate, new { @class = "form-control", @style = "width:150px;", @Value = Model.OrderDate })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+
+                                <label class=" bold  col-md-1 control-label">Order Type :</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.Ordertype, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Ordertype })
+                                </div>
+                                <label class=" bold  col-md-1 control-label">Service Type :</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.ServiceType, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.ServiceType })
+                                </div>
+                                <label class=" bold   col-md-1 control-label" style="">Order (Branch):</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillBranchOrder, new { @class = "input-large-query", @style = "width:70%;", @Value = Model.BillBranchOrder })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label">Cust Name:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.CustomerName, new { @class = "form-control", @style = "", @Value = Model.CustomerName })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Contact Person:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.ContactPersonName, new { @class = "form-control", @style = "", @Value = Model.ContactPersonName })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Mobile-No :</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.ContactPersonMobileNo, new { @class = "form-control", @style = "width:150px;", @Value = Model.ContactPersonMobileNo })
+                                </div>
+
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label">Consigner:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.RecCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.RecCode })
+                                </div>
+                                <label class=" bold  col-md-1 control-label">Consignee_Code:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.SendCode, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.SendCode })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Billing Party:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillParty, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.BillParty })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextAreaFor(x => x.RecCodeAddr, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @disabled = "disabled", @Value = Model.RecCodeAddr })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextAreaFor(x => x.SendCodeAddr, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @disabled = "disabled", @Value = Model.SendCodeAddr })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextAreaFor(x => x.BillPartyAddr, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @disabled = "disabled", @Value = Model.BillPartyAddr })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.RecCodeInfo, new { @class = "form-control", @Value = Model.RecCodeInfo, @placeholder = "Consigner Extra Info" })
+                                </div>
+                                <label class=" bold  col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.SendCodeInfo, new { @class = "form-control", @Value = Model.SendCodeInfo, @placeholder = "Consignee Extra Info" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillPartyInfo, new { @class = "form-control", @Value = Model.BillPartyInfo, @placeholder = "BillParty Extra Info" })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label">From:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.Source, new { @class = "input-large-query", @style = "width:70%;", @Value = Model.Source })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">To:</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.Dest, new { @class = "input-large-query", @style = "width:70%;", @Value = Model.Dest })
+                                </div>
+                                <label class=" bold   col-md-1 control-label" style="">Bill At(Branch):</label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillBran, new { @class = "input-large-query", @style = "width:70%;", @Value = Model.BillBran })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.Source1, new { @class = "form-control", @style = "width:70%;", @Value = Model.Source1, @placeholder = "Source Extra Info" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.Dest1, new { @class = "form-control", @style = "width:70%;", @Value = Model.Dest1, @placeholder = "Destination Extra Info" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-3">
+                                    @Html.TextBoxFor(x => x.BillBran1, new { @class = "form-control", @style = "width:70%;", @Value = Model.BillBran1, @placeholder = "BillBranch Extra Info" })
+                                </div>
+
+                            </div>
+                            <hr />
+                            <div class="form-group " style="">
+                                <label class=" bold   col-md-1 control-label">Collection :</label>
+                                <div class="col-md-2" style="display: flex;">
+                                    <input type="radio" class="form-control" name="Collection" id="Yes" value="Yes" style="height:20px;width:35px;" /><label class=" bold control-label"> Yes</label>
+                                    <input type="radio" class="form-control" name="Collection" id="No" value="No" style="height:20px;width:35px;" /><label class=" bold control-label"> No</label>
+                                </div>
+                                <div id="CollectionArea" class="">
+                                    <label class=" bold   col-md-1 control-label">Collection Area:</label>
+                                    <div class="col-md-2" style="display: flex;">
+                                        @Html.TextBoxFor(x => x.CollnArea, new { @class = "input-large-query ", @style = "width:100%;" })
+                                       </div>
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Delivery :</label>
+                                <div class="col-md-2" style="display: flex;">
+                                    <input type="radio" class="form-control" name="Delivery" id="Door" value="Yes" style="height:20px;width:35px;" /><label class=" bold control-label"> Door</label>
+                                    <input type="radio" class="form-control" name="Delivery" id="Godown" value="No" style="height:20px;width:35px;" /><label class=" bold control-label"> Godown</label>
+                                </div>
+                                <div id="DeliveryArea" class="">
+                                    <label class=" bold   col-md-1 control-label">Delivery At:</label>
+                                    <div class="col-md-2" style="display: flex;">
+                                        @Html.TextBoxFor(x => x.DelAt, new { @class = "input-large-query ", @style = "width:100%;" })
+                                        </div>
+                                </div>
+                            </div>
+                            <div class="form-group " style="">
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-2" style="display: flex;">
+                                </div>
+                                <div id="CollectionArea" class="">
+                                    <label class=" bold   col-md-1 control-label"></label>
+                                    <div class="col-md-2" style="">
+                                        @Html.TextBoxFor(x => x.CollNAreaTxt, new { @class = "form-control ", @Value = Model.CollNAreaTxt, @placeholder = "Collection Area Extra Info" })
+                                    </div>
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-2" style="display: flex;">
+                                </div>
+                                <div id="DeliveryArea" class="">
+                                    <label class=" bold   col-md-1 control-label"></label>
+                                    <div class="col-md-2" style="">
+                                        @Html.TextBoxFor(x => x.DeliveryAtTxt, new { @class = "form-control ", @Value = Model.DeliveryAtTxt, @placeholder = "Delivery At Extra Info" })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold  col-md-1 control-label">Package :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.PackQty, new { @class = "form-control", @Value = Model.PackQty })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Unit :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.UnitCode, new { @class = "input-large-query", @style = "width:100%;" })
+                                </div>
+                                <label class=" bold  col-md-1 control-label">Actual Wt :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.ActWt, new { @class = "form-control", @Value = Model.ActWt })
+                                </div>
+                                <label class=" bold  col-md-1 control-label" style="">Charged Wt :</label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.ChgWt, new { @class = "form-control", @Value = Model.ChgWt })
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top: 0px;">
+                                <label class=" bold  col-md-1 control-label">Remark :</label>
+                                <div class="col-md-11">
+                                    @Html.TextAreaFor(x => x.Narr, new { @class = "form-control", @Value = Model.Narr, @rows = "1", @maxlength = 100 })
+                                </div>
+                            </div>
+                            <hr />
+                            <div class="form-group ">
+                                <label class=" bold  col-md-1 control-label">Charge Type :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.ChgType, new { @class = "input-large-query", @style = "width:100%;" })
+                                </div>
+                                <label class=" bold  col-md-1 control-label">Particulars :</label>
+                                <div class="col-md-2" style="display:flex;">
+                                    @Html.TextBoxFor(x => x.Descr, new { @class = "input-large-query ", @style = "width:100%;" })
+                                    </div>
+                                <label class=" bold   col-md-1 control-label">Party Challan :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.PartyRef, new { @class = "form-control", @Value = Model.PartyRef })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Party Invoice :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.PartyInvoice, new { @class = "form-control", @Value = Model.PartyInvoice })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold  col-md-1 control-label"></label>
+                                <div class="col-md-2">
+                                </div>
+                                <label class=" bold  col-md-1 control-label"></label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.DescrTxt, new { @class = "form-control", @Value = Model.DescrTxt, @placeholder = "Description Extra Info" })
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-2">
+                                </div>
+                                <label class=" bold   col-md-1 control-label"></label>
+                                <div class="col-md-2">
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-md-1 control-label" style="">Declared Value:</label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.DecVal, new { @class = "form-control", @Value = String.Format("{0:0.00}", Model.DecVal) })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">GST NO :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.GSTNO, new { @class = "form-control", @Value = Model.GSTNO })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">EwayBill No :</label>
+                                <div class="col-md-2">
+                                    @Html.TextBoxFor(x => x.EwayBill, new { @class = "form-control", @Value = Model.EwayBill })
+                                </div>
+                                <label class=" bold   col-md-1 control-label">Vehicle No :</label>
+                                <div class="col-md-2" style="">
+                                    @Html.TextBoxFor(x => x.VehicleNo, new { @class = "form-control", @Value = Model.VehicleNo })
+                                </div>
+                            </div>
+                        </div>
+                        <div class=" col-md-3  " style="overflow:scroll;width: 23%;margin-left: 20px;height:auto">
+                            <div id="PartialView_CalculationPart">
+                                <div class="form-group" id="ChargeDiv">
+                                    @if (Model.ChargeName != null)
+                                    {
+                                        for (int i = 0; i < Model.ChargeName.Length; i++)
+                                        {
+                                            if (Model.ChargeName[i] != null)
+                                            {
+                                                <div class="form-group">
+                                                    <label class=" bold col-md-6 control-label">@Model.ChargeName[i] :</label>
+                                                    <div class=" col-md-4">
+                                                        @Html.TextBoxFor(x => x.ChargeName[i], new { @class = "form-control CalculationTxt", @Value = Model.ChargeValue[i] })
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                </div>
+                                <div class="form-group"></div>
+                                <div class="form-group">
+                                    <label class=" col-md-6 control-label" style="font-weight:bold;">Total Amout :</label>
+                                    <div class=" col-md-4">
+                                        @Html.TextBoxFor(x => x.Amt, new { @class = "form-control", @Value = String.Format("{0:0.00}", Model.Amt), @style = "height: 40px;width: 100%;" })
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-md-5">
+        </div>
+        <div class="col-md-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-md-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SaveDraft">Save Draft</button>
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="hdnAreaID" />
+@Html.HiddenFor(x => x.Document)
+
+

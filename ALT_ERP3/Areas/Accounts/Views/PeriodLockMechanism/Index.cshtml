@@ -1,0 +1,320 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.PeriodLockVM
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+@*<script src="~/Content/js/dynamic_table_init.js"></script>*@
+<style>
+    .span6 {
+        display: none !important;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        LoadBranch();
+        $('#dynamic-table').dataTable({
+            "iDisplayLength": -1
+        });
+        $('#Search').keyup(function () {
+            var value = $(this).val();
+            if (value != "") {
+                $("#dynamic-table> tbody > tr").filter(function () {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            }
+        });
+
+        $("#CurrBranch").change(function (event) {
+            
+            var ModelData = {};
+            
+            debugger;
+            if ($("#MessageRules_Type").val() == null || $("#MessageRules_Type").val() == "") {
+                alert("Please Select DocType.....!");
+                return;
+            }
+            ModelData["Rules_Type"] = $("#MessageRules_Type").val();
+            ModelData["CurrBranch"] = $("#CurrBranch").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("ClickLeftGrid")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#errormessage').hide();
+                    $('#MessageRulesdiv').html(data.Html);
+                    $('#MessageRules_Type').val(data.MessageRules_Type);
+                    //$('#MessageRules_TypeName').val($tds.eq(1).text());
+
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+            
+
+        });
+
+        $("#dynamic-table").on('click', 'tbody tr', function (event) {
+            event.preventDefault();
+            var PSerial = [];
+            var row = $(this);
+            var $tds = $(this).find('td');
+            psrl = $tds.eq(0).text();
+            PSerial.push(psrl);
+            var ModelData = {};
+            ModelData["Rules_Type"] = PSerial.toString();
+            debugger;
+            if ($("#CurrBranch").val() == null || $("#CurrBranch").val() == "") {
+                alert("Please Select Branch.....!");
+                return;
+            }
+
+            ModelData["CurrBranch"] = $("#CurrBranch").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("ClickLeftGrid")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#errormessage').hide();
+                    $('#MessageRulesdiv').html(data.Html);
+                    $('#MessageRules_Type').val(data.MessageRules_Type);
+                    $('#MessageRules_TypeName').val($tds.eq(1).text());
+
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            var myTableArray = [];
+            $('#tabledatapick2 tbody tr').each(function () {
+                debugger;
+                var tds = $(this).find('td');
+                for (var i = 0; i < 31; i++) {
+                    debugger;
+                    if (tds.find("input[id='chk" + i + "']").is(':checked')) {
+                        var myDets = {
+                            Date: tds.find("input[id='chkdate" + i + "']").val(),
+                            Lock: tds.find("input[id='chk" + i + "']").is(':checked'),
+                        }
+                        myTableArray.push(myDets);
+                    }
+                    
+                }
+                
+            })
+            var ModelData = {};
+            ModelData["mRightList"] = myTableArray;
+            ModelData["Rules_Type"] = $("#MessageRules_Type").val();
+            ModelData["CurrBranch"] = $("#CurrBranch").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveData")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == "Success")
+                    {
+                        alert("Data Save Sucessfully....!");
+                        location.reload();
+                    }
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });
+    function LoadBranch() {
+        var url = '@Url.Action("GetBranch")'
+        $('#CurrBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CurrBranch', text: '@Model.BranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                //
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">Period Locking Mechanism</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/TransactionsDashBoard" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <form class="form-horizontal " id="MessageRulesFrm" role="form" style="margin-top:1%;margin-left:0px">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="panel-body" style="padding-top:0px;">
+                <div class="col-sm-4" style="border-right:solid;overflow:scroll;min-height:500px;max-height:500px;">
+                    <div class="form-group">
+                        <label class=" bold   col-md-2  control-label">Search:</label>
+                        <div class="col-sm-8">
+                            <input type="text" class="form-control" style="width:100%;" id="Search" placeholder="Search DocType.." />
+                        </div>
+                        
+                        
+                    </div>
+                    <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                        Transaction Types:
+                    </b>
+                    <table class="zui-table" id="dynamic-table" >
+                        <thead>
+                            <tr role="row">
+                                <th style="width: 14%;vertical-align:inherit;">Code</th>
+                                <th style="width: 42%;vertical-align:inherit;">Description</th>
+                                <th style="width: 16%;vertical-align:inherit;">Main Type</th>
+                                <th style="width: 16%;vertical-align:inherit;">Sub Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.mLeftList != null)
+                            {
+                                foreach (var item in @Model.mLeftList)
+                                {
+                                    <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                        <td style="width: 14%;vertical-align:inherit;">@item.DocTypes_Code</td>
+                                        <td style="width: 42%;vertical-align:inherit;">@item.DocTypes_Name</td>
+                                        <td style="width: 16%;vertical-align:inherit;">@item.DocTypes_MainType</td>
+                                        <td style="width: 16%;vertical-align:inherit;">@item.DocTypes_SubType</td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="col-sm-8">
+                    <div class="form-group">
+                        <div class="col-sm-2">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                Lock Rules:
+                            </b>
+                        </div>
+                        <div class="col-sm-3">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                Lock Rules Name:
+                            </b>
+                        </div>
+                        <div class="col-sm-4">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                Branch:
+                            </b>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.Rules_Type, new { @id = "MessageRules_Type", @Name = "MessageRules_Type", @style = "font-size:14px;font-weight:bolder;", @class = "form-control", @disabled = "disabled" })
+                        </div>
+                        <div class="col-sm-3">
+                            <input type="text" class="form-control" id="MessageRules_TypeName" style="font-size:14px;font-weight:bolder;" disabled />
+                        </div>
+                        <div class="col-sm-4">
+                            @Html.TextBoxFor(x => x.CurrBranch, new { @id = "CurrBranch", @Name = "CurrBranch", @style = "font-size:14px;font-weight:bolder;width:100%;", @class = "input-large-query",@value=Model.CurrBranch })
+                        </div>
+                    </div>
+
+                    <div id="MessageRulesdiv" style="min-height:442px;max-height:442px;overflow:scroll;">
+                        @Html.Partial("TransactionPeriodLockPartial")
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4" style="text-align:center;margin-top:4px;color:white;font-family:Tahoma;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4" style="padding-right:15px;">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/DashBoard/ControlPanel" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>

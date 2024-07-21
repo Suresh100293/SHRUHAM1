@@ -1,0 +1,253 @@
+﻿@model IEnumerable<ALT_ERP3.Areas.Logistics.Models.LRModal>
+@{
+    /**/
+
+    Layout = null;
+}
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<style>
+    td, th {
+        padding: 4px !important;
+    }
+
+    .Ordertable {
+        display: table;
+    }
+
+    .Ordertable-row {
+        display: table-row;
+        color: black;
+    }
+
+    .Ordertable-cell {
+        display: table-cell;
+        border: 1px solid black;
+        padding: 5px;
+        /*text-align: center;*/
+    }
+
+
+    .otherBranch {
+        background-color: #d690aa;
+    }
+
+    .ClickrowColor {
+        background-color: #71a1af !important;
+        color: black;
+    }
+
+    /*.inputColor{
+        color:black;
+    }*/
+    input[type=text] {
+        color: black !important;
+    }
+
+    .span6 {
+        display: none !important;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        //LoadD Comment Because Of This Of Direct Delivery Not Tracking Properly So We Cant Give It To The Direct Delivery IN Unloading.
+
+
+        $('#UnloadReadyForLrListexample1').DataTable();
+
+        $(".LGQty").constrain({ allow: { regex: "[0-9]" } });
+        $(".LDQty").constrain({ allow: { regex: "[0-9]" } });
+        $(".CalculateWeight").constrain({ allow: { regex: "[0-9]" } });
+
+
+        $(".checkbox").click(function () {
+            debugger;
+            $("#SelectAll").prop('checked', false);
+            var Row = $(this).closest('tr');
+            var Other ;
+            var CheckBox = Row.find('.checkbox').prop("checked");
+            if (CheckBox) {
+
+                Other = Row.find(".UNOTHBRANCH").text();
+                Row.find(".LGQty").val(Row.find(".Qty").text());
+                Row.find(".LGQty").prop("disabled", false);
+                //Row.find(".LDQty").val("0");
+                //Row.find(".LDQty").prop("disabled", false);
+                Row.find(".CalculateWeight").val(Row.find(".WeightU").text());
+                Row.find(".CalculateWeight").prop("disabled", false);
+
+                if (Other=="True") {
+                    var MSg = Row.find(".UNLRNO").text() + " LR IS Not Of Your Branch...! ";
+                    alert(MSg);
+                }
+
+            } else {
+                Row.find(".LGQty").val("0");
+                Row.find(".LGQty").prop("disabled", true);
+                //Row.find(".LDQty").val("0");
+                //Row.find(".LDQty").prop("disabled", true);
+                Row.find(".CalculateWeight").val("0");
+                Row.find(".CalculateWeight").prop("disabled", true);
+            }
+
+
+        });
+
+        $('#UnloadReadyForLrListexample1  > tbody  > tr').click(function () {
+            $("#UnloadReadyForLrListexample1 > tbody  > tr").removeClass('ClickrowColor');
+            $(this).addClass('ClickrowColor');
+        });
+
+        $("#SelectAll").click(function () {
+            TotalWeight = 0, TotalQty = 0;
+            $(".checkbox").prop('checked', $(this).prop('checked'));
+            if ($(this).prop("checked") == true) {
+                var MSg = "";
+                $("#UnloadReadyForLrListexample1 > tbody  > tr").each(function () {
+                  
+
+                    var Row = $(this).closest('tr');
+                    var Other = Row.find(".UNOTHBRANCH").text();
+                    Row.find(".LGQty").val(Row.find(".Qty").text());
+                    Row.find(".LGQty").prop("disabled", false);
+                    //Row.find(".LDQty").val("0");
+                    //Row.find(".LDQty").prop("disabled", false);
+                    Row.find(".CalculateWeight").val(Row.find(".WeightU").text());
+                    Row.find(".CalculateWeight").prop("disabled", false);
+
+                    if (Other == "True") {
+                        MSg +=  Row.find(".UNLRNO").text() + " LR IS Not Of Your Branch...!\n "; 
+                    }
+                });
+                debugger;
+                if (MSg!="") {
+                    alert(MSg);
+                }
+
+            } else {
+                $("#UnloadReadyForLrListexample1 > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    Row.find(".LGQty").val("0");
+                    Row.find(".LGQty").prop("disabled", true);
+                    //Row.find(".LDQty").val("0");
+                    //Row.find(".LDQty").prop("disabled", true);
+                    Row.find(".CalculateWeight").val("0");
+                    Row.find(".CalculateWeight").prop("disabled", true);
+                });
+            }
+        });
+    });
+    function LoadQtyBlur(value) {
+
+        var Row = $("#" + value);
+        var Qty = Row.find(".Qty").text();
+        var LoadGQty = Row.find(".LGQty").val();
+        var LoadDQty = Row.find(".LDQty").val();
+
+        var LoadQty = parseInt(LoadGQty) + parseInt(LoadDQty);
+        var Weight = Row.find(".WeightU").text();
+        if (!(parseFloat(Qty) >= parseFloat(LoadQty))) {
+            Row.find(".CalculateWeight").val(Row.find(".WeightU").text());
+            alert("GodownQty and DoorQty Not Greater Than Qty OF Lr.....!");
+            Row.find(".LGQty").val(Row.find(".loadGQtyU").text());
+            //Row.find(".LDQty").val(Row.find(".loadDQtyU").text());
+            Row.find(".CalculateWeight").val(Row.find(".WeightU").text());
+        }
+        else {
+            var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+            if (parseInt(CalculateWeight) >= parseInt(Weight)) {
+                Row.find(".CalculateWeight").val(Math.round(Weight));
+            } else {
+                Row.find(".CalculateWeight").val(Math.round(CalculateWeight));
+            }
+        }
+    }
+    function LoadweightBlur(value) {
+
+        debugger;
+        var Row = $("#" + value);
+        var Qty = Row.find(".Qty").text();
+        var LoadGQty = Row.find(".LGQty").val();
+        var LoadDQty = Row.find(".LDQty").val();
+
+        var LoadQty = parseInt(LoadGQty) + parseInt(LoadDQty);
+        var Weight = Row.find(".WeightU").text();
+        var LWeight = Row.find(".CalculateWeight").val();
+        if (!(parseFloat(Weight) >= parseFloat(LWeight))) {
+            var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+            Row.find(".CalculateWeight").val(CalculateWeight);
+            alert("Weight Not Greater Than Act Weight OF Lr.....!");
+        }
+    }
+    
+
+</script>
+@if (Model != null)
+{
+    <div class="container-fluid" style="margin-top:8px;margin-left:-5px;">
+        <table id="UnloadReadyForLrListexample1" class="table-bordered example" style="width:100%!important;">
+            <thead>
+
+                <tr>
+                    <th><center><input type="checkbox" id="SelectAll" style="height: 17px;width: 18px;" /></center></th>
+                    <th class="hidden">Record</th>
+                    <th>Lr No</th>
+                    <th>Lr Date</th>
+                    <th>Godown </th>
+                    <th> Direct </th>
+                    <th>Un-Weight</th>
+                    <th>Avl Qty</th>
+                    <th>Weight</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>G-Qty</th>
+                    <th>D-Qty</th>
+                    <th>LC No</th>
+                    <th>Lc From</th>
+                    <th>Lc TO</th>
+                    <th>Charge Type</th>
+                    <th>Consigner</th>
+                    <th>Consignee</th>
+                    <th class="hidden">UnOtherBranch Flag</th>
+                </tr>
+            </thead>
+            <tbody style="max-height:400px;min-height:400px;width:100%; overflow-x:hidden;overflow-y:auto">
+                @foreach (var item in Model)
+                {
+                <tr id="@item.recordkey">
+
+                    <td class=""><center><input type="checkbox" class="checkbox" style="height: 17px;width: 18px;" /></center></td>
+                    <td class=" RecorKey hidden">@item.recordkey</td>
+                    <td class="UNLRNO ">@item.Lrno</td>
+                    <td class=" ">@item.Date</td>
+                    <td class=" LoadGQty">
+                        <center><input type="text" class="LGQty" style="width:100px;" onblur="LoadQtyBlur('@item.recordkey')" value="@item.unloadGQty" disabled /></center>
+                    </td>
+                    <td class=" LoadDQty">
+                        <center><input type="text" class="LDQty" style="width:100px;" onblur="LoadQtyBlur('@item.recordkey')" value="@item.unloadDQty" disabled /></center>
+                    </td>
+                    <td class=" ">
+                        <center><input type="text" class="CalculateWeight" style="width:100px;" disabled onblur="LoadweightBlur('@item.recordkey')" value="@item.UnWeight" /></center>
+                    </td>
+                    <td class="Qty ">@item.Qty</td>
+                    <td class="WeightU ">@item.Weight</td>
+                    <td class=" ">@item.From_Name</td>
+                    <td class=" ">@item.To_Name</td>
+                    <td class="loadGQtyU ">@item.loadGQty</td>
+                    <td class="loadDQtyU ">@item.loadDQty</td>
+                    <td class=" ">@item.Lcno</td>
+                    <td class=" ">@item.LcFrom</td>
+                    <td class=" ">@item.LCTo</td>
+                    <td class=" ">@item.ChargeType</td>
+                    <td class=" ">@item.Consignor</td>
+                    <td class=" ">@item.Consignee</td>
+                    <td class=" hidden UNOTHBRANCH">@item.UnOtherBranch</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

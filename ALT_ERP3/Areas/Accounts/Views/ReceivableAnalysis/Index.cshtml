@@ -1,0 +1,764 @@
+﻿@model GridOption
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<script src="~/Scripts/jquery.jstree.js"></script>
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+
+<script type="text/javascript">
+    var scrollPosition = 0;
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        //document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+
+        LoadSavedParamentersType();
+        $('#ToDate').val('@Model.ToDate');
+        var mheight = $(window).innerHeight() - 155;
+        $('#tabacledger').height(mheight);
+        $('#tabOutstanding').height(mheight);
+
+
+        $('#ParaDialog').modal('show');
+
+        $(".ReportName").change(function (event) {
+            event.preventDefault();
+            
+            if ($(".ReportName").val() != "" && $(".ReportName").val() != null) {
+                $("#txtReportName").val($(".ReportName option:selected").text());
+            } else {
+                $("#txtReportName").val("");
+                ResetParameter();
+            }
+
+        });
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+
+            $('#acledger').jqGrid('clearGridData');
+            $("#acledger").jqGrid("GridUnload");
+            $('#acledger').trigger('reloadGrid');
+
+            $('#OutstandingD').jqGrid('clearGridData');
+            $("#OutstandingD").jqGrid("GridUnload");
+            $('#OutstandingD').trigger('reloadGrid');
+
+            var FormatCode = $("#FormatViewCode").val();
+            if (FormatCode == "New Outstanding Report" || FormatCode == "Party Ageing Summary") {
+                GridOutstanding();
+            } else {
+                Gridacledger();
+            }
+
+
+        });
+
+        $('#chkSelectAll').change(function () {
+            if ($('#chkSelectAll').is(":checked")) {
+                CheckUncheckTree('Check');
+            }
+            else {
+                CheckUncheckTree('UnCheck');
+            }
+        });
+
+        $('#search').keyup(function () {
+            $('#treeviewcontrol').jstree('search', $(this).val());
+        });
+    });
+
+
+
+    function ResetParameter() {
+        
+        $("#Submit").prop("disabled", true);
+            var url = '@Url.Action("ParameterReset")';
+            var ModelData = {};
+           ModelData["Branch"] = '@Model.Branch';
+           ModelData["ViewDataId"] = '@Model.ViewDataId';
+           ModelData["ReportTypeL"] = '@Model.ViewDataId';
+            ModelData["MainType"] = '@Model.MainType';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#Submit").prop("disabled", false);
+
+                    if (data.Status == "Success") {
+                        var LoadDownLoadFiles = $("#Dialog");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $('#ParaDialog').modal('show');
+                        LoadSavedParamentersType();
+                    }
+                    else {
+                        alert("Some Error Occured...!");
+                    }
+                },
+            });
+    }
+    function GetSaveParameter()
+    {
+        $('.spinner').show();
+        if ($("#ReportName").val() == "" || $("#ReportName").val() == null) {
+            alert("Please Select First Reports From The Combo....!");
+            $('.spinner').hide();
+            return;
+        }
+
+        var url = '@Url.Action("GetParameterAuto")';
+        var ModelData = {};
+        ModelData["ReportTypeL"] = '@Model.ViewDataId';
+        ModelData["ReportName"] = $("#txtReportName").val();
+        ModelData["ViewDataId"] = '@Model.ViewDataId';
+        ModelData["MainType"] = '@Model.MainType';
+
+        $("#GetReportParameter").val(false);
+        if ($(".ReportName").val() != "" && $(".ReportName").val() != null) {
+            $("#GetReportParameter").val(true);
+        }
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $("#Submit").prop("disabled", false);
+
+                if (data.Status == "Success") {
+                    
+                    var LoadDownLoadFiles = $("#Dialog");
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                    $('#ParaDialog').modal('show');
+                }
+                else {
+                    alert("Some Error Occured...!");
+                }
+            },
+        });
+    }
+    function LoadSavedParamentersType() {
+        event.preventDefault();
+        var url = '@Url.Action("PopulateSaveReports")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { ViewDataId: '@Model.ViewDataId', MainType:'@Model.MainType'},
+            success: function (result) {
+                $('#ReportName').empty();
+                $('#ReportName').append($("<option></option>").attr("value", "").text(" -- Select Saved Reports -- "));
+                $.each(result, function (i, item) {
+                    $("#ReportName").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    // reportprintoptions
+    function clickPrint() {
+        $("#hiddenvalues").val($('#Account').val());
+        $("#hdnparastring").val("&mopening="+ 0 + "&mRunning=true&mParaString=Code^" + $('#Account').val() + "&Code=" + $('#Account').val());
+        $("#hdnparastring").val("&mopening="+ 0 + "&mRunning=true");
+        $('#dialogprint').modal('show');
+    };
+
+    function ClickPara() {
+        $('#ParaDialog').modal('show');
+    };
+
+    function LoadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Account').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        MainType: '@Model.MainType',
+                        Customer: $("#Customer").is(":checked")
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Name, id: item.Code }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Document', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+    function Gridacledger() {
+        $('.spinner').show();
+        //event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ('@Model.FromDate' + ':' + $('#ToDate').val());
+        if ($("#chkActiveDate").is(":checked")) {
+            mDate = ($('#StartDate').val() + ':' + $('#EndDate').val());
+        }
+        var Code = "";
+        if ($("#Customer").is(":checked")) {
+            Code = $('#CustomerCodes').val();
+        } else {
+            Code = $('#Document').val();
+        }
+
+        var FormatCode = $("#FormatViewCode").val();
+        //Parameters
+        var BranchList = "";
+        $('#treeviewcontrol').each(function () {
+            $(this).find('li').each(function () {
+                var current = $(this);
+                if (current.hasClass("jstree-checked")) {
+                    BranchList = BranchList + "" + current.context.id + ","
+                    //BranchList += current.context.id + ",";
+                }
+            });
+        });
+        if (BranchList != "") {
+            BranchList = BranchList.substr(0, BranchList.length - 1)
+        }
+        var BillSubDetails = "No";
+        if ($("#Para15").prop("checked")) {
+            BillSubDetails = "Yes";
+        }
+        BranchList += "|" + $("#Para9").val() + "|" + $("#Para10").val() + "|" + $("#Para11").val() + "|" + $("#Para12").val() + "|" + $("#Para13").val() + "|" + $("#Para14").val() + "|" + BillSubDetails
+
+        debugger;
+        var SundryCreditorsFilterGroups = "";
+        if ($('#MasterFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "M^"
+        }
+        if ($('#BrokerFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "B^"
+        }
+        if ($('#VehicleFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "H^"
+        }
+        if ($('#VendorFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "V^"
+        }
+        if ($('#DriverFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "D^"
+        }
+
+        if (SundryCreditorsFilterGroups != "") {
+            SundryCreditorsFilterGroups = SundryCreditorsFilterGroups.substr(0, SundryCreditorsFilterGroups.length - 1);
+        }
+
+
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + FormatCode + '&Code=' + Code + '&MainType=' + '@Model.MainType' + '&Customer=' + $("#Customer").is(":checked") + '&SelectContent=' + BranchList + '&SundryCreditorsFilterGroups=' + SundryCreditorsFilterGroups + '&ARAPReqOnly=' + $("#ARAPReqOnly").is(":checked") + '&Supress=' + $("#Supress").is(":checked");
+        var sUrlpath = '@Url.Action("GetGridData1")?Date=' + mDate + '&ViewDataId=' + FormatCode;
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                
+
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+
+            },
+            Error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            
+
+            var mgroupby = "Name";
+            var misgroup = true;
+            $('#acledger').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: false,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+                @*rowNum: @Session["GridRows"],*@
+                rowNum: 5000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                sortname: 'Docdate,BillNumber',
+                height: $(window).height() - 280,
+                //height: 400,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: true,
+                autoencode: true,
+                search: true,
+                //recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                grouping: misgroup,
+                groupingView: {
+                    groupField: [mgroupby],
+                    groupColumnShow: [true],
+                    groupText: ["<b>{0}</b>"],
+                    groupCollapse: false,
+                    groupOrder: ["asc"],
+                    groupSummary: [true],
+                    groupDataSorted: true,//Suresh ,
+                    showSummaryOnHide: true,
+                },
+                footerrow: true,
+                userDataOnFooter: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+
+                    if (FormatCode == "Payment Reminder Letter")
+                    {
+                        var Pending = parseFloat($("#acledger").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var BillAmt = parseFloat($("#acledger").jqGrid('getCol', "Bill Amt", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Chq Amt.", false, 'sum')).toFixed(2);
+                        var UnAdjPending = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Pending", false, 'sum')).toFixed(2);
+                        $('#acledger').jqGrid('footerData', 'set', { "Bill Amt": BillAmt, "UnAdj. Chq Amt.": UnAdjChqAmt, "UnAdj. Pending": UnAdjPending, "Pending": Pending });
+                    }
+                    else if (FormatCode == "UnAdjust Report") {
+                        var Pending = parseFloat($("#acledger").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var BillAmt = parseFloat($("#acledger").jqGrid('getCol', "Bill Amt", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Chq Amt.", false, 'sum')).toFixed(2);
+                        var UnAdjPending = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Pending", false, 'sum')).toFixed(2);
+                        var DueDays = $("#acledger").jqGrid('getCol', "Due Days", false, 'sum');
+                        $('#acledger').jqGrid('footerData', 'set', { "Bill Amt": BillAmt, "UnAdj. Chq Amt.": UnAdjChqAmt, "UnAdj. Pending": UnAdjPending, "Pending": Pending, "Due Days": DueDays });
+                    }
+                    else if (FormatCode == "Outstanding Report With LR") {
+                        var Pending = parseFloat($("#acledger").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var BillAmt = parseFloat($("#acledger").jqGrid('getCol', "Bill Amt", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Chq Amt.", false, 'sum')).toFixed(2);
+                        var UnAdjPending = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Pending", false, 'sum')).toFixed(2);
+                        var LRBillAmt = parseFloat($("#acledger").jqGrid('getCol', "LR Bill Amt", false, 'sum')).toFixed(2);
+                        $('#acledger').jqGrid('footerData', 'set', { "Bill Amt": BillAmt, "UnAdj. Chq Amt.": UnAdjChqAmt, "UnAdj. Pending": UnAdjPending, "Pending": Pending, "LR Bill Amt": LRBillAmt });
+                    }
+                    else if (FormatCode == "OS With Reference-2") {
+                        var Pending = parseFloat($("#acledger").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var Amount = parseFloat($("#acledger").jqGrid('getCol', "Amount", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Amt.", false, 'sum')).toFixed(2);
+                        $('#acledger').jqGrid('footerData', 'set', { "UnAdj. Amt.": UnAdjChqAmt, "Amount": Amount, "Pending": Pending });
+                    }
+                    else if (FormatCode == "OS Ageing") {
+                        var Pending = parseFloat($("#acledger").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var Amount = parseFloat($("#acledger").jqGrid('getCol', "Amount", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Amt.", false, 'sum')).toFixed(2);
+                        var _30 = parseFloat($("#acledger").jqGrid('getCol', "0-30", false, 'sum')).toFixed(2);
+                        var _60 = parseFloat($("#acledger").jqGrid('getCol', "30-60", false, 'sum')).toFixed(2);
+                        var _90 = parseFloat($("#acledger").jqGrid('getCol', "60-90", false, 'sum')).toFixed(2);
+                        var _120 = parseFloat($("#acledger").jqGrid('getCol', "90-120", false, 'sum')).toFixed(2);
+                        var _150 = parseFloat($("#acledger").jqGrid('getCol', "120-150", false, 'sum')).toFixed(2);
+                        var _180 = parseFloat($("#acledger").jqGrid('getCol', "150-180", false, 'sum')).toFixed(2);
+                        var _180More = parseFloat($("#acledger").jqGrid('getCol', ">180", false, 'sum')).toFixed(2);
+                        //var LRBillAmt = $("#acledgerwithLR").jqGrid('getCol', "LR Bill Amt", false, 'sum');
+                        $('#acledger').jqGrid('footerData', 'set', { "UnAdj. Amt.": UnAdjChqAmt, "Amount": Amount, "Pending": Pending, "0-30": _30, "30-60": _60, "60-90": _90, "90-120": _120, "120-150": _150, "150-180": _180, ">180": _180More });
+                    }
+                    else if (FormatCode == "OS Ageing with Ref") {
+                        var Pending = parseFloat($("#acledger").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var Amount = parseFloat($("#acledger").jqGrid('getCol', "Amount", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Amt.", false, 'sum')).toFixed(2);
+                        var _30 = parseFloat($("#acledger").jqGrid('getCol', "0-30", false, 'sum')).toFixed(2);
+                        var _60 = parseFloat($("#acledger").jqGrid('getCol', "30-60", false, 'sum')).toFixed(2);
+                        var _90 = parseFloat($("#acledger").jqGrid('getCol', "60-90", false, 'sum')).toFixed(2);
+                        var _120 = parseFloat($("#acledger").jqGrid('getCol', "90-120", false, 'sum')).toFixed(2);
+                        var _150 = parseFloat($("#acledger").jqGrid('getCol', "120-150", false, 'sum')).toFixed(2);
+                        var _180 = parseFloat($("#acledger").jqGrid('getCol', "150-180", false, 'sum')).toFixed(2);
+                        var _180More = parseFloat($("#acledger").jqGrid('getCol', ">180", false, 'sum')).toFixed(2);
+                        //var LRBillAmt = $("#acledgerwithLR").jqGrid('getCol', "LR Bill Amt", false, 'sum');
+                        $('#acledger').jqGrid('footerData', 'set', { "UnAdj. Amt.": UnAdjChqAmt, "Amount": Amount, "Pending": Pending, "0-30": _30, "30-60": _60, "60-90": _90, "90-120": _120, "120-150": _150, "150-180": _180, ">180": _180More });
+                    }
+                    else if (FormatCode == "Invoice wise Outstanding") {
+                        var Pending = parseFloat($("#acledger").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var Amount = parseFloat($("#acledger").jqGrid('getCol', "Amount", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#acledger").jqGrid('getCol', "UnAdj. Amt.", false, 'sum')).toFixed(2);
+                        var _30 = parseFloat($("#acledger").jqGrid('getCol', "0-30", false, 'sum')).toFixed(2);
+                        var _60 = parseFloat($("#acledger").jqGrid('getCol', "30-60", false, 'sum')).toFixed(2);
+                        var _90 = parseFloat($("#acledger").jqGrid('getCol', "60-90", false, 'sum')).toFixed(2);
+                        var _120 = parseFloat($("#acledger").jqGrid('getCol', "90-120", false, 'sum')).toFixed(2);
+                        var _150 = parseFloat($("#acledger").jqGrid('getCol', "120-150", false, 'sum')).toFixed(2);
+                        var _180 = parseFloat($("#acledger").jqGrid('getCol', "150-180", false, 'sum')).toFixed(2);
+                        var _180More = parseFloat($("#acledger").jqGrid('getCol', ">180", false, 'sum')).toFixed(2);
+                        $('#acledger').jqGrid('footerData', 'set', { "UnAdj. Amt.": UnAdjChqAmt, "Amount": Amount, "Pending": Pending, "0-30": _30, "30-60": _60, "60-90": _90, "90-120": _120, "120-150": _150, "150-180": _180, ">180": _180More });
+                    }
+                    $('.spinner').hide();
+
+                },
+            });
+            jQuery("#acledger").jqGrid('navGrid', "#pager1",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "Search"});
+            jQuery("#acledger").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    //GridOutstanding (Last Tab)
+    function GridOutstanding() {
+
+        $('.spinner').show();
+        var ColName, Coldata;
+
+        var mDate = ('@Model.FromDate' + ':' + $('#ToDate').val());
+        if ($("#chkActiveDate").is(":checked")) {
+            mDate = ($('#StartDate').val() + ':' + $('#EndDate').val());
+        }
+
+        var FormatCode = $("#FormatViewCode").val();
+
+        var Code = "";
+        if ($("#Customer").is(":checked")) {
+            Code = $('#CustomerCodes').val();
+        } else {
+            Code = $('#Document').val();
+        }
+
+        //Parameters
+        var BranchList = "";
+        $('#treeviewcontrol').each(function () {
+            $(this).find('li').each(function () {
+                var current = $(this);
+                if (current.hasClass("jstree-checked")) {
+                    BranchList = BranchList + "" + current.context.id + ","
+                }
+            });
+        });
+        if (BranchList != "") {
+            BranchList = BranchList.substr(0, BranchList.length - 1);
+        }
+
+        BranchList += "|" + $("#Para9").val() + "|" + $("#Para10").val() + "|" + $("#Para11").val() + "|" + $("#Para12").val() + "|" + $("#Para13").val() + "|" + $("#Para14").val()
+        debugger;
+        var SundryCreditorsFilterGroups = "";
+        if ($('#MasterFilter').is(":checked")) {
+            SundryCreditorsFilterGroups+="M^"
+        }
+        if ($('#BrokerFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "B^"
+        }
+        if ($('#VehicleFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "H^"
+        }
+        if ($('#VendorFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "V^"
+        }
+        if ($('#DriverFilter').is(":checked")) {
+            SundryCreditorsFilterGroups += "D^"
+        }
+
+        if (SundryCreditorsFilterGroups != "") {
+            SundryCreditorsFilterGroups = SundryCreditorsFilterGroups.substr(0, SundryCreditorsFilterGroups.length - 1);
+        }
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + FormatCode + '&Code=' + Code + '&MainType=' + '@Model.MainType' + '&Customer=' + $("#Customer").is(":checked") + '&SelectContent=' + BranchList + '&SundryCreditorsFilterGroups=' + SundryCreditorsFilterGroups + '&ARAPReqOnly=' + $("#ARAPReqOnly").is(":checked") + '&Supress=' + $("#Supress").is(":checked");
+        var sUrlpath = '@Url.Action("GetGridData1")?Date=' + mDate + '&ViewDataId=' + FormatCode;
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                Createpartyageing();
+            },
+            Error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function Createpartyageing() {
+            $('#OutstandingD').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager2'),
+                @*rowNum: @Session["GridRows"],*@
+                rowNum: 5000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height: $(window).height() - 280,
+                frozen: true,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                footerrow: true,
+                userDataOnFooter: true,
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#OutstandingD');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'LrNo');
+                    GetURL(cellVal);
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    if (FormatCode =="New Outstanding Report") {
+                        var Total = parseFloat($("#OutstandingD").jqGrid('getCol', "Total", false, 'sum')).toFixed(2);
+                        var UnAdjPending = parseFloat($("#OutstandingD").jqGrid('getCol', "UnAdj. Pending", false, 'sum')).toFixed(2);
+                        var Outstanding = parseFloat($("#OutstandingD").jqGrid('getCol', "Outstanding", false, 'sum')).toFixed(2);
+                        var _30 = parseFloat($("#OutstandingD").jqGrid('getCol', "0-30", false, 'sum')).toFixed(2);
+                        var _60 = parseFloat($("#OutstandingD").jqGrid('getCol', "30-60", false, 'sum')).toFixed(2);
+                        var _90 = parseFloat($("#OutstandingD").jqGrid('getCol', "60-90", false, 'sum')).toFixed(2);
+                        var _120 = parseFloat($("#OutstandingD").jqGrid('getCol', "90-120", false, 'sum')).toFixed(2);
+                        var _150 = parseFloat($("#OutstandingD").jqGrid('getCol', "120-150", false, 'sum')).toFixed(2);
+                        var _180 = parseFloat($("#OutstandingD").jqGrid('getCol', "150-180", false, 'sum')).toFixed(2);
+                        var _180More = parseFloat($("#OutstandingD").jqGrid('getCol', ">180", false, 'sum')).toFixed(2);
+                        $('#OutstandingD').jqGrid('footerData', 'set', { "Total": Total, "UnAdj. Pending": UnAdjPending, "Outstanding": Outstanding, "0-30": _30, "30-60": _60, "60-90": _90, "90-120": _120, "120-150": _150, "150-180": _180, ">180": _180More });
+                    }
+                    else if (FormatCode == "Party Ageing Summary") {
+                        var Pending = parseFloat($("#OutstandingD").jqGrid('getCol', "Pending", false, 'sum')).toFixed(2);
+                        var Amount = parseFloat($("#OutstandingD").jqGrid('getCol', "Bill Amt", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt = parseFloat($("#OutstandingD").jqGrid('getCol', "Reced. Chq Amt.", false, 'sum')).toFixed(2);
+                        var UnAdjChqAmt1 = parseFloat($("#OutstandingD").jqGrid('getCol', "UnAdj. Pending", false, 'sum')).toFixed(2);
+                        var _30 = parseFloat($("#OutstandingD").jqGrid('getCol', "0-30", false, 'sum')).toFixed(2);
+                        var _60 = parseFloat($("#OutstandingD").jqGrid('getCol', "30-60", false, 'sum')).toFixed(2);
+                        var _90 = parseFloat($("#OutstandingD").jqGrid('getCol', "60-90", false, 'sum')).toFixed(2);
+                        var _120 = parseFloat($("#OutstandingD").jqGrid('getCol', "90-120", false, 'sum')).toFixed(2);
+                        var _150 = parseFloat($("#OutstandingD").jqGrid('getCol', "120-150", false, 'sum')).toFixed(2);
+                        var _180 = parseFloat($("#OutstandingD").jqGrid('getCol', "150-180", false, 'sum')).toFixed(2);
+                        var _180More = parseFloat($("#OutstandingD").jqGrid('getCol', ">180", false, 'sum')).toFixed(2);
+                        $('#OutstandingD').jqGrid('footerData', 'set', { "Bill Amt": Amount, "Reced. Chq Amt.": UnAdjChqAmt, "UnAdj. Pending": UnAdjChqAmt1, "Pending": Pending, "0-30": _30, "30-60": _60, "60-90": _90, "90-120": _120, "120-150": _150, "150-180": _180, ">180": _180More });
+                    }
+                    $('.spinner').hide();
+                    $('#pager2').height = 5;
+                },
+            });
+            jQuery("#OutstandingD").jqGrid('navGrid', "#pager2",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#OutstandingD").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+    function ClickPara() {
+        $('#ParaDialog').modal('show');
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-md-3" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <div class="col-md-2 pull-right" style="padding-top:-3px;float:right;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:5px;padding-left:5px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;text-align:center">
+                <a id="btnRefresh" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+
+            <div class="col-sm-1" style="padding-left:5px;font-family:Tahoma;padding-top:5px;padding-left:5px;font-size:9pt;width:unset;text-align:center">
+                <a onclick="ClickPara()" class="fa fa-cogs" style="font-size:20px;cursor:pointer" title="Parameters"></a>
+            </div>
+
+            @* reportprintoptions*@
+            <div class="col-sm-1"></div>
+            <button class="btn btn-success" onclick="clickPrint()" style="font-size:14px;padding:3px 12px;" id="btnPrint">Print / Export</button>
+        </div>
+        <div class="col-md-2  pull-right" style="padding-right:unset;">
+            <div class="col-md-1" style="color:black;padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:12px; width:unset;">
+                As on:
+            </div>
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                @*<input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">*@
+                @*<span class="input-group-addon">to</span>*@
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+            </div>
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div id="panelbody" class="panel-body" style="margin-top:2%;height:500px;padding-left:0px;padding-right:5px;">
+        <div class="tab">
+            <button class="tablinks" style="width:200px;height:40px;" onclick="openTab(event, 'tabacledger')" id="defaulttab">Party-Invoice Outstanding</button>
+            <button class="tablinks hidden" style="width:200px;height:40px;" onclick="openTab(event, 'tabOutstanding')" id="Summarytab">Outstanding</button>
+        </div>
+
+        <div id="tabacledger" class="tabcontent" style="height:100%;padding:0px 0px 0px 0px;overflow:scroll;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="acledger" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;overflow:scroll;"></table>
+                <div id="pager1" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+        <div id="tabOutstanding" class="tabcontent" style="height:100%;padding:0px 0px 0px 0px;overflow:scroll;">
+            <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;">
+                <table id="OutstandingD" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;overflow:scroll;"></table>
+                <div id="pager2" style="height:32px;width:100%;"></div>
+            </div>
+        </div>
+
+
+        <script>
+            function openTab(evt, tabName) {
+                var i, tabcontent, tablinks;
+                tabcontent = document.getElementsByClassName("tabcontent");
+                for (i = 0; i < tabcontent.length; i++) {
+                    tabcontent[i].style.display = "none";
+                }
+                tablinks = document.getElementsByClassName("tablinks");
+                for (i = 0; i < tablinks.length; i++) {
+                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                }
+                document.getElementById(tabName).style.display = "block";
+                evt.currentTarget.className += " active";
+            }
+            document.getElementById("defaulttab").click();
+        </script>
+    </div>
+</section>
+
+@*<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+            T.FAT ERP-iX9 by Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4"></div>
+    </footer>*@
+
+<div class="example-modal">
+    <div id="ParaDialog" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:1000px;">
+            @*<div id="Dialog">
+                    @Html.Partial("SetParameters")
+                </div>*@
+            <div class="modal-body" id="Dialog" style="padding:0px!important;">
+                @Html.Partial("SetParameters")
+            </div>
+            <div class="modal-footer" style="color:black;background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                <div class="form-group" style="margin-top:-3px;">
+                    <button class="btn btn-danger" style="float:left; font-size: 13px;padding:3px 12px;" onclick="ResetParameter();" id="btnReset">Reset</button>
+                    <div class="col-sm-offset-2 col-sm-6" style="display:flex;">
+
+                        @Html.DropDownListFor(m => m.ReportName, DropdownHelper.EmptyList(), new { @class = "form-control ReportName", @Name = "ReportName", @Id = "ReportName" })
+                        <a onclick="GetSaveParameter();" class="btn btn-warning" style="padding:4px 10px;">
+                            <span class="glyphicon glyphicon-refresh"></span>
+                        </a>
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SubmitSaveReport">Save Report</button>
+
+                    </div>
+                    <button type="button" class="btn btn-info" data-dismiss="modal" style="font-family:Verdana, Geneva, Tahoma, sans-serif" id="submit">Save Para</button>
+                    <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+
+
+
+@* reportprintoptions*@
+<div class="example-modal">
+    <div id="dialogprint" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:600px;">
+            <div id="dialogtoprint">
+                @Html.Partial("ReportPrintOptions")
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@Html.HiddenFor(x => x.ViewCode, new { @Id = "viewcode" })
+<input type="hidden" id="hdnparastring" />
+<input type="hidden" id="hiddenvalues" />
+@Html.HiddenFor(x => x.CustomerCodes)
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.Branch)
+@Html.HiddenFor(x => x.xView)
+@Html.HiddenFor(x => x.ViewDataId, new { @Id = "printformats" })

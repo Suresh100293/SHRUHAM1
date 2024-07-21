@@ -1,0 +1,133 @@
+﻿
+@model ALT_ERP3.Areas.Accounts.Models.CreditPurchaseVM
+@using Common
+
+<div class="form-horizontal" id="ledgerBTNupdate" style="margin-left:0px;">
+    <div class="form-group">
+        <label class="col-sm-1 control-label">BTN No.:</label>
+        @if (Model.AmtType == "Payment")
+        {
+            <div class="col-sm-1">
+                @Html.TextBoxFor(m => m.BTNNO, new { @style = "width:99%; margin-top:2px;height:25px;color:black;text-align: right;font-weight: bold;", @class = "input-large", @Name = "txtBTNNO", @Id = "txtBTNNO", @disabled = "disabled" })
+            </div>
+        }
+        else
+        {
+            <div class="col-sm-4">
+                @Html.TextBoxFor(m => m.BTNNOCombo, new { @style = "width:99%; margin-top:2px;height:25px;text-align: right;font-weight: bold;}", @class = "input-large search-query", @Name = "txtBTNNOCombo", @Id = "txtBTNNOCombo" })
+            </div>
+            <label class="col-sm-1 control-label">BTN Amt.:</label>
+            <div class="col-sm-1">
+                @Html.TextBoxFor(m => m.BTNTotalAmt, new { @style = "width:99%; margin-top:2px;height:25px;color:black;text-align: right;font-weight: bold;", @class = "input-large", @Name = "txtBTNNO", @disabled = "disabled" })
+            </div>
+            <label class="col-sm-1 control-label">BTN Bal Amt.:</label>
+            <div class="col-sm-1">
+                @Html.TextBoxFor(m => m.BTNBalAmt, new { @style = "width:99%; margin-top:2px;height:25px;color:black;text-align: right;font-weight: bold;", @class = "input-large", @Name = "txtBTNNO", @disabled = "disabled" })
+            </div>
+        }
+
+
+
+    </div>
+</div>
+
+
+
+<script>
+  $(document).ready(function () {
+      LoadBTNCombo();
+
+      $("#hdnBTNNO").val('@Model.BTNNO');
+      $("#hdnBTNNOCombo").val('@Model.BTNNOCombo');
+      $("#hdnBTNBalAmt").val('@Model.BTNBalAmt');
+      $("#hdnBTNTotalAmt").val('@Model.BTNTotalAmt');
+
+      $("#txtBTNNOCombo").change(function ()
+      {
+          $("#hdnBTNNOCombo").val(this.value);
+          var ModelData = {};
+          ModelData["RelatedTo"] = $('#RelatedTo').val();
+          ModelData["Amt"] = $('#addAmt').val();
+          ModelData["Code"] = $("#txtAccount").val();
+          ModelData["DocuDate"] = $("#DocuDate").val();
+          ModelData["BTNNOCombo"] = this.value;
+          var DTO = { Model: ModelData };
+          var url = '@Url.Action("GetBTNDetail")';
+          $.ajax({
+              type: "POST",
+              dataType: "json",
+              data: JSON.stringify(DTO),
+              cache: false,
+              url: url,
+              contentType: "application/json;charset=utf-8",
+              beforeSend: function () {
+                  $('.spinner').show();
+              },
+              success: function (data) {
+                  $("#BTNTotalAmt").val(data.Max);
+                  $("#BTNBalAmt").val(data.Min);
+                  $("#hdnBTNBalAmt").val(data.Min);
+                  $("#hdnBTNTotalAmt").val(data.Max);
+                  $('.spinner').hide();
+              },
+              error: function () {
+                  $('.spinner').hide();
+                  alert("error occured while processing your request.");
+              }
+          });
+      });
+
+
+
+  });
+
+    function LoadBTNCombo() {
+        var url = '@Url.Action("GetBTNCOMBOList")';
+        $('#txtBTNNOCombo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 5,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Account: $("#txtAccount").val(),
+                        Srl: $("#EdithdnSrl").val(),
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BTNNOCombo', text:'@Model.BTNNOComboN' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    }
+</script>

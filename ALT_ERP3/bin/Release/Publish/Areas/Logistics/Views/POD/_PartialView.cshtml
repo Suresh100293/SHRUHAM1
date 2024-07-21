@@ -1,0 +1,669 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.PODReceivedVM
+@using Common;
+@{
+    ViewBag.Title = "Delivery";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<style>
+    .toggle {
+        border-radius: 15px !important;
+        margin-top: -35px !important;
+    }
+
+        .toggle.btn {
+            min-width: 77px !important;
+            min-height: 34px;
+        }
+
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    .example {
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        width: max-content;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .example th {
+            background-color: #F7F7F7;
+            font-weight: bold;
+        }
+
+        .example th, .example td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .example, .example table td {
+            border: 0px solid #ccc;
+        }
+</style>
+
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        if ('@Model.Mode'!="Add") {
+            $("#Lrno").prop("disabled", true);
+            if ('@Model.ComingFromBranchPOD'=='') {
+                $("#ComingFromBranchPOD").prop("disabled", true);
+            } else {
+                $("#DeliveryDate").prop("disabled", true);
+                $("#DeliveryTime").prop("disabled", true);
+                $("#DeliverQty").prop("disabled", true);
+                $("#DeliverWeight").prop("disabled", true);
+                $("#BillQty").prop("disabled", true);
+                $("#VehicleNo").prop("disabled", true);
+                $("#PersonName").prop("disabled", true);
+                $("#MobileNO").prop("disabled", true);
+                $('input[type=radio][name=DeliveryStatus]').prop("disabled", true);
+            }
+        }
+
+        if (('@Model.Mode' == "View")||('@Model.Mode' == "Delete")) {
+            $('.form-group :input').prop("disabled", true);
+        }
+        $('#example1  > tbody  > tr').dblclick(function () {
+            $("#LRComboList").modal("hide");
+            var Row = $(this).closest('tr');
+            var Reco = Row.find(".LRValue").text();
+            var ModelData = {};
+            ModelData["Lrno"] = Reco;
+            var url = '@Url.Action("ShowLRDeliveryDetails")';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    var LoadDownLoadFiles = $("#LRDetails");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                    $("#Remark").val($('input[name="DeliveryStatus"]:checked').val());
+                },
+            });
+        });
+
+        $("#btnAttachSubmit").click(function (event) {
+            event.preventDefault();
+            //$("#LockModal").modal("hide");
+            if ($("#Document").val()!="")
+            {
+                var url = '@Url.Action("SaveAttachment")';
+                var ModelData = {};
+
+                ModelData["Document"] = $("#Document").val();
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                            $("#ErrorMessage").hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            alert(data.Message);                    }
+                    },
+                    });
+            }
+        });
+        $("#btnPhotoupload").click(function (event) {
+            event.preventDefault();
+            var size = 0;
+            var formData = new FormData();
+            var totalFiles = document.getElementById("Attachment_UploadFile").files.length;
+            for (var i = 0; i < totalFiles; i++) {
+                var file = document.getElementById("Attachment_UploadFile").files[i];
+                size += file.size;
+                if (file.size < 1048576) {
+                    formData.append("UploadFile", file);
+                }
+                else {
+                    alert('File Size Must Not Exceed 1 MB')
+                    return;
+                }
+            }
+            if (size > 1048576) {
+                alert('File Size Must Not Exceed 1 MB')
+                return;
+            }
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("AttachDocument")',
+                data: formData,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    $('#ShowAllFile').html(data.Html);
+                    AttachMentList();
+                    //hideorshowtable();
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+    $(".btnShow").click(function (event) {
+            
+             var url = '@Url.Action("ViewImage")';
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["AttachFMNo"] = this.id;
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    var LoadDownLoadFiles = $("#updTfatsearchDiv1");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updTfatsearch1').modal('show');
+                    //$('#AllVehicleRate').html('');
+                    //$('#AllVehicleRate').html(data.Html);
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                    @*$("#ImageId").val('@Model.attachmentDocuments.AttachmentCode');*@
+                   // $('#updTfatsearchDiv').html(data.Html);
+                },
+            });
+        });$('#btnDelete').click(function (event) {
+            event.preventDefault();
+            var result = confirm("Are you sure you want to delete POD Also Delete Delivery Automatically?");
+            if (result) {
+
+                var url = '@Url.Action("SaveData")';
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = '@Model.Mode';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                            window.location.href = "/Logistics/POD/Index?ViewDataId=POD&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=Delivery&Header=Delivery&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                            $("#ErrorMessage").hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            alert(data.Message);
+                        }
+                    },
+                });
+            }
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if ($("#DeliverQty").val() != '0' || $("#DeliverQty").val() > parseInt('0')) {
+                if ($("#DeliveryDate").val()=='') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Deliver Date Required......!');
+                    return;
+                }
+                if ($("#DeliverWeight").val() == '' || $("#DeliverWeight").val() == '0') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('PLease Check Deliver Weight......!');
+                    return;
+                }
+            }
+
+
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            if ($("#ComingFromBranchPOD").val()=='') {
+                ModelData["Task"] = "Direct";
+                ModelData["RecordKey"] = $("#DeliverLrRecordKey").val();
+            } else {
+                ModelData["Task"] = "Branch";
+                var RecordList = "";
+                $("#example > tbody  > tr").each(function () {
+                    if ($(this).find('input[type=checkbox]').prop("checked") == true) {
+                        
+                        var LRValue = $(this).find(".Unique").text();
+                        RecordList = RecordList + LRValue + ",";
+                    }
+                });
+                ModelData["RecordKey"] = RecordList.substr(0, RecordList.length - 1);
+            }
+            ModelData["Document"] = $("#Document").val();
+
+            ModelData["PODNO"] = $("#PODNO").val();
+            ModelData["DeliveryNo"] = $("#DeliveryNo").val();
+            ModelData["Lrno"] = $("#Lrno").val();
+
+
+
+
+            ModelData["DeliveryTime"] = $("#DeliveryTime").val();
+            ModelData["DeliveryDate"] = $("#DeliveryDate").val();
+            ModelData["DeliverQty"] = $("#DeliverQty").val();
+            ModelData["DeliverWeight"] = $("#DeliverWeight").val();
+            ModelData["Remark"] = $("#Remark").val();
+
+            ModelData["DeliveryGoodStatus"] = $('input[name="DeliveryStatus"]:checked').val();
+
+            ModelData["ShortQty"] = $("#ShortQty").val();
+            ModelData["BillQty"] = $("#BillQty").val();
+            ModelData["PersonName"] = $("#PersonName").val();
+            ModelData["MobileNO"] = $("#MobileNO").val();
+            
+            ModelData["VehicleNo"] = $("#VehicleNo").val();
+            ModelData["PODTime"] = $("#PODTime").val();
+            ModelData["PODDate"] = $("#PODDate").val();
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["MinDate"] = '@Model.MinDate';
+            ModelData["MaxDate"] = '@Model.MaxDate';
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/POD/Index?ViewDataId=POD&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=POD&Header=POD&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+
+    function LrDetailsLoad() {
+        
+        var ModelData = {};
+        ModelData["Lrno"] = $('#Lrno').val();
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["MinDate"] = '@Model.MinDate';
+        ModelData["MaxDate"] = '@Model.MaxDate';
+        ModelData["Document"] = '@Model.Document';
+
+
+        var url = '@Url.Action("ShowLRDeliveryDetails")';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var LoadDownLoadFiles = $("#LRDetails");
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+                LoadDownLoadFiles.html('');
+                LoadDownLoadFiles.html(data.Html);
+                $("#Remark").val($('input[name="DeliveryStatus"]:checked').val());
+            },
+        });
+    }
+    function AttachMentList() {
+
+        var url = '@Url.Action("AttachDocumentList")';
+                //var ModelData = {};
+                //ModelData["Document"] = $("#Document").val();
+        var DTO = {  };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        var LoadDownLoadFiles = $("#AttachList");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+
+                    },
+                    error: function (error) {
+                        alert("errror");
+                    }
+                    });
+    }
+</script>
+
+
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/Delivery/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <span class="tools pull-right" style="    margin-right: 15px;">
+        </span>
+    </div>
+</header>
+
+
+
+
+
+<form class="form-horizontal" id="frmaccountLedger" role="form" style="margin-top:32px;">
+    <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+</form>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LRMaster" role="form" style="">
+            <fieldset class=" col-sm-12" style="margin-top: 15px;">
+
+                @*<input type="checkbox" checked data-toggle="toggle" id="PODReceivedFrom" data-on="Direct" data-off="Branch" data-onstyle="success" data-offstyle="warning" style="width: 73px !important;height: 34px;">*@
+
+                <div class="panel panel-default" style="height:470px;">
+                    <div class="panel-body " style="padding-left: 0px !important;">
+                        <div class="col-sm-9" id="">
+                            <div class="tab">
+                                <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" id="All">Direct</button>
+                                <button class="tablinks" onclick="openCity(event, 'divLedgerTable1')" id="Branch">Branch</button>
+                            </div>
+                            <div id="divLedgerTable" style="height:480px;overflow: auto;" class="tabcontent">
+                                <div id="LRDetails" style="padding:0px !important;margin:0px!important;">
+                                    @Html.Partial("_ShowLRDeliveryDetails", Model)
+                                </div>
+                            </div>
+                            <div id="divLedgerTable1" style="height:480px;overflow: auto;" class="tabcontent">
+
+
+                                @Html.Partial("_PODReceivedCombo", Model)
+
+                            </div>
+                            <script>
+                                function openCity(evt, cityName) {
+                                    
+                                    var i, tabcontent, tablinks;
+                                    tabcontent = document.getElementsByClassName("tabcontent");
+                                    for (i = 0; i < tabcontent.length; i++) {
+                                        
+                                        tabcontent[i].style.display = "none";
+                                    }
+                                    tablinks = document.getElementsByClassName("tablinks");
+                                    for (i = 0; i < tablinks.length; i++) {
+                                        
+                                        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                                    }
+                                    document.getElementById(cityName).style.display = "block";
+                                    evt.currentTarget.className += " active";
+                                }
+                                if ('@Model.Mode' == "Add")
+                                {
+                                    document.getElementById("All").click();
+                                } else {
+                                    if ('@Model.Task' == "Branch") {
+                                        document.getElementById("Branch").click();
+                                    } else {
+                                        document.getElementById("All").click();
+                                    }
+                                }                            
+                            </script>
+                        </div>
+                        <div class=" col-sm-3  " style="border: 3px solid #dec0c0;width: 23%;margin-left: 20px;height:465px;">
+                            <div style="border: 2px solid #d3d3d3;height:90px;" id="AttachList">
+                                @Html.Partial("_AttachmentList", Model)
+                            </div>
+                            <div class="form-group" style="position:absolute;bottom:0px;width: -webkit-fill-available;">
+                                @*<label class=" bold col-sm-6 control-label" style="margin-left: 10px;">Total Amout :</label>*@
+                                <div class=" col-sm-12">
+                                    <button class="btn btn-danger">Receipt</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+
+
+
+
+</section>
+<footer class="footer-section" style="height:60px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+
+                @*<button class="btn btn-danger" data-toggle="modal" data-target="#LockModal" style="font-size: 13px;padding:3px 12px;" id="btnBlock"><i class="glyphicon glyphicon-ban-circle" style="font-size: 2em;"></i><br />Lock</button>*@
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnListPrint"><i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />List Print</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnShare"><i class="glyphicon glyphicon-share" style="font-size: 2em;"></i><br />Share</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnDownload"><i class="glyphicon glyphicon-download" style="font-size: 2em;"></i><br />Download</button>
+                @*<button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnAttachment" data-toggle="modal" data-target="#Attachmentmodal"><i class="glyphicon glyphicon-paperclip" style="font-size: 2em;"></i><br />Attachment</button>*@
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnPrint"><i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />Print</button>
+                @*<button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="SaveDraft"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i><br />Save Draft</button>*@
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="" data-toggle="modal" data-target="#Notemodal"><i class="glyphicon glyphicon-file" style="font-size: 2em;"></i><br />Save Note</button>
+            </div>
+        </div>
+        <div class="col-sm-offset-1 col-sm-2" style="">
+            <div class="pull-left">
+
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode == "Delete")
+                {
+                    <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete"><i class="glyphicon glyphicon-trash" style="font-size: 2em;"></i><br />Delete</button>
+
+                }
+                else
+                {
+                    <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Submit"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i><br />Save</button>
+                    <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="SubmitClear"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i>&nbsp;&nbsp;&nbsp;<i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />Save And Clear</button>
+                }
+                @*<button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Edit" onclick="EditEntry();"><i class="glyphicon glyphicon-edit" style="font-size: 2em;"></i><br /> Edit</button>*@
+                    @*<button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete"><i class="glyphicon glyphicon-trash" style="font-size: 2em;"></i><br />Delete</button>*@
+                    <a href="~/Logistics/POD/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel"><i class="glyphicon glyphicon-remove" style="font-size: 2em;"></i><br />Cancel</a>
+                </div>
+        </div>
+    </div>
+</footer>
+
+
+
+<!--Attachment Modal -->
+<div class="example-modal">
+    <div id="Attachmentmodal" class="modal modal-default">
+        <div class="modal-dialog " style="width:1080px;">
+            <div id="AttachmentmodalDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Attachment</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="grid" id="FormatTable" style="max-height:500px;min-height:500px; width:100%; overflow: scroll;">
+                                <div id="" class="" style="width:100%;">
+                                    <div class="form-group">
+                                        <div class="col-sm-3" style="padding-top: 5px;">
+                                            <label class="col-sm-12 control-label" style="font-weight:bold;color:black;">Upload File:</label>
+                                        </div>
+                                        <div class="col-sm-5">
+                                            @Html.TextBoxFor(x => x.Attachment.UploadFile, new { @type = "file", @class = "form-control"@*, @style = "font-size:12pt;font-weight:bolder;"*@})
+                                        </div>
+                                        <div class="col-sm-4">
+
+                                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPhotoupload">Upload</button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-sm-12" id="ShowAllFile">
+                                        <hr />
+                                        @Html.Partial("AttachmentView", Model)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnAttachSubmit" data-dismiss="modal">Save</button>
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--View Modal -->
+<div class="example-modal">
+    <div id="updTfatsearch1" class="modal modal-default">
+        <div class="modal-dialog" style="width:1080px;">
+            <div id="updTfatsearchDiv1">
+                @*@Html.Partial("ImageView")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.RecordKey, new { @id = "DeliverLrRecordKey" })
+
+<!--All Destination Modal -->
+<div class="modal fade" id="LRComboList" style="overflow:scroll;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" @*style="margin-top: 60px;"*@>
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: 100%;margin: auto;margin-top: 3%;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="tab">
+                    <button class="tablinks1" onclick="openCity1(event, 'ComboLIst')" id="FirstTab">All</button>
+                    <button class="tablinks1" onclick="openCity1(event, 'GoDownLR')">GoDown LR</button>
+                    <button class="tablinks1" onclick="openCity1(event, 'PickLR')">Pick LR</button>
+                </div>
+                <div id="ComboLIst" style="height:480px;overflow: auto;" class="tabcontent1">
+                    @Html.Partial("G_D_T_A_LrList", Model.All)
+                </div>
+                <div id="GoDownLR" style="height:480px;overflow: auto;" class="tabcontent1">
+                    @Html.Partial("G_D_T_A_LrList", Model.Godown)
+                </div>
+                <div id="PickLR" style="height:480px;overflow: auto;" class="tabcontent1">
+                    @Html.Partial("G_D_T_A_LrList", Model.Pick)
+                </div>
+                <script>
+                    function openCity1(evt, cityName) {
+                        
+                        var i, tabcontent, tablinks;
+                        tabcontent = document.getElementsByClassName("tabcontent1");
+                        for (i = 0; i < tabcontent.length; i++) {
+                            
+                            tabcontent[i].style.display = "none";
+                        }
+                        tablinks = document.getElementsByClassName("tablinks1");
+                        for (i = 0; i < tablinks.length; i++) {
+                            
+                            tablinks[i].className = tablinks[i].className.replace(" active", "");
+                        }
+                        document.getElementById(cityName).style.display = "block";
+                        evt.currentTarget.className += " active";
+                    }
+                    document.getElementById("FirstTab").click();
+                </script>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>

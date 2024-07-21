@@ -1,0 +1,383 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.LabourGradeRatesVM
+@using Common;
+@{
+    ViewBag.Title = "Labour Grade Rates";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#EmpGradeRates_DateFrom').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#EmpGradeRates_DateTo').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadCode()
+        LoadUnit()
+
+        @* iX9: Date Picker Code *@
+        $('#EmpGradeRates_DateFrom').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#EmpGradeRates_DateTo').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#LabourGradeRates').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                EmpGradeRates_Code: {required: true,},
+                EmpGradeRates_DateFrom: {required: true,},
+                EmpGradeRates_DateTo: {required: true,},
+                EmpGradeRates_Unit: {required: true,},
+               },
+            messages: {
+                EmpGradeRates_Code: {required: 'Code is Required',},
+                EmpGradeRates_DateFrom: {required: 'DateFrom is Required',},
+                EmpGradeRates_DateTo: {required: 'DateTo is Required',},
+                EmpGradeRates_Unit: {required: 'Unit is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#EmpGradeRates_Code").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#EmpGradeRates_Rate").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#EmpGradeRates_OTRate").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#EmpGradeRates_Unit").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#LabourGradeRates").validate().form() == false)
+            //    return;
+
+            if ($("#EmpGradeRates_Code").val() == null || $("#EmpGradeRates_Code").val() == 0)
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Code is Required..');
+                return;
+            }
+            if ($("#EmpGradeRates_DateFrom").val() == null || $("#EmpGradeRates_DateFrom").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Effective From is Required..');
+                return;
+            }
+            if ($("#EmpGradeRates_DateTo").val() == null || $("#EmpGradeRates_DateTo").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Effective To is Required..');
+                return;
+            }
+            if ($("#EmpGradeRates_Unit").val() == null || $("#EmpGradeRates_Unit").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Unit is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["EmpGradeRates_Code"] = $("#EmpGradeRates_Code").val();
+            ModelData["EmpGradeRates_DateFromVM"] = $("#EmpGradeRates_DateFrom").val();
+            ModelData["EmpGradeRates_DateToVM"] = $("#EmpGradeRates_DateTo").val();
+            ModelData["EmpGradeRates_Rate"] = $("#EmpGradeRates_Rate").val();
+            ModelData["EmpGradeRates_OTRate"] = $("#EmpGradeRates_OTRate").val();
+            ModelData["EmpGradeRates_Unit"] = $("#EmpGradeRates_Unit").val();
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $("#btnAddOns").click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("AddOnGrid")?mCode=' + '@Model.EmpGradeRates_Code';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#dialog').modal('show');
+                    $('#controllername').val(data.Controller);
+                    jQuery("#grid").jqGrid('setGridParam', { url: "/" + data.Controller + "/GetAddOnList?Code=" + null }).trigger("reloadGrid");
+                },
+            });
+        });
+
+        $("#btnAddNote").click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("AddNote")?mCode=' + '@Model.EmpGradeRates_Code';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#dialog1').modal('show');
+                    $('#controllername').val(data.Controller);
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadCode() {
+        var url = '@Url.Action("AutoCompleteCode")'
+        $('#EmpGradeRates_Code').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.EmpGradeRates_Code', text: '@Model.CodeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadUnit() {
+        var url = '@Url.Action("AutoCompleteUnit")'
+        $('#EmpGradeRates_Unit').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.EmpGradeRates_Unit', text: '@Model.UnitName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LabourGradeRates" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.EmpGradeRates_Code, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "EmpGradeRates_Code", @Name = "EmpGradeRates_Code" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Effective From:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.EmpGradeRates_DateFromVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "EmpGradeRates_DateFrom", @id = "EmpGradeRates_DateFrom", @Value = Model.EmpGradeRates_DateFrom.ToString("dd/MM/yyyy") })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Effective To:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.EmpGradeRates_DateToVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "EmpGradeRates_DateTo", @id = "EmpGradeRates_DateTo", @Value = Model.EmpGradeRates_DateTo.ToString("dd/MM/yyyy") })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Pay Rate:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.EmpGradeRates_Rate, new { @maxlength = "10", @class = "form-control", @Name = "EmpGradeRates_Rate", @Id = "EmpGradeRates_Rate" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">OT Rate:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.EmpGradeRates_OTRate, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "EmpGradeRates_OTRate", @Id = "EmpGradeRates_OTRate" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Unit:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.EmpGradeRates_Unit, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "EmpGradeRates_Unit", @Name = "EmpGradeRates_Unit" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+                <button class="btn btn-warning" type="submit" style="font-size: 13px;padding:3px 12px;" id="btnAddOns" name="Command">AddOns</button>
+                <button class="btn btn-info" type="submit" style="font-size: 13px;padding:3px 12px;" id="btnAddNote" name="Command">Note</button>
+            </div>
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT.air.3, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div class="example-modal">
+    <div id="dialog" class="modal modal-primary">
+        <div class="modal-dialog" style="width:650px;margin:70px auto;">
+            <div id="Dialog">
+                @*@Html.Partial("AddOnGrid")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="dialog1" class="modal modal-primary">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="Dialog2">
+                @Html.Partial("AddNote")
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Tue 05-Mar-2019 04:31 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 12
+    by Team Shruham Software *@
+

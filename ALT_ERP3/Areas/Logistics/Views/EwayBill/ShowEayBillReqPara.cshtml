@@ -1,0 +1,649 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.EwayBillVM
+@using Common;
+<style>
+    textarea {
+        resize: none;
+    }
+</style>
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        debugger;
+        $("#EWB_Distance").constrain({ allow: { regex: "[0-9]" } });
+        loadSuppltType();
+        loadSubSuppltType("I");
+        loadDocType();
+        loadTRNType();
+        loadTRNMode();
+        loadVehicleType();
+        LoadVehicleEWB();
+        LoadConsignorState();
+        LoadConsigneeState();
+        $("#EWB_SupplyType").change(function () {
+            loadSubSuppltType($("#EWB_SupplyType").val());
+        });
+
+        $("#rdbtnVehicle").change(function () {
+            if (this.checked)
+            {
+                $(".MasterVehicle").addClass("hidden");
+                $(".ManualVehicle").removeClass("hidden");
+            }
+            else {
+                $(".MasterVehicle").removeClass("hidden");
+                $(".ManualVehicle").addClass("hidden");
+            }
+
+        });
+
+
+
+
+        $("#btnGenerateEwayBill").click(function (event) {
+            event.preventDefault();
+
+            if ($("#EWB_SupplyType").val() == '' || $("#EWB_SupplyType").val() == '0' || $("#EWB_SupplyType").val() == null) {
+                alert('Supply Type is required...!');
+                return;
+            }
+            if ($("#EWB_SubSupplyType").val() == '' || $("#EWB_SubSupplyType").val() == null) {
+                alert('Sub Type is required...!');
+                return;
+            }
+            else
+            {
+                if ($("#EWB_SubSupplyType").val() == '8')
+                {
+                    if ($("#EWB_SubSupplyDesc").val() == '' || $("#EWB_SubSupplyDesc").val() == null)
+                    {
+                        alert('SubSupplyDesc Type is required...!');
+                        return;
+                    }
+                }
+            }
+            if ($("#EWB_DocType").val() == '' || $("#EWB_DocType").val() == null) {
+                alert('Document Type is required...!');
+                return;
+            }
+            if ($("#EWB_TRNType").val() == '' || $("#EWB_TRNType").val() == null) {
+                alert('Transaction Type is required...!');
+                return;
+            }
+            if ($("#EWB_TRNMode").val() == '' || $("#EWB_TRNMode").val() == null) {
+                alert('Transaction Mode is required...!');
+                return;
+            }
+            else
+            {
+                if ($("#EWB_TRNMode").val() == '1') {
+
+                    if ($("#EWB_VehicleType").val() == '' || $("#EWB_VehicleType").val() == null) {
+                        alert('Vehicle Type is required...!');
+                        return;
+                    }
+
+                    if ($("#rdbtnVehicle").is(':checked'))
+                    {
+                        if ($("#EWB_VehicleNoTxt").val() == '' || $("#EWB_VehicleNoTxt").val() == null) {
+                            alert('VehicleNo is required...!');
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        if ($("#EWB_VehicleNo").val() == '' || $("#EWB_VehicleNo").val() == null) {
+                            alert('VehicleNo is required...!');
+                            return;
+                        }
+                    }
+                }
+            }
+            if ($("#EWB_hsnCode").val() == '' || $("#EWB_hsnCode").val() == null) {
+                alert('HSN Code is required...!');
+                return;
+            }
+            if ($("#EWB_Distance").val() == '' || $("#EWB_Distance").val() == null) {
+                alert('Transaction Distance is required...!');
+                return;
+            }
+
+            if ($("#EWB_ConsignorGST").val() == '' || $("#EWB_ConsignorGST").val() == null) {
+                alert('Consignor GST is required...!');
+                return;
+            }
+            if ($("#EWB_ConsignorPincode").val() == '' || $("#EWB_ConsignorPincode").val() == null) {
+                alert('Consignor Pin is required...!');
+                return;
+            }
+            if ($("#EWB_ConsignorState").val() == '' || $("#EWB_ConsignorState").val() == null) {
+                alert('Consignor State is required...!');
+                return;
+            }
+            if ($("#EWB_ConsigneeGST").val() == '' || $("#EWB_ConsigneeGST").val() == null) {
+                alert('Consignee GST is required...!');
+                return;
+            }
+            if ($("#EWB_ConsigneePincode").val() == '' || $("#EWB_ConsigneePincode").val() == null) {
+                alert('Consignee Pin is required...!');
+                return;
+            }
+            if ($("#EWB_ConsigneeState").val() == '' || $("#EWB_ConsigneeState").val() == null) {
+                alert('Consignee State is required...!');
+                return;
+            }
+
+
+
+
+            var url = '@Url.Action("GenerateEWayBill")';
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["EWB_SupplyType"] = $("#EWB_SupplyType").val();
+            ModelData["EWB_SubSupplyType"] = $("#EWB_SubSupplyType").val();
+            ModelData["EWB_DocType"] = $("#EWB_DocType").val();
+            ModelData["EWB_TRNType"] = $("#EWB_TRNType").val();
+            ModelData["EWB_TRNMode"] = $("#EWB_TRNMode").val();
+            ModelData["EWB_VehicleType"] = $("#EWB_VehicleType").val();
+            if ($("#rdbtnVehicle").is(':checked')) {
+                ModelData["EWB_VehicleNo"] = $("#EWB_VehicleNoTxt").val();
+            } else {
+                ModelData["EWB_VehicleNo"] = $("#EWB_VehicleNo").val();
+            }
+            
+            ModelData["EWB_SubSupplyDesc"] = $("#EWB_SubSupplyDesc").val();
+            ModelData["EWB_hsnCode"] = $("#EWB_hsnCode").val();
+            ModelData["EWB_Distance"] = $("#EWB_Distance").val();
+            ModelData["EWB_productName"] = $("#EWB_productName").val();
+
+            ModelData["EWB_ConsignorGST"] = $("#EWB_ConsignorGST").val();
+            ModelData["EWB_ConsignorState"] = $("#EWB_ConsignorState").val();
+            ModelData["EWB_ConsignorPincode"] = $("#EWB_ConsignorPincode").val();
+
+            ModelData["EWB_ConsigneeGST"] = $("#EWB_ConsigneeGST").val();
+            ModelData["EWB_ConsigneeState"] = $("#EWB_ConsigneeState").val();
+            ModelData["EWB_ConsigneePincode"] = $("#EWB_ConsigneePincode").val();
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == 'Success')
+                    {
+                        alert(data.errormsg);
+                        location.reload();
+                    }
+                    else
+                    {
+                        alert(data.errormsg);
+                    }
+                },
+            });
+        });
+
+        
+
+    });
+
+    function loadSuppltType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetSuppltType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Country: $('#Grp').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#EWB_SupplyType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#EWB_SupplyType').val('@Model.EWB_SupplyType').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function loadSubSuppltType(value) {
+        event.preventDefault();
+        var url = '@Url.Action("GetSubSuppltType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { SupplyType: value },
+            success: function (result) {
+                $("#EWB_SubSupplyType").empty();
+                $.each(result, function (i, item) {
+                    $("#EWB_SubSupplyType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#EWB_SubSupplyType').val('@Model.EWB_SubSupplyType').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function loadDocType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetDocType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {  },
+            success: function (result) {
+                $("#EWB_DocType").empty();
+                $.each(result, function (i, item) {
+                    $("#EWB_DocType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#EWB_DocType').val('@Model.EWB_DocType').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function loadTRNType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetTrasactType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {  },
+            success: function (result) {
+                $("#EWB_TRNType").empty();
+                $.each(result, function (i, item) {
+                    $("#EWB_TRNType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#EWB_TRNType').val('@Model.EWB_TRNType').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function loadTRNMode() {
+        event.preventDefault();
+        var url = '@Url.Action("GetTrasactMode")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {  },
+            success: function (result) {
+                $("#EWB_TRNMode").empty();
+                $.each(result, function (i, item) {
+                    $("#EWB_TRNMode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#EWB_TRNMode').val('@Model.EWB_TRNMode').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function loadVehicleType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetVehicleType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {  },
+            success: function (result) {
+                $("#EWB_VehicleType").empty();
+                $.each(result, function (i, item) {
+                    $("#EWB_VehicleType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#EWB_VehicleType').val('@Model.EWB_VehicleType').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    function LoadVehicleEWB() {
+
+        var url = '@Url.Action("GetVehicle")'
+        $('#EWB_VehicleNo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Hire: $("#HIRE").is(':checked'),
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.EWB_VehicleNo', text: '@Model.EWB_VehicleName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadConsignorState() {
+
+        var url = '@Url.Action("LoadState")'
+        $('#EWB_ConsignorState').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.EWB_ConsignorState', text: '@Model.EWB_ConsignorStateName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadConsigneeState() {
+
+        var url = '@Url.Action("LoadState")'
+        $('#EWB_ConsigneeState').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.EWB_ConsigneeState', text: '@Model.EWB_ConsigneeStateName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+
+<div class="modal-dialog" style="width:70%;">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding:10px!important;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title" style="color:black;font-weight:bold;">Generate Eway Bill of @Model.Document  Document</h4>
+        </div>
+        <div class="modal-body" style="padding:unset;min-height:450px;max-height:450px;overflow:auto;">
+            <div class="panel-body">
+                <div class="row">
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Supply Type:</label>
+                    <div class="col-sm-2">
+                        @Html.DropDownListFor(m => m.EWB_SupplyType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "EWB_SupplyType", @Id = "EWB_SupplyType" })
+                    </div>
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Sub Type:</label>
+                    <div class="col-sm-2">
+                        @Html.DropDownListFor(m => m.EWB_SubSupplyType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "EWB_SubSupplyType", @Id = "EWB_SubSupplyType" })
+                    </div>
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Document Type:</label>
+                    <div class="col-sm-2">
+                        @Html.DropDownListFor(m => m.EWB_DocType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "EWB_DocType", @Id = "EWB_DocType" })
+                    </div>
+                </div>
+                <br />
+                <div class="row">
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Transaction Type:</label>
+                    <div class="col-sm-2">
+                        @Html.DropDownListFor(m => m.EWB_TRNType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "EWB_TRNType", @Id = "EWB_TRNType" })
+                    </div>
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Transaction Mode:</label>
+                    <div class="col-sm-2">
+                        @Html.DropDownListFor(m => m.EWB_TRNMode, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "EWB_TRNMode", @Id = "EWB_TRNMode" })
+                    </div>
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Vehicle Type:</label>
+                    <div class="col-sm-2">
+                        @Html.DropDownListFor(m => m.EWB_VehicleType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "EWB_VehicleType", @Id = "EWB_VehicleType" })
+                    </div>
+                </div>
+                <br />
+                <div class="row">
+                    <div class="col-sm-2">
+                        <input type="checkbox" title="Allow To Enter Manual VehicleNO" style="width:20px;height:20px;" id="rdbtnVehicle" />
+                        <label class="col-sm-2 control-label" style="color:black;font-weight:bold;margin-top:5px;width:auto;padding: 0px 5px 0px 0px;">Manual Vehicle</label>
+                    </div>
+                    <div class="col-sm-2 MasterVehicle" style="display: flex;padding: 0px 0px 0px 5px !important;">
+                        <input type="radio" class="form-control" name="EWBVEHICLENO" id="OWN" style="height:20px;width:35px;" checked /><label class=" bold control-label" style="color:#d71f1f;font-weight:bold;padding-top: 5px!important;"> Own/Attach</label>
+                        <input type="radio" class="form-control" name="EWBVEHICLENO" id="HIRE" style="height:20px;width:35px;" /><label class=" bold control-label" style="color:#d71f1f;font-weight:bold;padding-top: 5px!important;"> Hire</label>
+                    </div>
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;margin-top:5px;width:auto;">Vehicle No:</label>
+                    <div class="col-sm-3 MasterVehicle">
+                        @Html.TextBoxFor(x => x.EWB_VehicleNo, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.EWB_VehicleNo })
+                    </div>
+                    <div class="col-sm-3 ManualVehicle hidden">
+                        @Html.TextBoxFor(x => x.EWB_VehicleNoTxt, new { @class = "form-control", @style = "width:100%;", @Value = Model.EWB_VehicleNoTxt })
+                    </div>
+
+                </div>
+                <br />
+                <div class="row">
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">SubSupply Desc:</label>
+                    <div class="col-sm-10">
+                        @Html.TextAreaFor(x => x.EWB_SubSupplyDesc, new { @class = "form-control", @Value = Model.EWB_SubSupplyDesc, @rows = "1", @maxlength = 100 })
+                    </div>
+                </div>
+                <br />
+                <div class="row">
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Product Name:</label>
+                    <div class="col-sm-10">
+                        @Html.TextAreaFor(x => x.EWB_productName, new { @class = "form-control", @Value = Model.EWB_productName, @rows = "1", @maxlength = 100 })
+                    </div>
+                </div>
+                <br />
+                <div class="row">
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">HSN Code:</label>
+                    <div class="col-sm-2">
+                        @Html.TextAreaFor(x => x.EWB_hsnCode, new { @class = "form-control", @Value = Model.EWB_hsnCode, @rows = "1", @maxlength = 8 })
+                    </div>
+                    <label class="col-sm-2 control-label" style="color:black;font-weight:bold;">Total Distance:</label>
+                    <div class="col-sm-2">
+                        @Html.TextAreaFor(x => x.EWB_Distance, new { @class = "form-control", @Value = Model.EWB_Distance, @rows = "1" })
+                    </div>
+                   
+                </div>
+                <br />
+                <div class="row">
+                    <div class="col-sm-6" style="">
+                        <table class="zui-table" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th colspan="2">Consignor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>GST NO:</td>
+                                    <td>
+                                        @Html.TextAreaFor(x => x.EWB_ConsignorGST, new { @class = "form-control", @Value = Model.EWB_ConsignorGST, @rows = "1", @maxlength = 15 })
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>PIN NO:</td>
+                                    <td>
+                                        @Html.TextAreaFor(x => x.EWB_ConsignorPincode, new { @class = "form-control", @Value = Model.EWB_ConsignorPincode, @rows = "1", @maxlength = 6 })
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>State:</td>
+                                    <td>
+                                        @Html.TextBoxFor(x => x.EWB_ConsignorState, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.EWB_ConsignorState })
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="col-sm-6" style="">
+                        <table class="zui-table" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th colspan="2">Consignee</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>GST NO:</td>
+                                    <td>
+                                        @Html.TextAreaFor(x => x.EWB_ConsigneeGST, new { @class = "form-control", @Value = Model.EWB_ConsigneeGST, @rows = "1", @maxlength = 15 })
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>PIN NO:</td>
+                                    <td>
+                                        @Html.TextAreaFor(x => x.EWB_ConsigneePincode, new { @class = "form-control", @Value = Model.EWB_ConsigneePincode, @rows = "1", @maxlength = 6 })
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>State:</td>
+                                    <td>
+                                        @Html.TextBoxFor(x => x.EWB_ConsigneeState, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.EWB_ConsigneeState })
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc">
+            <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnGenerateEwayBill" title="Camera">Generate EwayBill</button>
+            <input type="submit" value="Close" class="btn btn-danger" data-dismiss="modal" />
+        </div>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.Document)
+
+
+
+
+
+
+
+
+
+

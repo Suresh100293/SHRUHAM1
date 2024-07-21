@@ -1,0 +1,255 @@
+﻿@* Admin Dashboard *@
+@model ActiveObjectsVM
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script src="@Url.Content("~/Content/js/chart-js/Chart.min.js")" type="text/javascript"></script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0px;">
+    <div class="fixhead">
+        <b class="CodeSt" id="headercaption">@Session["ModuleName"] Dashboard</b>
+    </div>
+</header>
+<style>
+    /*.row {
+        margin-left: auto !important;
+    }*/
+
+    /*.box-shadow-hover {
+        box-shadow: 0 5px 10px 0 rgb(0 0 0 / 92%), 0 5px 20px 0 rgb(0 0 0);
+    }*/
+</style>
+<script>
+    $(document).ready(function () {
+
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $("#clientScreenWidth").val($(window).width());
+        $("#clientScreenHeight").val($(window).height());
+
+        //OutstandingGraph();
+        @*var marr = [];
+        var x;
+        var mstr='@ViewBag.Code';
+        marr = mstr.split("|");
+        for (x = 0; x < marr.length; x++ )
+        {
+            if (marr[x] != "")
+            {
+                $("#" + marr[x]).jqGrid('clearGridData');
+                $("#" + marr[x]).jqGrid('GridUnload');
+                $('#' + marr[x]).trigger('reloadGrid');
+                GridReload(marr[x]);
+            }
+        }*@
+        //GridReload("Outstanding");
+        //SideMenu();
+        
+        //var Width = Math.ceil( (screen.width / 100) * 27)+"px";
+        //document.getElementById("mySidenav").style.width = Width;
+        if ('@Model.DashboardActive'=="True" || '@Model.DashboardActive'=="true") {
+            $('div#mySidenav').width('27%');
+        } else {
+            $('div#mySidenav').width('0%');
+        }
+    });
+
+
+
+    function OutstandingGraph1() {
+        var c = document.getElementById("MultiBarChart");
+        var ctx = c.getContext("2d");
+
+        var c1 = document.getElementById("MultiBarChart1");
+        var ctx1 = c1.getContext("2d");
+
+        //var tData = $.getValues("/FirstPage/MultiBarChartDataEF");
+        var sPathUrl = '@Url.Action("MultiBarChartDataEF")?CODE=Outstanding';
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (tData) {
+                
+                var myBarChart = new Chart(ctx, {
+                    type: 'horizontalBar',
+                    data: tData
+                });
+                var myBarChart1 = new Chart(ctx1, {
+                    type: 'horizontalBar',
+                    data: tData
+                });
+
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+    }
+    function GridReload(mint) {
+        
+        event.preventDefault();
+        $('.spinner').show();
+        var ColName, Coldata;
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?ViewDataId=' + mint;
+        var sUrlpath = '@Url.Action("GetGridData")?ViewDataId=' + mint;
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                
+
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData(mint);
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData(mint) {
+            
+            $('#' + mint).jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                mtype: 'POST',
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#p-'+mint),
+                rowNum: 20,
+                rowList: [15, 20, 50, 100, 300, 5000],
+                height: 254,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $("tr.jqgrow:odd").css("background", "#EAEAEA");
+                    $('.spinner').hide();
+                },
+            });
+            jQuery("#"+mint).jqGrid('navGrid', "#p-"+mint,
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter" });
+            jQuery("#"+mint).jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+</script>
+
+<section id="main-content">
+    <section class="wrapper" style="padding: 0px;margin-top:3%;position:relative!important;">
+        
+        @*<div class="form-group">
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-3" style="background-color:#d3b211;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#23bb35;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#ff00eb;height:50px;"></div>
+            <div class="col-sm-3" style="background-color:#15d7d7;height:50px;"></div>
+        </div>*@
+
+    </section>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4">
+        </div>
+        <div class="col-sm-4" style="text-align:center; margin-top:5px;color:white;font-family:Helvetica;font-size:9pt;padding-top:0px;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" value="" name="clientScreenHeight" id="clientScreenHeight" />
+<input type="hidden" value="" name="clientScreenWidth" id="clientScreenWidth" />

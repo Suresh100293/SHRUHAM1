@@ -1,0 +1,892 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.ExternalAttachmentVM
+
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Content/WebCamera/webcam.js"></script>
+
+<style>
+    #HideImg1 {
+        visibility: hidden;
+        display: none;
+        /*position: absolute;*/
+        top: 0px;
+        left: 0px;
+        right: 0px;
+        box-shadow: 0px 0px 20px 0px black;
+        width: 100%;
+        height: 400px;
+        margin: 0%;
+        padding: 7px;
+        background-color: white;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+
+
+        $("#ExtraSELDiv").hide();
+
+        if (('@Model.Srl' == "" || '@Model.Srl' == null ) && '@Model.Mode'!="Add") {
+            $("#ExtraSELDiv").show();
+            $("#NornalSELDiv").hide();
+        } else {
+            $("#ExtraSELDiv").hide();
+            $("#NornalSELDiv").show();
+        }
+        debugger;
+
+
+        if (('@Model.Mode' == "View")||('@Model.Mode' == "Delete")) {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        LoadType();
+        LoadExtraSrl();
+        LoadDocType();
+
+        if (('@Model.Type' == "Vehic" || '@Model.Type' == "Drive")) {
+            $(".ExtraParamenterDiv").show();
+        } else {
+            debugger;
+            $(".ExtraParamenterDiv").hide();
+        }
+
+
+        $('#FileUpload').on('change', function () {
+            debugger;
+            //get the file name
+            //var fileName = $(this).val();
+            //replace the "Choose a file" label
+            $('.custom-file-control').html(this.value.split("\\").pop());
+        });
+        $("#Srl").blur(function (event)
+        {
+            event.preventDefault();
+            var url = '@Url.Action("GetDocumentDetails")';
+            if (($("#Srl").val()) != "" && $("#Srl").val() != null)
+            {
+                $("#OldAttachDoc").html('');
+                var ModelData = {};
+                ModelData["Type"] = $("#Type").val();
+                ModelData["Srl"] = $("#Srl").val();
+                ModelData["Mode"] = '@Model.Mode';
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").hide();
+
+                        if (data.Status == "Success")
+                        {
+                            var LoadDownLoadFiles1 = $("#BasicDetailsDiv");
+                            LoadDownLoadFiles1.html('');
+                            LoadDownLoadFiles1.html(data.BasicHtml);
+                        }
+                        else
+                        {
+                            $("#Srl").val("");
+                            var LoadDownLoadFiles1 = $("#BasicDetailsDiv");
+                            LoadDownLoadFiles1.html('');
+                            alert("Document Not Found In Current Finanfial Year...!");
+                        }
+                    },
+                });
+            }
+        });
+        $("#extraSrl").change(function (event)
+        {
+            event.preventDefault();
+            var url = '@Url.Action("GetDocumentDetails")';
+            if (($("#extraSrl").val()) != "" && $("#extraSrl").val() != null)
+            {
+                $("#OldAttachDoc").html('');
+                var ModelData = {};
+                ModelData["Type"] = $("#Type").val();
+                ModelData["Srl"] = $("#extraSrl").val();
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").hide();
+                        if (data.Status == "Success")
+                        {
+                            var LoadDownLoadFiles1 = $("#BasicDetailsDiv");
+                            LoadDownLoadFiles1.html('');
+                            LoadDownLoadFiles1.html(data.BasicHtml);
+                        }
+                        else
+                        {
+                            $("#Srl").val("");
+                            var LoadDownLoadFiles1 = $("#BasicDetailsDiv");
+                            LoadDownLoadFiles1.html('');
+                            alert("Document Not Found In Current Finanfial Year...!");
+                        }
+                    },
+                });
+            }
+        });
+
+        $("#Type").change(function (event)
+        {
+            event.preventDefault();
+            var LoadDownLoadFiles1 = $("#BasicDetailsDiv");
+            LoadDownLoadFiles1.html('');
+            $("#Srl").val("");
+            $('#extraSrl').select2('data', { id: '', text: '' });
+            $('#DocType').select2('data', { id: '', text: '' });
+            $("#OldAttachDoc").html('');
+            if ($("#Type").val() == "Vehic" || $("#Type").val() == "Drive" ||  $("#Type").val() == "Maste" || $("#Type").val() == "CUSMA")
+            {
+                $("#ExtraSELDiv").show();
+                $("#NornalSELDiv").hide();
+            }
+            else
+            {
+                $("#ExtraSELDiv").hide();
+                $("#NornalSELDiv").show();
+            }
+            if ($("#Type").val() == "Vehic" || $("#Type").val() == "Drive") {
+                $(".ExtraParamenterDiv").show();
+            } else {
+                $(".ExtraParamenterDiv").hide();
+            }
+        });
+        $("#btnCamera").click(function (e) {
+            e.preventDefault();
+            $('#NormalAttach,#btnCamera').addClass('hidden');
+            $('#CameraAttach,#btnHideCamera').removeClass('hidden');
+            Webcam.set({
+                width: 360,
+                height: 260,
+                image_format: 'jpeg',
+                jpeg_quality: 90
+            });
+            Webcam.attach('#idwebcam');
+
+        });
+        $("#btnHideCamera").click(function (e) {
+            e.preventDefault();
+            $('#NormalAttach,#btnCamera').removeClass('hidden');
+            $('#CameraAttach,#btnHideCamera').addClass('hidden');
+        });
+
+        $("#btncapture").click(function () {
+            debugger;
+            Webcam.snap(function (data_uri) {
+                debugger;
+                Webcam.snap(function (data_uri) {
+                    debugger;
+                    //$("#idcaptured")[0].src = data_uri;
+                    document.getElementById('idcaptured').innerHTML =
+                        '<img src="' + data_uri + '"/>';
+                });
+            });
+        });
+
+        $("#btnreset").click(function () {
+            Webcam.snap(function (data_uri) {
+                Webcam.snap(function (data_uri) {
+                    document.getElementById('idcaptured').innerHTML =
+                        '<img src=""/>';
+                });
+            });
+        });
+
+        $("#btnAddDocument").click(function (event) {
+            event.preventDefault();
+
+            if ($("#Srl").val() == null || $("#Srl").val() == "")
+            {
+                if ($("#extraSrl").val() == null || $("#extraSrl").val() == "") {
+                    alert("Doc No Required...!");
+                    return;
+                }
+            }
+
+
+
+            var size = 0;
+            var formData = new FormData();
+            var totalFiles = document.getElementById("FileUpload").files.length;
+            for (var i = 0; i < totalFiles; i++)
+            {
+                var file = document.getElementById("FileUpload").files[i];
+                size += file.size;
+                if (file.size < 26214400)
+                {
+                    debugger;
+                    formData.append("FileUpload", file);
+
+                    if ($("#Srl").val() == null || $("#Srl").val() == "")
+                    {
+                        formData.append("Srl", $("#extraSrl").val());
+                    }
+                    else
+                    {
+                        formData.append("Srl", $("#Srl").val());
+                    }
+
+                    formData.append("Type", $("#Type").val());
+                    formData.append("DocType", $("#DocType").val());
+                }
+                else
+                {
+                    alert('File Size Must Not Exceed 25 MB')
+                    return;
+                }
+            }
+            if (size > 26214400)
+            {
+                alert('File Size Must Not Exceed 25 MB')
+                return;
+            }
+
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("AttachDocument")',
+                data: formData,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    if (data.Status == "CancelError")
+                    {
+                        alert(data.Message);
+                    }
+                    else
+                    {
+                        $('.spinner').hide();
+                        var AttachDoc = $("#AttachDoc");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                        $('.custom-file-control').html("");
+                    }
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+        $("#btnCameraUpload").click(function (event) {
+            event.preventDefault();
+
+            if ($("#Srl").val() == null || $("#Srl").val() == "") {
+                if ($("#extraSrl").val() == null || $("#extraSrl").val() == "") {
+                    alert("Doc No Required...!");
+                    return;
+                }
+            }
+
+
+            var url = '@Url.Action("WebCamCaptureImg")';
+            var file = $('#idcaptured img').attr('src');
+
+            var SRL = "";
+            if ($("#Srl").val() == null || $("#Srl").val() == "") {
+                SRL= $("#extraSrl").val();
+            }
+            else {
+                SRL = $("#Srl").val();
+            }
+
+            var DTO = { DocumentStr: file, Mode: $("#Mode").val(), Type: $("#Type").val(), Srl: SRL, RefType: $("#RefType").val(), DocType: $("#DocType").val()};
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+         $("#Submit").click(function (event)
+         {
+             event.preventDefault();
+
+             if ('@Model.Mode' == "Delete")
+             {
+                 var result = confirm("Are you sure you want to delete?");
+                 if (result)
+                 {
+                     var url = '@Url.Action("SaveData")';
+                     @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+                     var ModelData = {};
+                     ModelData["Document"] = $("#Document").val();
+                     ModelData["Mode"] = '@Model.Mode';
+                     ModelData["Header"] = '@Model.Header';
+                     ModelData["Type"] = $("#Type").val();
+                     if ($("#Type").val() == "Vehic" || $("#Type").val() == "Drive" || $("#Type").val() == "Maste" || $("#Type").val() == "CUSMA")
+                     {
+                         ModelData["Srl"] = $("#extraSrl").val();
+                     }
+                     else
+                     {
+                         ModelData["Srl"] = $("#Srl").val();
+                     }
+                     var DTO = { Model: ModelData };
+                     $.ajax({
+                         type: "POST",
+                         dataType: "json",
+                         data: JSON.stringify(DTO),
+                         cache: false,
+                         url: url,
+                         contentType: "application/json; charset=utf-8",
+                         beforeSend: function ()
+                         {
+                             $('.spinner').show();
+                         },
+                         success: function (data) {
+                             if (data.Status == 'Success')
+                             {
+                                 $('.spinner').hide();
+                                 window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                                 $("#ErrorMessage").hide();
+                             }
+                             else
+                             {
+                                 $('.spinner').hide();
+                                 alert(data.Message);
+                             }
+                         },
+                     });
+                 }
+             }
+             else
+             {
+                 var url = '@Url.Action("SaveData")';
+                 @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+                 var ModelData = {};
+                 ModelData["Document"] = $("#Document").val();
+                 ModelData["Mode"] = '@Model.Mode';
+                 ModelData["Header"] = '@Model.Header';
+                 ModelData["Type"] = $("#Type").val();
+                 if ($("#Type").val() == "Vehic" || $("#Type").val() == "Drive" || $("#Type").val() == "Maste" || $("#Type").val() == "CUSMA")
+                 {
+                     if ($("#extraSrl").val() == "" || $("#extraSrl").val() == null || $("#extraSrl").val().trim() == "") {
+                         alert("Please Select DocNo...!");
+                         return;
+                     }
+                     ModelData["Srl"] = $("#extraSrl").val();
+                 }
+                 else
+                 {
+                     if ($("#Srl").val() == "" || $("#Srl").val() == null || $("#Srl").val().trim() == "") {
+                         alert("Please Enter DocNo...!");
+                         return;
+                     }
+                     ModelData["Srl"] = $("#Srl").val();
+                 }
+                 ModelData["ParentKey"] = $("#ParentKey").val();
+                 var DTO = { Model: ModelData };
+                 $.ajax({
+                     type: "POST",
+                     dataType: "json",
+                     data: JSON.stringify(DTO),
+                     cache: false,
+                     url: url,
+                     contentType: "application/json; charset=utf-8",
+                     beforeSend: function ()
+                     {
+                         $('.spinner').show();
+                     },
+                     success: function (data) {
+                         if (data.Status == 'Success')
+                         {
+                             $('.spinner').hide();
+                             $("#ErrorMessage").hide();
+                             if ('@Model.Mode'=="Add") {
+                                 location.reload(true);
+                             } else {
+                                 window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                             }
+                             
+                         }
+                         else
+                         {
+                             $('.spinner').hide();
+                             alert(data.Message);
+                         }
+                     },
+                 });
+             }
+        });
+        $("#btnGetOldAttachment").click(function (event) {
+            event.preventDefault();
+
+            if ($("#Type").val() == null || $("#Type").val() == "") {
+                alert("Type Required...!");
+                return;
+            }
+            if ($("#Srl").val() == null || $("#Srl").val() == "") {
+                if ($("#extraSrl").val() == null || $("#extraSrl").val() == "") {
+                    alert("Doc No Required...!");
+                    return;
+                }
+            }
+
+
+
+            var url = '@Url.Action("GetOldFile")';
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Type"] = $("#Type").val();
+            if ($("#Srl").val() == null || $("#Srl").val() == "") {
+                ModelData["Srl"] = $("#extraSrl").val();
+            } else {
+                ModelData["Srl"] = $("#Srl").val();
+            }
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#OldAttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+    });
+
+    function big_image(src, index) {
+        debugger;
+        $("#HideImg1").fadeIn(1000);
+        $('#HideImg1').attr('src', src);
+        visibility();
+        document.getElementById("img_no1").value = index;
+    }
+    function visibility() {
+        $('#ImgView3').modal('show');
+        document.getElementById("HideImg1").style.visibility = "visible";
+        document.getElementById("HideImg1").style.display = "block";
+    }
+    function HideOnlyCurrntModel() {
+        $('#ImgView3').modal('hide');
+    }
+    function LoadType() {
+        var url = '@Url.Action("GetType")'
+        $('#Type').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Type', text: '@Model.TypeName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadDocType() {
+        var url = '@Url.Action("GetParameters")'
+        $('#DocType').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Type: $("#Type").val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DocType', text: '@Model.DocTypeN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadExtraSrl() {
+        var url = '@Url.Action("GetMaster")'
+        $('#extraSrl').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Type: $("#Type").val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.extraSrl', text: '@Model.extraSrlN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right" style="margin-top:5px;">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right" style="margin-top:5px;">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+    </div>
+</header>
+
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LRMaster" role="form" style="margin-top:50px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+            <fieldset class=" col-sm-11" style="margin-top: 0px;">
+                <div class="panel panel-default">
+                    <div class="panel-body ">
+                        <div class="form-group">
+                            <div class="form-group" style="margin-left: -31px;">
+                                <label class=" bold   col-sm-1 control-label">Type:</label>
+                                <div class="col-sm-2">
+                                    @if (Model.Mode == "Add")
+                                    {
+                                        @Html.TextBoxFor(x => x.Type, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Type })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.Type, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Type, @disabled = "disabled" })
+                                    }
+
+                                </div>
+                                <label class=" bold   col-sm-1 control-label">Doc NO :</label>
+                                <div class="col-sm-2" id="NornalSELDiv">
+                                    @if (Model.Mode == "Add")
+                                    {
+                                        @Html.TextBoxFor(x => x.Srl, new { @class = "form-control", @style = "width:100%;", @Value = Model.Srl })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.Srl, new { @class = "form-control", @style = "width:100%;", @Value = Model.Srl, @disabled = "disabled" })
+                                    }
+                                </div>
+                                <div class="col-sm-3" id="ExtraSELDiv">
+                                    @if (Model.Mode == "Add")
+                                    {
+                                        @Html.TextBoxFor(x => x.extraSrl, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.extraSrl })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.extraSrl, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.extraSrl, @disabled = "disabled" })
+                                    }
+                                </div>
+                                <label class=" bold   col-sm-1 control-label ExtraParamenterDiv">Parameter :</label>
+                                <div class="col-sm-2 ExtraParamenterDiv">
+                                    @if (Model.Mode == "Add")
+                                    {
+                                        @Html.TextBoxFor(x => x.DocType, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.DocType })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.DocType, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.DocType, @disabled = "disabled" })
+                                    }
+                                </div>
+                            </div>
+                            <div class="form-group col-sm-12" id="BasicDetailsDiv" style="margin-left: -15px !important;">
+                                @Html.Partial("BasicDetailsDocView", Model)
+                            </div>
+                            <div class="form-group">
+                                <div id="NormalAttach">
+                                    <div class="form-group">
+                                        <label class="col-sm-1" style="color:black;font-weight:bold;">File input</label>
+                                        <label for="FileUpload" class="btn" style="border:1px double black;color:blue;background-color:blanchedalmond;">Choose Files / Camera :  </label> <span style="color: blue;" class="custom-file-control form-control-file "></span>
+                                        <input type="file" id="FileUpload" style="visibility:hidden;" multiple />
+                                    </div>
+                                    <input type="submit" value="Upload" class="btn btn-warning" id="btnAddDocument" />
+                                </div>
+                                <div id="CameraAttach" class="hidden" style="margin-left:10px;">
+                                    <div class="form-group">
+                                        <table class="zui-tableww" id="">
+                                            <thead>
+                                                <tr>
+                                                    <th>Live Camera</th>
+                                                    <th colspan="2">Capture Picture</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>
+                                                        <div id="idwebcam"></div>
+                                                    </td>
+                                                    <td colspan="2">
+                                                        <div id="idcaptured" class="idcaptured" style="width:360px;"></div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>
+                                                        <input type="button" id="btncapture" value="btncapture" class="btn btn-danger" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="button" id="btnreset" value="btnreset" class="btn btn-danger" />
+                                                    </td>
+                                                    <td>
+                                                        <input type="button" id="btnCameraUpload" value="Upload" class="btn btn-danger" />
+                                                    </td>
+
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <div class=" col-sm-10" id="AttachDoc">
+                                    @Html.Partial("AttatPartialView", Model)
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label class=" bold   col-sm-2 control-label" style="font-size: 15px;color: blue;">Old Attachment :</label>
+                                @if (Model.Mode == "Add")
+                                {
+                                    <div class="col-sm-2">
+                                        <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnGetOldAttachment" title="Get Old Attachmens">Old Attachment</button>
+                                    </div>
+                                }
+                            </div>
+
+
+                            <div class="form-group">
+                                <div class=" col-sm-10" id="OldAttachDoc">
+                                    @Html.Partial("OldAttatlistPartialView", Model)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+
+</section>
+
+
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="col-md-4 pull-left" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:5px;font-size:9pt; width:unset;">
+                <button class="btn btn-warning" style="font-size: 13px;padding:3px 12px;" id="btnCamera" title="Camera">Web-Camera</button>
+                <button class="btn btn-warning hidden" style="font-size: 13px;padding:3px 12px;background-color:#896230!important;" id="btnHideCamera" title="Camera">Close Camera</button>
+            </div>
+        </div>
+        <div class="col-sm-2" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.LAT ERP-3.0, Shruham Software
+        </div>
+        <div class="col-sm-5">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Submit" data-toggle="tooltip" data-placement="top" title="Save">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit" data-toggle="tooltip" data-placement="top" title="Save">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div class="example-modal">
+    <div id="ImgView3" class="modal modal-default" style="margin-top:3%;height:fit-content;width:fit-content;">
+        <div class="modal-dialog" style="width:840px;">
+            <div id="ImgView3Div">
+                <div class="modal-body" style="">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" onclick="HideOnlyCurrntModel();" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>View Attachment</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="form-group">
+
+                                <img src="" id="HideImg1" style="object-fit:contain;">
+
+                            </div>
+                            <br />
+
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button onclick="HideOnlyCurrntModel();" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="img_no1" value="1">
+@Html.HiddenFor(x => x.Srl)
+@Html.HiddenFor(x => x.Type)
+@Html.HiddenFor(x => x.ParentKey)
+
+
+
+
+
+
+
+
+

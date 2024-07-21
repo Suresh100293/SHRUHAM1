@@ -1,0 +1,664 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.LocalKmAndTimeVM
+@using Common
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<style>
+</style>
+<script type="text/javascript">
+    var mmain = "@Model.MainType";
+    $(document).ready(function () {
+
+          GetMyFavorites('@Model.ViewDataId');
+
+        //ShowHideCL();
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        //document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+
+        $("#txtKMCalculate").constrain({ allow: { regex: "[0-9]" } });
+
+        LoadBranch();
+        if ('@Model.Mode' != "Add")
+        {
+            if ('@Model.BranchType' != "Branch")
+            {
+                $("#AllR").prop("checked", true);
+                $("#BranchR").prop("checked", false);
+            }
+        }
+
+
+        $('#branch').change(function (event) {
+            event.preventDefault();
+            RefreshReport()
+        });
+
+        $('#ChkBranchOnly').change(function () {
+
+            var Suppress = $("#issuppress").prop("checked");
+            if (this.checked)
+            {
+                $('#detail_table .Area').addClass("hidden");
+                $('.AddBtnTD').removeClass("hidden");
+                $('.MinusBtnTD').addClass("hidden");
+
+                if (Suppress)
+                {
+                    $('#detail_table > tbody  > tr').each(function () {
+                        if ($(this).attr("class").includes("Branch") || $(this).attr("class").includes("SubBranch")) {
+                            var tds = $(this).find('td');
+                            if (tds.eq(4).text() == "00:00"  && parseFloat(tds.eq(5).text()) == 0 ) {
+                                $(this).addClass("hidden");
+                            }
+                        }
+                    });
+                }
+            }
+            else
+            {
+                $('#detail_table .Area').removeClass("hidden");
+                $('#detail_table .AddBtnTD').addClass("hidden");
+                $('#detail_table .MinusBtnTD').removeClass("hidden");
+                if (Suppress) {
+                    $('#detail_table > tbody  > tr').each(function () {
+                        if ($(this).attr("class") != "MainTR") {
+                            var tds = $(this).find('td');
+                            if (tds.eq(4).text() == "00:00" && parseFloat(tds.eq(5).text()) == 0) {
+                                $(this).addClass("hidden");
+                            }
+                        }
+                    });
+                }
+            }
+        });
+
+        $("#issuppress").change(function ()
+        {
+            var Branch = $("#ChkBranchOnly").prop("checked");
+            //debugger;
+            //$('#detail_table > tbody  > tr').removeClass("hidden");
+            //$('#detail_table > tbody  > tr .AddBtnTD').addClass("hidden");
+            //$('#detail_table > tbody  > tr .MinusBtnTD').removeClass("hidden");
+            if (this.checked)
+            {
+                if (Branch)
+                {
+                    $('#detail_table .Area').addClass("hidden");
+                    $('.AddBtnTD').removeClass("hidden");
+                    $('.MinusBtnTD').addClass("hidden");
+                    $('#detail_table > tbody  > tr').each(function ()
+                    {
+                        if ($(this).attr("class").includes("Branch") || $(this).attr("class").includes("SubBranch"))
+                        {
+                            debugger;
+                            var tds = $(this).find('td');
+                            if (tds.eq(4).text() == "00:00" && parseFloat(tds.eq(5).text()) == 0) {
+                                $(this).addClass("hidden");
+                            }
+                        }
+                    });
+                }
+                else
+                {
+                    $('#detail_table .Area').removeClass("hidden");
+                    $('.AddBtnTD').addClass("hidden");
+                    $('.MinusBtnTD').removeClass("hidden");
+                    $('#detail_table > tbody  > tr').each(function ()
+                    {
+                        if ($(this).attr("class") != "MainTR")
+                        {
+                            debugger;
+                            var tds = $(this).find('td');
+                            if (tds.eq(4).text() == "00:00" && parseFloat(tds.eq(5).text()) == 0) {
+                                $(this).addClass("hidden");
+                            }
+                        }
+                    });
+                }
+            }
+            else
+            {
+                $('#detail_table > tbody  > tr').removeClass("hidden");
+                if (Branch)
+                {
+                    $('#detail_table .Area').addClass("hidden");
+                    $('.AddBtnTD').removeClass("hidden");
+                    $('.MinusBtnTD').addClass("hidden");
+                }
+                else
+                {
+                    $('#detail_table .Area').removeClass("hidden");
+                    $('.AddBtnTD').addClass("hidden");
+                    $('.MinusBtnTD').removeClass("hidden");
+                }
+               //
+            }
+
+        });
+
+
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+            RefreshReport()
+        });
+
+
+        $('#btnAddKM').click(function (event)
+        {
+            if ($("#txtKMCalculate").val() != "" && $("#txtKMCalculate").val() != null)
+            {
+                var check = $('#detail_table').find('input[type=checkbox]:checked').length;
+                if (check > 0) {
+                    var KM = parseInt($("#txtKMCalculate").val());
+                    $("#detail_table > tbody  > tr").each(function ()
+                    {
+                        var Row = $(this);
+                        var Checkbox = Row.find(".checkbox").prop("checked");
+                        if (Checkbox) {
+                            debugger;
+                            var tds = $(this).find('td');
+                            var NewKM = parseInt(tds.eq(5).text()) + KM;
+                            tds.eq(5).text(NewKM);
+                        }
+                    });
+                    $("#txtKMCalculate").val("")
+                }
+                else
+                {
+                    alert("Please Select Atleast One Area To Calculate KM...!");
+                }
+            }
+        });
+        $('#btnAddTime').click(function (event) {
+            if ($("#txtTimeCalculate").val() != "" && $("#txtTimeCalculate").val() != null) {
+                var check = $('#detail_table').find('input[type=checkbox]:checked').length;
+                if (check > 0) {
+                    var KMPerHr = parseFloat($("#txtTimeCalculate").val());
+                    $("#detail_table > tbody  > tr").each(function () {
+                        var Row = $(this);
+                        var Checkbox = Row.find(".checkbox").prop("checked");
+                        if (Checkbox) {
+                            debugger;
+                            var tds = $(this).find('td');
+                            var GetKM = parseFloat(tds.eq(5).text());
+                            var CalculateTime = (GetKM / KMPerHr).toFixed(2);
+                            var SetTimeFormat = CalculateTime.toString().split('.');
+                            var First = "", Sencond = "";
+                            if (SetTimeFormat[0].length == 1)
+                            {
+                                First = "0" + SetTimeFormat[0]+":";
+                            }
+                            else
+                            {
+                                First = SetTimeFormat[0] + ":";
+                            }
+                            if (SetTimeFormat[1].length == 1)
+                            {
+                                Sencond = SetTimeFormat[1] + "0";
+                            }
+                            else
+                            {
+                                Sencond = SetTimeFormat[1];
+                            }
+
+                            tds.eq(4).text(First + Sencond);
+                        }
+                    });
+                    $("#txtTimeCalculate").val("")
+                }
+                else {
+                    alert("Please Select Atleast One Area To Calculate KM...!");
+                }
+            }
+        });
+
+        $('#btnSubmitCopy').click(function (event)
+        {
+            event.preventDefault();
+
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Branch"] = $("#branch").val();
+            ModelData["copy"] = true;
+
+            var TripCharges = [];
+            $("#detail_table > tbody  > tr").each(function () {
+                var Row = $(this);
+                var Checkbox = Row.find(".checkbox").prop("checked");
+                if (Checkbox)
+                {
+                    var tds = $(this).find('td');
+                    var myDets =
+                    {
+                        ID: tds.eq(3).text(),
+                    }
+                    TripCharges.push(myDets);
+                }
+            });
+            ModelData["list"] = TripCharges;
+
+            debugger;
+
+            var CopyId = "";
+            $('#Copy_table > tbody  > tr').each(function () {
+                var Row = $(this);
+                debugger;
+                var Checkbox = Row.find(".checkbox").prop("checked");
+                debugger;
+                if (Checkbox)
+                {
+                    CopyId = Row.find(".checkbox").attr("id");
+                }
+            });
+            ModelData["copyDocument"] = CopyId;
+
+            if (CopyId == "" || CopyId == null)
+            {
+                alert("Please Select Which One Want To Copy...!");
+            }
+            else
+            {
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("Kilometerlist")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "Error") {
+                            alert(data.Message);
+                        }
+                        var BillListDiv = $("#balancesheet");
+                        BillListDiv.html('');
+                        BillListDiv.html(data.Html);
+                        $('#copymodal').modal('hide');
+                        $("#ChkBranchOnly").prop("checked", false);
+                        $("#issuppress").prop("checked", false);
+                    },
+                    error: function (err) {
+                        alert(JSON.stringify(err))
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if ('@Model.Mode' == "Delete") {
+
+                var result = confirm("Are you sure you want to Delete This LR ?");
+                if (result)
+                {
+                    SaveTrip();
+                }
+            }
+            else
+            {
+                SaveTrip();
+            }
+
+        });
+
+    });
+    function SaveTrip()
+    {
+        if ($("#branch").val() == '' || $("#branch").val() == null)
+        {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('Branch is required..');
+            return;
+        }
+
+        var ModelData = {};
+        ModelData["Document"] = $("#Document").val();
+        ModelData["BranchType"] = $('input[name="BranchCombo"]:checked').val();
+        ModelData["Branch"] = $('#branch').val();
+        var TripCharges = [];
+        $("#detail_table > tbody  > tr").each(function () {
+            var tds = $(this).find('td');
+
+            if ((tds.eq(4).text() != "00:00" || parseFloat(tds.eq(5).text()) != 0) && (tds.eq(4).text() != "NA"))
+            {
+                var myDets =
+                {
+                    ID: tds.eq(3).text(),
+                    Time: tds.eq(4).text(),
+                    KM: tds.eq(5).text(),
+                }
+                TripCharges.push(myDets);
+            }
+            
+        });
+        if ('@Model.Mode' == "Add" || '@Model.Mode' == "Edit") {
+            if (TripCharges.length == 0) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Fill Kilometer Master...');
+                return;
+            }
+        }
+        
+
+
+
+        ModelData["list"] = TripCharges;
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+
+        var url = '@Url.Action("SaveData")';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function ()
+            {
+                $('.spinner').show();
+            },
+            success: function (data)
+            {
+                if (data.Status == 'Success')
+                {
+                    $('.spinner').hide();
+                    window.location.href = "/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                    $("#ErrorMessage").hide();
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function RefreshReport() {
+        $('#balancesheet').html('');
+        GridReload();
+        $("#ChkBranchOnly").prop("checked", false);
+        $("#issuppress").prop("checked", false);
+    }
+
+    function LoadBranch() {
+        var url = '@Url.Action("GetBranch")';
+        $('#branch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Branch: $('#BranchR').is(':checked')
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Branch', text: '@Model.BranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+
+
+    };
+    function GridReload() {
+        event.preventDefault();
+
+
+        if ($("#branch").val() == '' || $("#branch").val() == null) {
+            alert('Select Branch');
+            return;
+        }
+
+        var ModelData = {};
+        ModelData["Document"] = $("#Document").val();
+        ModelData["Branch"] = $("#branch").val();
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("Kilometerlist")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                if (data.Status == "Error") {
+                    alert(data.Message);
+                }
+                var BillListDiv = $("#balancesheet");
+                BillListDiv.html('');
+                BillListDiv.html(data.Html);
+                //$('#BillListDiv').html(data.Html);
+            },
+            error: function (err) {
+                alert(JSON.stringify(err))
+                alert("Error occured while processing your request.");
+            }
+        });
+    }
+</script>
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-sm-3" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <span class="tools pull-right" style="margin-top:5px;">
+            <a href="~/Vehicles/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right" style="margin-top:5px;">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <div class="col-sm-1 pull-right" style="width:auto;">
+            <button class="btn btn-info" style="font-size:14pt;font-weight:bolder;padding:0px 0px;width:40px;" id="btnRefresh" title='Refresh'><i style="color:black;" class="fa fa-refresh"></i></button>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        @*</div>*@
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:55px;height:auto;padding:0px;">
+        <div class="form-horizontal" id="optionpanel" role="form" style="margin-top:3px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+
+            <div class="form-group" style="margin-left:0px;margin-right:0px;margin-bottom:3px;">
+                <div class="col-sm-2">
+                    <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                        DocNo:
+                    </div>
+                    <div class="col-sm-8" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt;">
+                        @Html.TextBoxFor(x => x.Document, new { @id = "ShowDoc", @class = "form-control", @style = "width:100%;margin-top:2px;font-size:9pt;font-weight:bold;background-color:lightgray;", @disabled = "disabled" })
+                    </div>
+                </div>
+                <div class="col-sm-4">
+                    <div class="col-sm-5" style="display: flex;">
+                        <input type="radio" class="form-control" name="BranchCombo" id="BranchR" value="Branch" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Branch Only</label>
+                        <input type="radio" class="form-control" name="BranchCombo" id="AllR" value="All" style="height:20px;width:35px;" /><label class=" bold control-label"> All</label>
+                    </div>
+                    <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                        Branch:
+                    </div>
+                    <div class="col-sm-5" style="padding-right:unset;">
+                        @Html.TextBoxFor(x => x.Branch, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-size:9pt;font-weight:bold;background-color:lightgray;", @id = "branch", @name = "branch" })
+                    </div>
+                </div>
+                <div class="col-sm-3">
+                    <div class="col-sm-12" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;">
+
+                        <div class="col-sm-6">
+                            Show Branch Only:
+                        </div>
+                        <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt; ">
+                            <input title='Branch Only' type="checkbox" id="ChkBranchOnly" name="ChkBranchOnly" style="margin-top: 0px;width:20px;height:20px;" />
+                        </div>
+                        <div class="col-sm-4">
+                            Suppress 0:
+                        </div>
+
+                        <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt;">
+                            <input title='Suppress Zero Balances' type="checkbox" id="issuppress" name="issuppress" style="margin-top: 0px;width:20px;height:20px;" />
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+            <div class="form-group" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;">
+                <div class="col-sm-12">
+                    <div class="col-sm-1">
+                        Calculate Time:
+                    </div>
+                    <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt; ">
+                        <input title='KM Calculate' class="form-control" placeholder="Enter KM...." type="text" id="txtKMCalculate" name="txtKMCalculate" style="margin-top: 0px;" />
+                    </div>
+                    <div class="col-sm-1">
+                        <button class="btn btn-warning" style="font-size:14pt;font-weight:bolder;padding:0px 0px;;width:40px;" id="btnAddKM" title='Calculate KM'><i style="color:black;" class="fa fa-refresh"></i></button>
+                    </div>
+                    <div class="col-sm-1">
+                        Calculate Time:
+                    </div>
+                    <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt; ">
+                        <input title='Time Calculate' placeholder="KM Pr HR..." class="form-control" type="text" id="txtTimeCalculate" name="txtTimeCalculate" style="margin-top: 0px;" />
+                    </div>
+                    <div class="col-sm-1">
+                        <button class="btn btn-info" style="font-size:14pt;font-weight:bolder;padding:0px 0px;width:40px;" id="btnAddTime" title='Calculate Time'><i style="color:black;" class="fa fa-refresh"></i></button>
+                    </div>
+
+                </div>
+
+
+
+
+            </div>
+        </div>
+        <div class="col-sm-12" style="padding-left:0px;padding-right:0px;">
+            <div class="panel-body" style="margin-top:0px;height:auto;padding-left:0px;padding-right:0px;padding-top:2px;">
+
+                <div id="balancesheet">
+                    @Html.Partial("LocalKmAndTimeView")
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+@*<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+            T.FAT ERP-iX9 by Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4"></div>
+    </footer>*@
+<footer class="footer-section" style="height:45px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-2" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-5">
+            @if (Model.Mode != "View")
+            {
+                <div class="col-md-4 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:5px;font-size:9pt; width:unset;">
+                    <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="SubmitPrint" data-toggle="tooltip" data-placement="top" title="Save & Print"><i class="glyphicon glyphicon-floppy-saved">&nbsp;&nbsp;&nbsp;<i class="glyphicon glyphicon-print"></i><br />Save & Print</i></button>
+                </div>
+                <div class="col-md-4 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                    @if (Model.Mode == "Add" || Model.Mode == "Edit")
+                    {
+                        <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="Submit" data-toggle="tooltip" data-placement="top" title="Save"><i class="glyphicon glyphicon-floppy-saved"><br />Save</i></button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Submit" data-toggle="tooltip" data-placement="top" title="Save"><i class="glyphicon glyphicon-trash"><br />Delete</i></button>
+                    }
+                </div>
+                <div class="col-md-4 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                    <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnAttachment" data-toggle="modal" data-target="#Attachmentmodal" title="Attachment"><i class="glyphicon glyphicon-paperclip"><br />Attachment</i></button>
+                </div>
+            }
+
+        </div>
+    </div>
+</footer>
+<!--Copy Modal -->
+<div class="modal right fade" id="copymodal" style="margin-top: 20px;" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl">
+        <div class="modal-content" style="width: 70%;">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <h4 class="modal-title"><b>Copy Freight Trip Advance List</b></h4>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div class="grid" id="FormatTable">
+                    <div class="form-group col-sm-12" id="CopyModal" style="overflow: auto;width: 100%;display: block;min-height:500px;max-height:500px;">
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                @*<button class="btn btn-warning" style="color:black; font-size: 13px;padding:3px 12px;" id="btnSubmitCopy" data-toggle="tooltip" data-placement="top" title="Copy"></button>*@
+                <button type="button" class="btn btn-warning" style="color:black;font-weight: bold;" id="btnSubmitCopy" data-toggle="tooltip" data-placement="top" title="Copy">Get Copy Area</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@Html.HiddenFor(x => x.Document, new { @id = "Document" }) 

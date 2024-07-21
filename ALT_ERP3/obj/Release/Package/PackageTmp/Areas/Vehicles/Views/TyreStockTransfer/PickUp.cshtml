@@ -1,0 +1,149 @@
+﻿
+@model ALT_ERP3.Areas.Vehicles.Models.TyreStockTransferVM
+@using Common;
+<style>
+    .fixPickupTableHead {
+        overflow-y: auto;
+        height: 300px;
+    }
+
+        .fixPickupTableHead thead th {
+            position: sticky;
+            top: 0;
+        }
+
+        .fixPickupTableHead tfoot tr {
+            position: sticky;
+            bottom: 0;
+        }
+
+    .SearchRow {
+        background-color: coral;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+
+        $('#SearchPickup').keyup(function () {
+            var value = $(this).val();
+            if (value != "") {
+                $('#tabledatapick td').removeClass('SearchRow');
+
+                $('#tabledatapick > tbody > tr > td ').each(function () {
+                    if ($(this).text().toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                        var dd = $(this).text().toLowerCase();
+                        $(this).addClass("SearchRow");
+                    }
+                    else {
+                        $(this).removeClass("SearchRow");
+                    }
+                });
+            }
+            else {
+                $('#tabledatapick td').removeClass('SearchRow');
+            }
+        });
+
+
+        $("#tabledatapick tbody").on('dblclick','.clstr', function () {
+
+            var tds2 = $(this).closest("tr");
+
+            var ModelData = {};
+            ModelData["DoubleClickDocument"] = tds2.find('td').eq(1).text();
+            ModelData["Mode"] = $("#Mode").val();
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("OldStockDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#StockDetailsDiv').html('');
+                    $('#StockDetailsDiv').html(data.Html);
+                    $('#TransferDetailsDiv :input').prop('disabled', false);
+                    $('#StockStatusList').prop('disabled', true);
+                    $('#pickuplist').modal('hide');
+                    document.getElementById("FirstTab").click();
+
+                },
+                error: function (er) {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+    });
+</script>
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            <h4 class="modal-title">Stock List</h4>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="col-sm-1 control-label" style="width:auto;">Search</label>
+                <div class="col-sm-2">
+                    <input type="text" id="SearchPickup" class="form-control" placeholder="Search Here" />
+                </div>
+            </div>
+
+            <div class="fixPickupTableHead" id="PickTable" style="max-height:400px; min-height:400px;width:100%; overflow: scroll;">
+
+                <table id="tabledatapick" class="zui-table">
+                    <thead>
+                        <tr role="row">
+                            <th style="vertical-align:inherit;width:0%;">Sr. No.</th>
+                            <th style="vertical-align:inherit;width:0%;" hidden="hidden">UniqueID</th>
+                            <th style="vertical-align:inherit;width:10%;">Tyre SerialNO</th>
+                            <th style="vertical-align:inherit;width:10%;">Tyre Status</th>
+                            @*<th style="vertical-align:inherit;width:10%;">VehicleNo</th>*@
+                            <th style="vertical-align:inherit;width:10%;">Tyre Place No</th>
+                            <th style="vertical-align:inherit;width:10%;">Stepnee Place No</th>
+                            <th style="vertical-align:inherit;width:10%;">Stock At</th>
+                            <th style="vertical-align:inherit;width:0%;" hidden="hidden">Parentkey</th>
+                            <th style="vertical-align:inherit;width:0%;" hidden="hidden">Tablekey</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.PickupList != null)
+                        {
+                            foreach (var item in @Model.PickupList.ToList())
+                            {
+                                if (item != null)
+                                {
+                                    <tr class="clstr" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                        <td style="vertical-align:inherit;width:0%;">@item.Vehicle</td>
+                                        <td style="vertical-align:inherit;width:0%;" hidden="hidden">@item.RECORDKEY</td>
+                                        <td style="vertical-align:inherit;width:10%;">@item.SerialNo</td>
+                                        <td style="vertical-align:inherit;width:10%;">@item.Status</td>
+                                        @*<td style="vertical-align:inherit;width:10%;">@item.Vehicle</td>*@
+                                        <td style="vertical-align:inherit;width:10%;">@item.TyreNo</td>
+                                        <td style="vertical-align:inherit;width:10%;">@item.StepneeNo</td>
+                                        <td style="vertical-align:inherit;width:10%;">@item.StockAt</td>
+                                        <td style="vertical-align:inherit;width:0%;" hidden="hidden">@item.ParentKey</td>
+                                        <td style="vertical-align:inherit;width:0%;" hidden="hidden">@item.TableKey</td>
+                                    </tr>
+                                }
+                            }
+                        }
+                    </tbody>
+                </table>
+
+
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;">
+            <button type="button" class="btn btn-danger" data-dismiss="modal">Discard</button>
+        </div>
+    </div>
+</div>

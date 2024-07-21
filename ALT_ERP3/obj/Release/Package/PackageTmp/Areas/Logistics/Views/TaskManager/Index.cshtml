@@ -1,0 +1,523 @@
+﻿@*Task Manager*@
+@model GridOption
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+@*<head>
+        <link href="~/Content/js/ion.rangeSlider-1.8.2/css/ion.rangeSlider.css" rel="stylesheet" />
+        <link href="~/Content/js/ion.rangeSlider-1.8.2/css/ion.rangeSlider.skinFlat.css" rel="stylesheet" />
+    </head>
+    <script src="~/Content/js/ion.rangeSlider-1.8.2/js/ion-rangeSlider/ion.rangeSlider.min.js" type="text/javascript"></script>*@
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        document.getElementById("sidepanel").height = $(window).innerHeight() - 111 - 85 - 23;
+        //$("#progresscomplete").ionRangeSlider({
+        //    min: 0,
+        //    max: 100,
+        //    type: 'single',
+        //    step: 5,
+        //    postfix: " %Complete",
+        //    prettify: true,
+        //    hasGrid: true
+        //});
+        LoadUser();
+        $("#viewcode").val('@Model.ViewDataId');
+        GetColumnsList($("#viewcode").val());
+        GridReload();
+        
+        $('#btnprintlist').click(function () {
+            var sUrlpath = window.open('@Url.Action("GetMasterGridData")?ViewDataId=' + $("#viewcode").val() + '&mWhat=PDL', '_blank');
+        });
+    });
+    function LoadUser() {
+        var url = '@Url.Action("GetTypes")'
+        $('#mVar1').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.mVar1', text: '@Model.mVar2' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                clickRefresh();
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function AddNewEntry() {
+        window.location.href = "/Logistics/AssignTasks/Index?TableName=Task&MainType=&Mode=Add&Header=Tasks%20/%20Activities&ViewDataId=AssignTasks&Controller2=TaskManager&Module=Admin&optiontype=M&optioncode=AssignTasks"
+    //window.location.href = "/SetUp/" + '@ViewBag.Controller2' + "/Index?TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Add&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+    }
+
+    function clickRefresh() {
+        $('#list').jqGrid('clearGridData');
+        $("#list").jqGrid("GridUnload");
+        $('#list').trigger('reloadGrid');
+        GridReload();
+        
+    }
+
+    function GridReload() {
+        var ColName, Coldata, ColorData;
+        var sPathUrl = "@Url.Action("GetGridStructureRecords")?id=@Model.ViewDataId&TableName=@ViewBag.Table";
+        var sUrlpath = "@Url.Action("GetGridData")?ViewDataId=@Model.ViewDataId"+'&TableName=@ViewBag.Table&searchField=' + $('#searchField').val() + '&searchString=' + $('#searchString').val() + '&searchOper=' + $('#searchOper').val() + '&mVar3=' + $('#mVar1').val();
+        @*var sPathUrl = "/TaskManager/GetGridStructureRecords/?id=" + $("#viewcode").val() + '&TableName=' + '@ViewBag.Table';
+        var sUrlpath = "/TaskManager/GetGridData/?ViewDataId=" + $("#viewcode").val() + '&TableName=' + '@ViewBag.Table' + '&searchField=' + $('#searchField').val() + '&searchString=' + $('#searchString').val() + '&searchOper=' + $('#searchOper').val();*@
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                ColorData = obj[2].split(",");
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                height: $(window).height() - 141 - 85 - 23,/*38 for search panel*/
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: false,
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    //$('#SelectedDocument').val($('#list').jqGrid('getCell', id, 'Document'));
+                    //if ("@ViewBag.DrillQuery" != "") {
+                        //$('#list2').jqGrid('clearGridData');
+                        //$('#list2').jqGrid("GridUnload");
+                        //$('#list2').trigger('reloadGrid');
+                        GridReload2($('#list').jqGrid('getCell', id, 'Document'));
+                    //}
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    var myGrid = $('#list');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    location.href = "/Logistics/AssignTasks/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=Task&MainType=&Mode=View&Header=Tasks%20/%20Activities&ViewDataId=AssignTasks&Controller2=TaskManager&Module=Admin&optiontype=M&optioncode=AssignTasks";
+                    //location.href = "/SetUp/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=View&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    //$("tr.jqgrow:odd").css("background", "#EAEAEA");
+                    var mcolindex = -1;
+                    var cm = $('#list').jqGrid('getGridParam', 'colModel');
+                    var trxrows = $('#list').getDataIDs();
+                    for (var mcol = 0, l = cm.length; mcol < l; mcol++) {
+                        if (cm[mcol].name === 'Status') {
+                            mcolindex = mcol;
+                        }
+                        if (cm[mcol].name === 'Status') {
+                            mcolindex = mcol;
+                        }
+                        try {
+                            var mclr = ColorData[mcol];
+                            if (mclr != "") {
+                                for (var mrow = 0; mrow <= trxrows.length; mrow++) {
+                                    jQuery("#list").jqGrid('setCell', mrow + 1, mcol, "", { 'background-color': mclr, 'background-image': 'none' });
+                                }
+                            }
+                        } catch (e) { }
+                    }
+                    // set color for status column
+                    if (mcolindex != -1) {
+                        for (var mrow = 0; mrow <= trxrows.length; mrow++) {
+                            if ($('#list').jqGrid('getCell', mrow+1, 'Status') == 'Pending') {
+                                jQuery("#list").jqGrid('setCell', mrow + 1, mcolindex, "", { 'background-color': '#ffc700', 'background-image': 'none' });
+                            }
+                            var mfld = $('#list').jqGrid('getCell', mrow + 1, 'Priority');
+                            if (mfld == 'Medium High') {
+                                jQuery("#list").jqGrid('setCell', mrow + 1, 'Priority', "", { 'background-color': '#ffc700', 'background-image': 'none' });
+                            }
+                            if (mfld == 'High' || mfld=='Very High')  {
+                                jQuery("#list").jqGrid('setCell', mrow + 1, 'Priority', "", { 'background-color': '#f97245', 'background-image': 'none' });
+                            }
+                        }
+                    }
+                    $('.spinner').hide();
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        var ed = "<button id='btnEdit" + rowId + "' value='" + rowId + "' style='padding-left:3px;padding-right:3px;' Class='edit' tooltip='Edit' , title='Edit' , attr='" + rowId + "' />";
+                        var del = "<button id='btnDelete" + rowId + "' type='button' value='" + rowId + "' style='padding-left:3px;padding-right:3px;' Class='delete' tooltip='Delete' , title='Delete' />";
+                        var view = "<button id='btnView" + rowId + "' type='button' value='" + rowId + "' style='padding-left:3px;padding-right:3px;' Class='view' tooltip='View' , title='View' />";
+                        jQuery("#list").jqGrid('setRowData', rowId, { Delete: del });
+                        jQuery("#list").jqGrid('setRowData', rowId, { Edit: ed });
+                        jQuery("#list").jqGrid('setRowData', rowId, { View: view });
+                    }
+                    $('.edit').html('<img src="/Content/Images/Edit.ico" />');
+                    $('.delete').html('<img src="/Content/Images/Delete.ico" />');
+                    $('.view').html('<img src="/Content/Images/FindOrFilter.ico" />');
+                    $("button").click(function (event) {
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#list');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'Document');
+                        switch (btntype) {
+                            case "btnEdit":
+                                //location.href = "/SetUp/AssignTasks/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=Task&MainType=&Mode=Edit&Header=Tasks%20/%20Activities&ViewDataId=AssignTasks&Controller2=AssignTasks&Module=Admin&optiontype=M&optioncode=AssignTasks";
+                                location.href = "/Logistics/" + 'AssignTasks' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + 'Task' + "&MainType=" + '' + "&Mode=Edit&Header=" + 'Tasks%20/%20Activities' + "&ViewDataId=" + 'AssignTasks' + '&Controller2=' + 'TaskManager' + '&Module=' + 'Admin' + '&optiontype=' + 'M' + '&optioncode=' + 'AssignTasks';
+                                break;
+                            case "btnDelete":
+                                location.href = "/Logistics/AssignTasks/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=Task&MainType=&Mode=Delete&Header=Tasks%20/%20Activities&ViewDataId=AssignTasks&Controller2=TaskManager&Module=Admin&optiontype=M&optioncode=AssignTasks";
+                              //location.href = "/SetUp/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Delete&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                            case "btnView":
+                                location.href = "/Logistics/AssignTasks/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=Task&MainType=&Mode=View&Header=Tasks%20/%20Activities&ViewDataId=AssignTasks&Controller2=TaskManager&Module=Admin&optiontype=M&optioncode=AssignTasks";
+                              //location.href = "/SetUp/" + '@ViewBag.Controller2' + "/Index?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=View&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                        }
+                    });
+                    SVGPending();
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+            { edit: false, add: false, del: false, print:false, search: false, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+            document.getElementById('list').focus();
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+
+    function GridReload2(mDocument) {
+        $('.spinner').show();
+        var sPathUrl = '@Url.Action("GetSubGridStructureTask")?Document=' + encodeURIComponent(mDocument) + '&ViewDataId=' + '@Model.ViewDataId';
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                debugger;
+                var obj = $.parseJSON(data);
+                var minfo = obj[4].split('|');
+                $('#taskid').val(minfo[0]);
+                $('#descr').val(minfo[1]);
+                $('#assignby').val(minfo[2]);
+                $('#assignto').val(minfo[3]);
+                $('#status').val(minfo[4]);
+                $('#priority').val(minfo[5]);
+                $('#startdate').val(minfo[6]);
+                $('#enddate').val(minfo[7]);
+                $('#actualstartdate').val(minfo[8]);
+                $('#actualenddate').val(minfo[9]);
+                $('#Narr').val(minfo[10]);
+                $('#percentcomplete').val(minfo[11]);
+
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("Error Found..");
+            }
+        });
+    };
+    
+    function SVGPending() {
+        debugger;
+        var myGrid = $('#list');
+        var ids = jQuery("#list").jqGrid('getDataIDs');
+        var UserId = $("#UserId").val();
+        for (var i = 0; i < ids.length; i++) {
+            var rowId = ids[i];
+            if (jQuery("#list").getCell(rowId, "Status") == "Complete") {
+                $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+            } else {
+                $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+            }
+        }
+    }
+    function SVGAssignBy() {
+        debugger;
+        var myGrid = $('#list');
+        var ids = jQuery("#list").jqGrid('getDataIDs');
+        var UserId = $("#UserId").val();
+        for (var i = 0; i < ids.length; i++) {
+            var rowId = ids[i];
+            if (jQuery("#list").getCell(rowId, "Status") == "Complete") {
+                $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+            }
+            else
+            {
+                if (jQuery("#list").getCell(rowId, "Assigned By") != UserId) {
+                    $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+                } else {
+                    $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+                }
+            }
+            
+        }
+    }
+    function SVGAssignTo() {
+        debugger;
+        var myGrid = $('#list');
+        var ids = jQuery("#list").jqGrid('getDataIDs');
+        var UserId = $("#UserId").val();
+        for (var i = 0; i < ids.length; i++) {
+            var rowId = ids[i];
+            if (jQuery("#list").getCell(rowId, "Status") == "Complete") {
+                $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+            }
+            else {
+                if (jQuery("#list").getCell(rowId, "Assigned By") != UserId) {
+                    $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+                } else {
+                    $('#' + $.jgrid.jqID(rowId)).addClass('hidden');
+                }
+            }
+        }
+    }
+    function SVGALL() {
+        debugger;
+        var myGrid = $('#list');
+        var ids = jQuery("#list").jqGrid('getDataIDs');
+        for (var i = 0; i < ids.length; i++) {
+            var rowId = ids[i];
+            $('#' + $.jgrid.jqID(rowId)).removeClass('hidden');
+        }
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-md-3" style="padding-left:6px;padding-top:3px;">
+            <b class="CodeSt" id="headercaption">@ViewBag.Header</b>
+        </div>
+        <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;">
+            <label class="col-sm-12 control-label" style="width:auto;color:black;">Un-Complete Task:</label>
+            <svg width="20" height="20">
+                <title>Un-Complete Task</title>
+                <a onclick="SVGPending();" style="cursor:pointer">
+                    <rect width="20" height="20" style="fill:rgb(163,228,180);stroke-width:3;stroke:rgb(0,0,0)" />
+                </a>
+            </svg>
+        </div>
+        <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;">
+            <label class="col-sm-12 control-label" style="width:auto;color:black;">AssignBy Me:</label>
+            <svg width="20" height="20">
+                <title>AssignBy Me</title>
+                <a onclick="SVGAssignBy();"  style="cursor:pointer">
+                    <rect width="20" height="20" style="fill:rgb(163,228,180);stroke-width:3;stroke:rgb(0,0,0)" />
+                </a>
+            </svg>
+        </div>
+        <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+            <label class="col-sm-12 control-label" style="width:auto;color:black;">AssignTo Me:</label>
+            <svg width="20" height="20">
+                <title>AssignedTo Me</title>
+                <a onclick="SVGAssignTo();"  style="cursor:pointer">
+                    <rect width="20" height="20" style="fill:rgb(157,210,218);stroke-width:3;stroke:rgb(0,0,0)" />
+                </a>
+            </svg>
+        </div>
+        <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+            <label class="col-sm-12 control-label" style="width:auto;color:black;">All :</label>
+            <svg width="20" height="20">
+                <title>All Task</title>
+                <a onclick="SVGALL();"  style="cursor:pointer">
+                    <rect width="20" height="20" style="fill:rgb(201,201,199);stroke-width:3;stroke:rgb(0,0,0)" />
+                </a>
+            </svg>
+        </div>
+        @if (Model.ScheduleFlow)
+        {
+            <label class="col-sm-1 control-label" style="font-weight: bolder;float:left;padding-top:5px;padding-right:0px;font-size:9pt;width:150px;font-weight:normal;color:black;">User:</label>
+            <div class="col-sm-2" style="float:left;">
+                @Html.TextBoxFor(x => x.mVar1, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-weight:bold;background-color:lightgray;", @id = "mVar1", @name = "mVar1", @value = Model.mVar1 })
+            </div>
+        }
+
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+            <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" tooltip="Add" onclick=AddNewEntry();>Add New</button>
+        </div>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:15px;">
+    <div class="panel-body" style="margin-top:55px;height:auto;padding:0px;">
+        @Html.Partial("SearchGridView")
+        <div class="col-sm-9" style="padding-left:0px;padding-right:0px;">
+            <div id="page-contentgrid">
+                <div class="jqGrid">
+                    <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                    <div id="pager" style="height:34px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-3" id="sidepanel" style="border:1px solid;overflow:auto;margin-top:0px;padding:0px;">
+            <div class="col-sm-12" style="padding:8px 8px 8px 0px;">
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Task ID:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="taskid" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;color:darkorange;font-size:11pt;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Description:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="descr" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Assigned By:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="assignby" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Assigned To:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="assignto" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Status:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="status" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Priority:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="priority" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Start Date:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="startdate" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">End Date:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="enddate" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Actual Start:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="actualstartdate" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Actual End:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="actualenddate" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">%Complete:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="percentcomplete" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+                <div class="form-group" style="display: inline-flex;">
+                    <label class="col-sm-4 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Narr:</label>
+                    <div class="col-sm-8">
+                        <input type="text" id="Narr" class="form-control" style="border:none;text-align:left;font-weight:bolder;background-color:white;" disabled="disabled" />
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="col-sm-4" style="padding-left:2px;">
+        <button class="btn btn-warning" id="btnxls" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:3px;" title='Export to Excel'>Export to Excel</button>
+    </div>
+    <div class="col-sm-4" style="text-align:center; margin-top:5px;color:white;font-family:Helvetica;font-size:9pt;padding-top:0px;">
+        ALT AIR-3.0, Shruham Software
+    </div>
+    <div class="col-sm-4">
+        <button class="btn btn-warning pull-right" id="btnprintlist" style="color:black; font-size:12px;height:27px;margin-left:0;width:unset;padding-top:3px;" title='Export to PDF in Landscape'>Print List</button>
+    </div>
+</footer>
+@*<input type="hidden" id="SelectedDocument" />*@
+
+
+@Html.HiddenFor(x => x.Grp, new { @id = "UserId" })

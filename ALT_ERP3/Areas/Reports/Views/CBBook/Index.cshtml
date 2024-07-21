@@ -1,0 +1,264 @@
+﻿@model GridOption
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        loadAccount();
+        $('#header').hide();
+        $('#footer').hide();
+        $('select').select2();
+
+        $('#btnrefresh').click(function () {
+            $('#list1').jqGrid('clearGridData');
+            $("#list1").jqGrid("GridUnload");
+            $('#list1').trigger('reloadGrid');
+            gridreload();
+        });
+
+
+        $('#btnexcel').click(function () {
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + Date + '&AccountName=' + $('#Account').val())
+        });
+
+        $('#btnPrint').click(function () {
+            var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDF")?Date=' + Date + '&AccountName=' + $('#Account').val())
+        });
+
+    });
+    function loadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var elementText = $(element).attr('data-init-text');
+                xcallback({ "term": elementText });
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+
+    function gridreload() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+        var AccountNames = $('#Account').val();
+        var Date = ($('#Fromdate').val() + '-' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + Date + '&AccountName=' + $('#Account').val();
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + Date + '&AccountName=' + $('#Account').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                $('#openb').text(obj[2]);
+                $('#closeb').text(obj[3]);
+                $('#tcredit').text(obj[4]);
+                $('#tdebit').text(obj[5]);
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#list1').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: 10,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                sortname: 'Ledger.Docdate',
+                height: 400,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                //loadonce: true,
+                //autowidth: true,
+                //shrinkToFit: false,
+                autoencode: true,
+                search: true,
+
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    $('#header').show();
+                    $('#footer').show();
+                },
+            });
+            jQuery("#list1").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#list1").jqGrid("setFrozenColumns");
+        };
+
+
+
+        function buttonclick() {
+            var ids = jQuery("#list1").jqGrid('getDataIDs');
+            var colname = jQuery('#list1').jqGrid('getGridParam', 'colNames');
+            for (var i = 0; i < ids.length; i++) {
+                var rowId = ids[i];
+                // var test = $("#list").getGridParam('selrow');
+                var celValue = jQuery("#list1").jqGrid('getCell', 'Code');
+                var selr = jQuery('#list1').jqGrid('getGridParam', 'selrow');
+                var rowData = jQuery('#list1').jqGrid('getRowData', rowId);
+                var abc = rowData.KeyCol;
+
+            }
+        }
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', ' #cccccc');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+
+        };
+    }
+
+
+</script>
+
+
+<div class="row">
+    <div class="col-md-12">
+        <section class="panel" style="margin-bottom:7px;">
+            <header class="panel-heading" style="background:beige;padding:6px;">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="col-md-2"><b>Cash/Bank Book</b></div>
+                        <div class="col-md-4 pull-right">
+                            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy">
+                                <span class="input-group-addon">To</span>
+                                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                        Account
+                    </div>
+                    <div class="col-md-6">
+                        <input type="text" id="Account" class="input-large search-query" style="width: 50%;" />
+                        <button class="btn btn-info btn-sm" id="btnrefresh"><i class="fa fa-refresh"></i></button>
+                        <button class="btn btn-success btn-sm" id="btnexcel"><i class="fa fa-file-excel-o"></i>Excel</button>
+                        <button class="btn btn-success btn-sm" id="btnPrint"><i class="fa fa-file-excel-o"></i>Print</button>
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="row">
+                <div class="col-md-12" id="header">
+                    <div class="col-md-2" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;">
+                        <b>Opening Balance :</b>
+                    </div>
+                    <div class="col-md-2" id="openb" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;">
+
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="panel-body" style="padding:0px;">
+                <div id=" page-contentgrid">
+                    <div class="jqGrid">
+                        <table id="list1" class="scroll" cellpadding="0" cellspacing="0"></table>
+                        <div id="pager" style="height:100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12" id="footer">
+                    <div class="col-md-2" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                        <b>Closing Balance :</b>
+                    </div>
+                    <div class="col-md-2" id="closeb" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;">
+
+                    </div>
+                    <div class="col-md-2" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;">
+                        <b>Total Debit :</b>
+                    </div>
+                    <div class="col-md-2" id="tdebit" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;">
+
+                    </div>
+                    <div class="col-md-2" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;">
+                        <b>Total Credit :</b>
+                    </div>
+                    <div class="col-md-2" id="tcredit" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt;width:unset;">
+
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>

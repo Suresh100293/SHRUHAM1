@@ -1,0 +1,124 @@
+﻿@model ALT_ERP3.Models.UserProfileVM
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#TfatPass_Code2').val("");
+        $('#TfatPass_Email2').val("");
+        $('#TfatPass_Mobile2').val("");
+        $('#btnverify').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage2").hide();
+            var merr = "";
+            if ($('#TfatPass_Code2').val() == null || $('#TfatPass_Code2').val() == "") {
+                merr += "User ID is Required..\n";
+            }
+            if ($('#TfatPass_Email2').val() == null || $('#TfatPass_Email2').val() == "") {
+                merr += "Email OTP is Required..\n";
+            }
+            if ($('#TfatPass_Mobile2').val() == null || $('#TfatPass_Mobile2').val() == "") {
+                merr += "Mobile OTP is Required..\n";
+            }
+            if (merr != "") {
+                $("#ErrorMessage2").show();
+                $("#ErrorMessage2").text(merr);
+                return;
+            }
+            $('.spinner').show();
+            var url = '@Url.Action("VerifyUser")?userid=' + $("#TfatPass_Code2").val() + '&emailotp=' + $("#TfatPass_Email2").val() + '&mobileotp=' + $("#TfatPass_Mobile2").val();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                //beforeSend: function () {
+                //    $('.spinner').show();
+                //},
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.emailok == false || data.mobileok == false ) {
+                        alert('Invalid User, EmailOTP or Mobile OTP');
+                        $("#ErrorMessage2").text('Invalid User, EmailOTP or Mobile OTP');
+                        $("#ErrorMessage2").show(); 
+                    }
+                    else
+                    {
+                        alert('Congratulations!\nYour credentials are Verified Successfully..');
+                        $('#dialogverify').modal('hide');
+                        $("#TfatPass_Email2").val('');
+                        $("#TfatPass_Mobile2").val('');
+                    }
+                },
+            });
+        });
+
+        $('#renewrequest').click(function (event) {
+            event.preventDefault();
+            $("#ErrorMessage2").hide();
+            if ($('#TfatPass_Code2').val() == null || $('#TfatPass_Code2').val() == "") {
+                $("#ErrorMessage2").show();
+                $("#ErrorMessage2").text('User ID is Required..');
+                return;
+            }
+            $('.spinner').show();
+            var url = '@Url.Action("RenewVerify")?userid=' + $("#TfatPass_Code2").val();
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                success: function (data) {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                    if (data.Status == "Error") {
+                        $("#ErrorMessage2").text(data.Message);
+                        $("#ErrorMessage2").show(); 
+                    }
+                    else
+                    {
+                        $("#TfatPass_Email2").val('');
+                        $("#TfatPass_Mobile2").val('');
+                        $('#dialogverify').modal('hide');
+                    }
+                },
+            });
+        });
+    });
+</script>
+
+<div class="modal-content" style="width:600px;padding-bottom:0px;">
+    <div class="modal-header" style="background-color:#cccccc;padding-top:7px;">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title"><b>New User Verification</b></h4>
+    </div>
+    <div class="modal-body" style="padding-top:15px;padding-bottom:5px;margin-left:15px;">
+        <div id="ErrorMessage2" name="ErrorMessage2" class="alert alert-danger" style="display: none;padding:unset;margin-bottom:unset;"></div>
+        <br/>
+        <div class="form-horizontal">
+            <div class="form-group">
+                <div class="col-sm-3 control-label" style="color:black;font-size:12px;text-align:left;">User ID:</div>
+                <div class="col-sm-5">
+                    @Html.TextBoxFor(x => x.TfatPass_Code, new { @MaxLength = 15, @class = "form-control", @id = "TfatPass_Code2", @Name = "TfatPass_Code", @Value = Model.TfatPass_Code, @style = "border-color:darkgray;color:black;font-weight:bolder;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-3 control-label" style="color:black;font-size:12px;text-align:left;">Verify Email OTP:</div>
+                <div class="col-sm-4" style="margin-bottom:0px;">
+                    @Html.TextBoxFor(x => x.TfatPass_Email, new { @MaxLength = 6, @class = "form-control", @id = "TfatPass_Email2", @Name = "TfatPass_Email", @Value = Model.TfatPass_Email, @style = "border-color:darkgray;color:black;font-weight:bolder;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="col-sm-3 control-label" style="color:black;font-size:12px;text-align:left;">Verify Mobile OTP:</div>
+                <div class="col-sm-4" style="margin-bottom:0px;">
+                    @Html.TextBoxFor(x => x.TfatPass_Mobile, new { @MaxLength = 6, @class = "form-control", @id = "TfatPass_Mobile2", @Name = "TfatPass_Mobile", @Value = Model.TfatPass_Mobile, @style = "border-color:darkgray;color:black;font-weight:bolder;" })
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;padding-right: 5px;padding-left: 5px;">
+        <a class="pull-left" id="renewrequest" href="" style="padding-top:8px;padding-left:5px;color:black;font-size:small;">Request OTP for Email & Mobile Verification</a>
+        <button type="button" class="btn btn-success" style="font-family:Verdana, Geneva, Tahoma, sans-serif" id="btnverify"><i class="fa fa-check-square-o"></i>&nbsp;&nbsp;Verify</button>
+        <button type="button" class="btn btn-danger" data-dismiss="modal" style="font-family:Verdana, Geneva, Tahoma, sans-serif"><i class="fa fa-arrow-left"></i>&nbsp;&nbsp;Cancel</button>
+    </div>
+</div>

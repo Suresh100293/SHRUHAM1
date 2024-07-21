@@ -1,0 +1,390 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+@using Common;
+
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">Delivery Schedule</h4>
+    </div>
+    <div class="modal-body">
+        <div class="grid" id="DeliveryGrid" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+            Quantity: @Html.DisplayFor(x => x.ProductQty, new { @class = "form-control", @style = "text-align:right;font-weight:bold;" })  Quantity2: @Html.DisplayFor(x => x.ProductQty2)
+            <table id="Edtdelyaddadd" class="zui-table">
+                <thead>
+                    <tr role="row">
+                        <th>Sr.</th>
+                        @*<th>Days</th>*@
+                        <th>Dely.Date</th>
+                        <th>Qty-1</th>
+                        <th>Qty-2</th>
+                        <th>Dly.Loc.</th>
+                        <th>Issued Qty</th>
+                        <th>Balance</th>
+                        <th></th>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        @*<td>@Html.TextBoxFor(x => x.Days, new { @type = "text", @id = "txtShwDays", @style = "width:99%;margin-top:2px;text-align:right;" })</td>*@
+                        <td>@Html.TextBoxFor(x => x.StrDlyDate, new { @type = "text", @id = "txtShwDlyDate", @name = "txtDlyDate", @Value = DateTime.Now.ToString("dd-MM-yyyy") })</td>
+                        <td>@Html.TextBoxFor(x => x.Qty1, new { @type = "text", @id = "txtShwQty1", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                        <td>@Html.TextBoxFor(x => x.Qty2, new { @type = "text", @id = "txtShwQty2", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                        <td>@Html.DropDownListFor(x => x.AltAddress, DropdownHelper.EmptyList(), new { @id = "txtShwAltAddress", @name = "txtAltAddress", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                        <td>@Html.TextBoxFor(x => x.ExecutedQty, new { @type = "text", @id = "txtShwExecutedQty", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                        <td>@Html.TextBoxFor(x => x.Pending, new { @type = "text", @id = "txtShwPending", @style = "width:99%;margin-top:2px;text-align:right;" })</td>
+                        <td><a id="btnaddeditdlysch" href="#" class="btn btn-primary btn-sm" title="Add"><i class="fa fa-plus"></i></a></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.DelyScheList != null)
+                    {
+                        foreach (var item in @Model.DelyScheList.Where(x => x.tempIsDeleted == false).ToList())
+                        {
+                            <tr style="font-family:Tahoma;font-size:9pt;">
+                                <td>@item.tempId</td>
+                                @*<td contenteditable="true">@item.Days</td>*@
+                                <td contenteditable="true"><input id="typedate" class="dlydtclassedt" type="text" value="@item.StrDlyDate" /></td>
+                                <td contenteditable="true">@item.Qty1</td>
+                                <td contenteditable="true">@item.Qty2</td>
+                                <td>@item.AltAddress</td>
+                                <td>@item.ExecutedQty</td>
+                                <td>@item.Pending</td>
+                                <td hidden="hidden">@item.Code</td>
+                                <td hidden="hidden">@item.Store</td>
+                                <td><button type="button" action="DeleteDelySchEdt" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc">
+        <button type="button" class="btn btn-success" id="SaveDelyScheEdt">Save</button>
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        GetAddrSnoList1Edt()
+        $('#txtShwDlyDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        $('.dlydtclassedt').datepicker({ format: 'dd-mm-yyyy' });
+        $('#btnaddeditdlysch').click(function (event) {
+            event.preventDefault(event);
+            if (CheckDelyValidationOnFirstAdd2() == false) {
+                return;
+            }
+            var myBatchArray = []
+            $('#Edtdelyaddadd tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    SrNo: tds.eq(0).text(),
+                    StrDlyDate: tds.find("input[id='typedate']").val(),
+                    Qty1: tds.eq(2).text(),
+                    Qty2: tds.eq(3).text(),
+                    AltAddress: tds.eq(4).text(),
+                    ExecutedQty: tds.eq(5).text(),
+                    Pending: tds.eq(6).text(),
+                    Code: tds.eq(7).text(),
+                    Store: tds.eq(8).text(),
+                    tempId: tds.eq(0).text()
+                }
+                myBatchArray.push(myDets);
+            })
+            var ModelData = {};
+
+            ModelData["StrDlyDate"] = $("#txtShwDlyDate").val();
+            ModelData["Qty1"] = $('#txtShwQty1').val();
+            ModelData["Qty2"] = $('#txtShwQty2').val();
+            ModelData["AltAddress"] = $("#txtShwAltAddress").val();
+            ModelData["ExecutedQty"] = $("#txtShwExecutedQty").val();
+            ModelData["Pending"] = $("#txtShwPending").val();
+            ModelData["SubType"] = $("#HdnShwDSubType").val();
+            ModelData["Type"] = $("#hdnShwType").val();
+            ModelData["Code"] = $("#HdnShwDCode").val();
+            ModelData["Store"] = $("#HdnShwDStore").val();
+            ModelData["tempId"] = $("#HdnShwSrno").val();
+            ModelData["ChangeLog"] = $("#hdnchangelog").val();
+            ModelData["DelyScheList"] = myBatchArray;
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddSessionEditDelSche")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#shwdelaysche').modal('show');
+                    $('#ShwDelaySche').html(data.Html);
+                    GetDlyRemainOfQtyEdt()
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+        $('button[action|="DeleteDelySchEdt"]').click(function (event) {
+            event.preventDefault();
+            var myBatchArray = []
+            $('#Edtdelyaddadd tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    SrNo: tds.eq(0).text(),
+                    StrDlyDate: tds.find("input[id='typedate']").val(),
+                    Qty1: tds.eq(2).text(),
+                    Qty2: tds.eq(3).text(),
+                    AltAddress: tds.eq(4).text(),
+                    ExecutedQty: tds.eq(5).text(),
+                    Pending: tds.eq(6).text(),
+                    Code: tds.eq(7).text(),
+                    Store: tds.eq(8).text(),
+                    tempId: tds.eq(0).text()
+                }
+                myBatchArray.push(myDets);
+            })
+
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["DelyScheList"] = myBatchArray;
+            ModelData["ChangeLog"] = $("#hdnchangelog").val();
+            ModelData["ProductQty"] = $("#HdnDlyEdtProductQty").val();
+            ModelData["ProductQty2"] = $("#HdnDlyEdtProductQty2").val();
+            ModelData["ProductRateOn2"] = $("#HdnDlyEdtProductRateOn2").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteDeliverySchInEditMode")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#shwdelaysche').modal('show');
+                    $('#ShwDelaySche').html(data.Html);
+                    GetDlyRemainOfQtyEdt()
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+        $("#SaveDelyScheEdt").click(function (event) {
+            event.preventDefault();
+            if (CheckDelyValidation2() == false) {
+                return;
+            }
+            var myBatchArray = []
+            var rowCount = $('#Edtdelyaddadd tbody tr').length;
+            if (rowCount < 1) {
+                alert('Please Add Delivery Schedule Record')
+                return;
+            }
+            $('#Edtdelyaddadd tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    SrNo: tds.eq(0).text(),
+                    StrDlyDate: tds.find("input[id='typedate']").val(),
+                    Qty1: tds.eq(2).text(),
+                    Qty2: tds.eq(3).text(),
+                    AltAddress: tds.eq(4).text(),
+                    ExecutedQty: tds.eq(5).text(),
+                    Pending: tds.eq(6).text(),
+                    Code: tds.eq(7).text(),
+                    Store: tds.eq(8).text(),
+                    tempId: tds.eq(0).text()
+                }
+                myBatchArray.push(myDets);
+            })
+
+            var ModelData = {};
+            ModelData["tempId"] = $("#HdnShwSrno").val();
+            ModelData["DelyScheList"] = myBatchArray;
+            ModelData["ChangeLog"] = $("#hdnchangelog").val();
+            ModelData["ProductQty"] = $("#HdnDlyEdtProductQty").val();
+            ModelData["ProductQty2"] = $("#HdnDlyEdtProductQty2").val();
+            ModelData["ProductRateOn2"] = $("#HdnDlyEdtProductRateOn2").val();
+            var url = '@Url.Action("SaveDelScheInEdit")';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#shwdelaysche').modal('hide');
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+    function GetAddrSnoList1Edt() {
+        var url = '@Url.Action("GetAddrSnoList")?Code=' + $("#Account").val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#txtShwAltAddress").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('select[name="txtShwAltAddress"] option:first').prop('selected', 'selected');
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+    function CheckDelyValidation2() {
+        var adjsum1 = 0;
+        var adjsum2 = 0;
+        var rateonbool = $('#HdnDlyEdtProductRateOn2').val();
+        var batchqty2 = $('#HdnDlyEdtProductQty2').val();
+        var batchqty1 = $('#HdnDlyEdtProductQty').val();
+        if (rateonbool == "False") {
+            $('#Edtdelyaddadd tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var Qty = tds.eq(2).text();
+                adjsum1 += (parseFloat(Qty));
+            })
+            if (batchqty1 < adjsum1) {
+                alert('Product Qty1 is less than Dely Schedule Qty1')
+
+                return false;
+            }
+            else {
+                return true;
+            }
+
+
+        }
+        else {
+            $('#Edtdelyaddadd tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var Qty2 = tds.eq(3).text();
+                adjsum2 += (parseFloat(Qty2));
+            })
+            if (batchqty2 < adjsum2) {
+                alert('Product Qty2 is less than Dely Schedule Qty2')
+
+                return false;
+            }
+            else {
+                return true;
+            }
+
+        }
+
+    }
+
+    function CheckDelyValidationOnFirstAdd2() {
+        var adjsum1 = 0;
+        var adjsum2 = 0;
+        var rateonbool = $('#HdnDlyEdtProductQty').val();
+        var batchqty2 = $('#HdnDlyEdtProductQty2').val();
+        var batchqty1 = $('#HdnDlyEdtProductRateOn2').val();
+        if (rateonbool == "False") {
+            adjsum1 = parseFloat($('#txtShwQty1').val());
+            if (batchqty1 < adjsum1) {
+                alert('Product Qty1 is less than Dely Schedule Qty1')
+
+                return false;
+
+            }
+            else {
+                return true;
+            }
+
+        }
+        else {
+            adjsum2 = parseFloat($('#txtShwQty2').val());
+
+            if (batchqty2 < adjsum2) {
+                alert('Product Qty2 is less than Dely Schedule Qty2')
+
+                return false;
+            }
+            else {
+                return true;
+            }
+
+        }
+
+    }
+
+
+    function GetDlyRemainOfQtyEdt() {
+        var adjsum1 = 0;
+        var adjsum2 = 0;
+        var rem1 = 0;
+        var rem2 = 0;
+        var rateonbool = $('#HdnDlyEdtProductRateOn2').val();
+        var batchqty2 = $('#HdnDlyEdtProductQty2').val();
+        var batchqty1 = $('#HdnDlyEdtProductQty').val();
+        if (rateonbool == "False") {
+            $('#Edtdelyaddadd tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var Qty = tds.eq(2).text();
+                adjsum1 += (parseFloat(Qty));
+            })
+            rem1 = batchqty1 - adjsum1;
+            $('#txtShwQty1').val(parseFloat(rem1).toFixed(2));
+        }
+        else {
+            $('#Edtdelyaddadd tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var Qty2 = tds.eq(3).text();
+                adjsum2 += (parseFloat(Qty2));
+            })
+            rem2 = batchqty2 - adjsum2;
+            $('#txtShwQty2').val(parseFloat(rem2).toFixed(2));
+        }
+        return true;
+    }
+</script>
+
+@Html.HiddenFor(x => x.Code, new { @Id = "HdnShwDCode" })
+@Html.HiddenFor(x => x.Store, new { @Id = "HdnShwDStore" })
+@Html.HiddenFor(x => x.SubType, new { @Id = "HdnShwDSubType" })
+@*@Html.HiddenFor(x => x.Type, new { @Id = "HdnShwDType" })*@
+@Html.HiddenFor(x => x.tempId, new { @Id = "HdnShwSrno" })
+@Html.HiddenFor(x => x.ProductQty, new { @id = "HdnDlyEdtProductQty" })
+@Html.HiddenFor(x => x.ProductQty2, new { @id = "HdnDlyEdtProductQty2" })
+@Html.HiddenFor(x => x.ProductRateOn2, new { @id = "HdnDlyEdtProductRateOn2" })

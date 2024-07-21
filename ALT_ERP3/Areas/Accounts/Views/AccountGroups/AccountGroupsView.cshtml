@@ -1,0 +1,329 @@
+﻿
+@model ALT_ERP3.Areas.Accounts.Models.AccountGroupsVM
+@using Common;
+@{
+    ViewBag.Title = "Account Groups";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadGrp();
+        LoadRevGroup();
+        if (@Model.MasterGroups_RECORDKEY!=0) {
+            GridReload();
+       }
+        @* iX9: set the selected value to fixed combos *@
+        $('#MasterGroups_BaseGr').val('@Model.MasterGroups_BaseGr').attr("selected", "selected");
+    });
+
+    function GridReload() {
+        event.preventDefault();
+        $('.spinner').show();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $("#hdnformatname").val($("#viewcode").val());
+
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?ViewDataId=AccountGroupsLedger' ;
+        var sUrlpath = '@Url.Action("GetGridData")?ViewDataId=AccountGroupsLedger' + '&Code=@Model.MasterGroups_RECORDKEY';
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                //if (data.Status = "Error")
+                //{
+                //    alert(data.Message);
+                //} else {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                $('#openb').val(obj[2]);
+                $('#closeb').val(obj[3]);
+                $('#tcredit').val(obj[4]);
+                $('#tdebit').val(obj[5]);
+                CreateGridData();
+                $('.spinner').hide();
+                //}
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list2').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: true,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 255,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#list2');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'LrNo');
+                    GetURL(cellVal);
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+
+                    $('.spinner').hide();
+                    $('#pager').height = 5;
+                },
+            });
+            jQuery("#list2").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#list2").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+
+
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadGrp() {
+        var url = '@Url.Action("AutoCompleteGrp")'
+        $('#MasterGroups_Grp').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.MasterGroups_Grp', text: '@Model.GrpName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadRevGroup() {
+        var url = '@Url.Action("AutoCompleteRevGroup")'
+        $('#MasterGroups_RevGroup').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.MasterGroups_RevGroup', text: '@Model.RevGroupName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+<section class="panel" style="margin-top:1%;display:flex;">
+    <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+    <div class="col-sm-9" style="margin-top: 0%;">
+        @* iX9: -- Code for Header Starts -- *@
+        @* iX9: Tab Body Panels *@
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Code:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.MasterGroups_Code, new { @maxlength = "9", @class = "form-control", @readonly = "readonly", @Name = "MasterGroups_Code", @Value = Model.MasterGroups_Code, @Id = "MasterGroups_Code" })
+            </div>
+            <label class="col-sm-2 control-label">Name:</label>
+            <div class="col-sm-4">
+                @Html.TextBoxFor(x => x.MasterGroups_Name, new { @maxlength = "70", @class = "form-control", @Name = "MasterGroups_Name", @Value = Model.MasterGroups_Name, @Id = "MasterGroups_Name" })
+            </div>
+        </div>
+        <br />
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Grp:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.MasterGroups_Grp, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @readonly = "readonly", @id = "MasterGroups_Grp", @Value = Model.MasterGroups_Grp, @Name = "MasterGroups_Grp" })
+            </div>
+            <label class="col-sm-2 control-label">Reverse Grp:</label>
+            <div class="col-sm-4">
+                @Html.TextBoxFor(x => x.MasterGroups_RevGroup, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "MasterGroups_RevGroup", @Value = Model.MasterGroups_RevGroup, @Name = "MasterGroups_RevGroup" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">BaseGr:</label>
+            <div class="col-sm-3">
+                @Html.DropDownListFor(m => m.MasterGroups_BaseGr, Model.BaseGrList, new { @class = "form-control", @Id = "MasterGroups_BaseGr", @Name = "MasterGroups_BaseGr", @style = "border-color:black;height:24px;padding:2px 4px;" })
+            </div>
+            <label class="col-sm-2 control-label">Seq:</label>
+            <div class="col-sm-4">
+                @Html.TextBoxFor(x => x.MasterGroups_Seq, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "MasterGroups_Seq", @Value = Model.MasterGroups_Seq, @Id = "MasterGroups_Seq" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Prefix for Auto Code:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.MasterGroups_Prefix, new { @maxlength = "3", @class = "form-control", @Name = "MasterGroups_Prefix", @Value = Model.MasterGroups_Prefix, @Id = "MasterGroups_Prefix" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Hide:</label>
+            <div class="col-sm-3">
+                @Html.CheckBoxFor(x => x.MasterGroups_Hide, new { @value = Model.MasterGroups_Hide, @id = "MasterGroups_Hide", @name = "MasterGroups_Hide", @style = "height:16px;width:16px;" })
+            </div>
+            <label class="col-sm-2 control-label">DisplayOrder:</label>
+            <div class="col-sm-4">
+                @Html.TextBoxFor(x => x.MasterGroups_DisplayOrder, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "MasterGroups_DisplayOrder", @Value = Model.MasterGroups_DisplayOrder, @Id = "MasterGroups_DisplayOrder" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">Force CC:</label>
+            <div class="col-sm-3">
+                @Html.CheckBoxFor(x => x.MasterGroups_ForceCC, new { @value = Model.MasterGroups_ForceCC, @id = "MasterGroups_ForceCC", @name = "MasterGroups_ForceCC", @style = "height:16px;width:16px;" })
+            </div>
+            <label class="col-sm-2 control-label">Sch:</label>
+            <div class="col-sm-4">
+                @Html.TextBoxFor(x => x.MasterGroups_Sch, new { @maxlength = "5", @class = "form-control", @Name = "MasterGroups_Sch", @Value = Model.MasterGroups_Sch, @Id = "MasterGroups_Sch" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-2 control-label">System Default:</label>
+            <div class="col-sm-3">
+                @Html.CheckBoxFor(x => x.MasterGroups_SystemCode, new { @value = Model.MasterGroups_SystemCode, @id = "MasterGroups_SystemCode", @name = "MasterGroups_SystemCode", @style = "height:16px;width:16px;" })
+            </div>
+        </div>
+        @* iX9: -- Code for Header Ends -- *@
+    </div>
+    <div class="col-sm-3" style="padding-left:0px;padding-right:0px;margin-top: 0%;">
+        <div class="panel-body" style="margin-top:0px;height:auto;padding:0px;width:100%;">
+            <div class="col-sm-12" style="padding-left:0px;padding-right:0px;overflow:scroll;">
+                <div id="page-contentgridright">
+                    <div class="jqGrid">
+                        <table id="list2" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        @*<div id="pager" style="height:32px;width:100%;"></div>*@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .tabcontent {
+        height: 475px;
+        overflow: scroll;
+    }
+</style>
+
+
+<input type="hidden" id="controllername" />
+@Html.HiddenFor(x => x.Mode, new { @id = "hdnMode" })
+@Html.HiddenFor(x => x.Header, new { @id = "hdnHeader" })
+@Html.HiddenFor(x => x.MasterGroups_Grp, new { @id = "hdnGrpCode" })
+@Html.HiddenFor(x => x.GrpName, new { @id = "hdnGrpName" })
+@*
+    Code Auto Generated on Tue 30-Apr-2019 07:58 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 32
+    by Team Shruham Software *@

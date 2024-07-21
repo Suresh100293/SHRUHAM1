@@ -1,0 +1,1510 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.DeliveryVM
+@using Common;
+@{
+    ViewBag.Title = "Delivery";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/JQGridJs/jquery.jqGrid.min.js")" type="text/javascript"></script>
+
+<link href="~/Content/ToogleCreate/CreateTgl.css" rel="stylesheet" />
+<script src="~/Content/ToogleCreate/CreateTgl.js"></script>
+
+<style>
+    .toggle {
+        border-radius: 15px !important;
+        margin-top: -35px !important;
+    }
+
+        .toggle.btn {
+            min-width: 77px !important;
+            min-height: 34px;
+        }
+
+    .bold {
+        color: green;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    .legend2 {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        background-color: #57c8f1;
+        color: white !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 20px 5px 20px;
+        margin-bottom: 0px !important;
+        margin-top: -36px;
+    }
+
+    .legend3 {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        /*background-color: #57c8f1;*/
+        color: white !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 20px 5px 20px;
+        margin-bottom: 0px !important;
+        margin-top: -36px;
+    }
+
+    .example {
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        width: max-content;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .example th {
+            background-color: #F7F7F7;
+            font-weight: bold;
+        }
+
+        .example th, .example td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .example, .example table td {
+            border: 0px solid #ccc;
+        }
+
+    /*.SearchRow {
+        background-color: coral;
+    }*/
+    .SearchRow {
+        background-color: coral;
+    }
+
+    .SelectedRow {
+        background-color: rgb(225 205 225) !important;
+    }
+
+    .HideRow {
+        display: none !important;
+    }
+</style>
+
+<script type="text/javascript">
+    var DeliverNO = true, Sucess = true;
+    var DelGenerate = true;
+    $(document).ready(function () {
+
+        $('#attachdoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        })
+        $("#attachdoc").modal("hide");
+        $("#Lrno,#DeliveryNo").constrain({ allow: { regex: "[0-9]" } });
+        GetMyFavorites('@Model.ViewDataId');
+        if ('@Model.DeliverySetup.DeliveryBoth' == "True")
+        {
+            DelGenerate = true;
+        }
+        else if ('@Model.DeliverySetup.DeliveryGenerate' == "False")
+        {
+            DelGenerate = false;
+        }
+        if ('@Model.Mode' == 'Add') {
+
+            LrDetailsLoad();
+            $('#Lrno').prop("disabled", false);
+            $('#VehicleNo').prop("disabled", false);
+            if ('@Model.DelGenerate' == "M")
+            {
+                $('#BothCHK').bootstrapToggle('on');
+            }
+        } else {
+            $('#Lrno').prop("disabled", true);
+            $('#VehicleNo').prop("disabled", true);
+        }
+
+        if ('@Model.Mode' == "View" || '@Model.Mode' == "Delete")
+        {
+            $('#BothCHK').prop("disabled", true);
+            $('.form-group :input').prop("disabled", true);
+        }
+        if ('@Model.PeriodLock' == "True")
+        {
+            var Message = $("#ErrorMessage").text() + "<br>This Document Lock By Author....!";
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").html(Message);
+            $('#BothCHK').prop("disabled", true);
+            $('.form-group :input').prop("disabled", true);
+            $('.btn').prop("disabled", true);
+        }
+        if ('@Model.Mode' == "Edit" || '@Model.Mode' == "Delete")
+        {
+            if ('@Model.LockAuthorise' == "True")
+            {
+                var Message = $("#ErrorMessage").text() + "<br>Document Lock In @Model.Mode Mode As Per The Authentication Rule...";
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").html(Message);
+                $('#BothCHK').prop("disabled", true);
+                $('.form-group :input').prop("disabled", true);
+                $('.btn').prop("disabled", true);
+            }
+        }
+
+        $('#changebranch :input').prop("disabled", false);
+        $('#changeperiod :input').prop("disabled", false);
+        $('#BothCHK').change(function () {
+            debugger;
+            if (this.checked) {
+                $("#DeliveryNo").removeAttr("disabled");
+                DelGenerate = false;
+            } else {
+                $("#DeliveryNo").attr("disabled", "disabled");
+                DelGenerate = true;
+            }
+        });
+        $("#SelectDelLrNO").keyup(function () {
+            debugger;
+            var WantToselectLRNO = $("#SelectDelLrNO").val();
+            var ScrollRow;
+            var count = 0;
+            if ($("#CurrentBranchLRFlg").val() == "True" || $("#CurrentBranchLRFlg").val() == "true") {
+                debugger;
+                $('#list > tbody > tr').removeClass("HideRow");
+                $("#list > tbody  > tr").each(function () {
+                    debugger;
+                    var Row = $(this).closest('tr');
+                    var LRNO = Row.find('td:eq(5)').text();
+                    var Auth = Row.find('td:eq(18)').text();
+                    //if (LRNO == WantToselectLRNO) {
+                    if (LRNO.indexOf(WantToselectLRNO.toLowerCase()) >= 0) {
+                        Row.removeClass("HideRow");
+                        //ScrollRow = Row;
+                        if (Auth == "A") {
+                            debugger;
+                            //var objTable = $("#list");
+                            //var iRow = ScrollRow.find("td:eq(20)").text();
+                            //objTable.jqGrid('setSelection', iRow);
+                            //jQuery("#list").jqGrid('setRowData', parseInt(iRow), false, { background: 'rgb(225 205 225)' });
+                            //Row.addClass("SelectedRow");
+                            count++;
+                        }
+                        else if (Auth == "N") {
+                            alert("This Is Un-Authorised LR So U Cant Select IT...");
+
+                        }
+                        else if (Auth == "R") {
+                            alert("This Is Reject LR So U Cant Select IT...");
+                        }
+                    }
+                    else
+                    {
+                        Row.addClass("HideRow");
+                    }
+                });
+
+                if (count == 0) {
+                //    alert("Not Found");
+                //    $("#DelLrSearch").focus();
+                }
+                else {
+                    //$("#SelectDelLrNO").focus();
+                }
+            }
+            else {
+                $('#list2 > tbody > tr').removeClass("HideRow");
+                $("#list2 > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    var LRNO = Row.find('td:eq(5)').text();
+                    var Auth = Row.find('td:eq(18)').text();
+                    if (LRNO.indexOf(WantToselectLRNO.toLowerCase()) >= 0) {
+                        Row.removeClass("HideRow");
+                        //ScrollRow = Row;
+                        if (Auth == "A") {
+                            debugger;
+                            //var objTable = $("#list2");
+                            //var iRow = ScrollRow.find("td:eq(20)").text();
+                            //objTable.jqGrid('setSelection', iRow);
+                            //jQuery("#list2").jqGrid('setRowData', parseInt(iRow), false, { background: 'rgb(225 205 225)' });
+                            //Row.addClass("SelectedRow");
+                            count++;
+                        }
+                        else if (Auth == "N") {
+                            alert("This Is Un-Authorised LR So U Cant Select IT...");
+
+                        }
+                        else if (Auth == "R") {
+                            alert("This Is Reject LR So U Cant Select IT...");
+                        }
+                    }
+                    else
+                    {
+                        //var iRow = Row.find("td:eq(20)").text();
+                        //jQuery("#list2").jqGrid('setRowData', parseInt(iRow), false, { background: 'rgb(255 255 255)' });
+                        Row.addClass("HideRow");
+                    }
+                });
+            }
+           // $("#SelectDelLrNO").val("");
+        });
+        $("#btnDataSearch1").click(function (event) {
+            debugger;
+
+                if ($("#CurrentBranchLRFlg").val() == "True" || $("#CurrentBranchLRFlg").val() == "true") {
+                    CurrentBranchTab();
+                } else {
+                    SecondBranchTab();
+                }
+        });
+        $('#DelLrSearch').keyup(function () {
+            var value = $(this).val();
+            if (value != "")
+            {
+                if ($("#CurrentBranchLRFlg").val() == "True" || $("#CurrentBranchLRFlg").val() == "true") {
+                    $('#list > tbody > tr').removeClass('SearchRow');
+
+                    $("#list > tbody > tr > td ").each(function () {
+                        if ($(this).text().toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                            var dd = $(this).text().toLowerCase();
+                            $(this).addClass("SearchRow");
+                        }
+                        else {
+                            $(this).removeClass("SearchRow");
+                        }
+                    });
+                }
+                else {
+                    $('#list2 > tbody > tr').removeClass('SearchRow');
+
+                    $("#list2 > tbody > tr > td ").each(function () {
+                        if ($(this).text().toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                            var dd = $(this).text().toLowerCase();
+                            $(this).addClass("SearchRow");
+                        }
+                        else {
+                            $(this).removeClass("SearchRow");
+                        }
+                    });
+                }
+            }
+            else {
+                $('#list td').removeClass('SearchRow');
+                $('#list2 td').removeClass('SearchRow');
+            }
+        });
+        $("#btnDeliveryAddDoc").click(function (event) {
+            debugger;
+            event.preventDefault();
+            debugger;
+
+            if ($("#Lrno").val() == null || $("#Lrno").val() == "") {
+                alert("Please Get Consignment First...!");
+                return;
+            }
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = 'Edit';
+            ModelData["Srl"] = $("#Parentkey").val();
+            ModelData["Type"] = "LR000";
+            ModelData["RefType"] = '@Model.Header';
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+
+            var result = confirm("Are you sure you want to delete Delivery?");
+            if (result) {
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                            $("#ErrorMessage").hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            alert(data.Message);
+                            $('.spinner').hide();
+                        }
+                    },
+                });
+            }
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            $("#ErrorMessage1").hide();
+            debugger;
+            if (!DelGenerate) {
+                if ($("#DeliveryNo").val() == "0" || $("#DeliveryNo").val() == "") {
+                    $("#ErrorMessage1").show();
+                    $("#ErrorMessage1").text('Please Enter Delivery No...!');
+                    return;
+                }
+            }
+
+            if (!DeliverNO) {
+                $("#ErrorMessage1").show();
+                $("#ErrorMessage1").text('DeliveryNO Exist Please Change Delivery No.');
+                return;
+            }
+            if ($("#Lrno").val() == '' || $("#Lrno").val() == null) {
+                $("#ErrorMessage1").show();
+                $("#ErrorMessage1").text('Please Enter LRNO .');
+                return;
+            }
+            if ($("#DeliveryDate").val() == '' || $("#DeliveryDate").val() == null) {
+                $("#ErrorMessage1").show();
+                $("#ErrorMessage1").text('Please Select Delivery Date.');
+                return;
+            }
+            else
+            {
+                CheckAlertNoteMaster();
+            }
+        });
+    });
+    function AlertNoteMaster(value) {
+        event.preventDefault();
+        $('.spinner').show();
+        var url = '/Logistics/AlertNote/ShoWAlertNoteList';
+        var myTableArray = [];
+        myTableArray.push(value);
+        var DTO = { Type: "LR000", TypeCode: myTableArray, DocTpe: "DELV0" };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                if (data.Status == "Success") {
+                    var AttachDoc = $("#AlertNoteDiv");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#AlertNoteModal').modal('show');
+                }
+            },
+        });
+    }
+    function CheckAlertNoteMaster()
+    {
+        event.preventDefault();
+        $('.spinner').show();
+        var url = '@Url.Action("CheckStopAlertNote")';
+        var myTableArray = [];
+        $('#tabledata tbody tr').each(function () {
+            var Row = $(this).closest('tr');
+            var Qty = parseInt(Row.find(".txtfDelQty").val());
+            if (Qty>0) {
+                myTableArray.push(Row.find('td:eq(6)').text());
+            }
+        });
+        var POD = false;
+        if ($('input[name="POD"]:checked').val()=="Yes") {
+            POD = true;
+        }
+        var DTO = { Type: "LR000", TypeCode: myTableArray, DocTpe: "DELV0", POD: POD};
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success')
+                {
+                    $('.spinner').hide();
+                    $("#ErrorMessage").hide();
+                    CheckDate($("#DeliveryDate").val(), false, myTableArray[0]);
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function CheckDate(value, POD, LRNO) {
+        debugger;
+        $('.spinner').show();
+        var url = '@Url.Action("CheckDeliveryDate")';
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: url,
+            data: { DocDate: value, POD: POD, Lrno: LRNO},
+            success: function (result) {
+                debugger;
+                if (!result.Status) {
+                    Sucess = false;
+                    $('.spinner').hide();
+                    $("#ErrorMessage1").show();
+                    $("#ErrorMessage1").text(result.Message);
+                    return;
+
+                } else {
+                    if ($('input[name="POD"]:checked').val() == "Yes") {
+                        CheckPODDate($("#PODDate").val(), true, LRNO);
+                    } else {
+                        SaveDelivery();
+                    }
+
+                }
+            }
+        });
+    }
+    function CheckPODDate(value, POD, LRNO) {
+        debugger;
+        $('.spinner').show();
+        var url = '@Url.Action("CheckDeliveryDate")';
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: url,
+            data: { DocDate: value, POD: POD, Lrno: LRNO},
+            success: function (result) {
+                debugger;
+                if (!result.Status) {
+                    Sucess = false;
+                    $("#ErrorMessage1").show();
+                    $("#ErrorMessage1").text(result.Message);
+                    return;
+                } else {
+                    SaveDelivery();
+                }
+            }
+        });
+    }
+    function SaveDelivery() {
+        $('.spinner').show();
+        var url = '@Url.Action("SaveData")';
+        @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+        var ModelData = {};
+        ModelData["Document"] = $("#Document").val();
+        ModelData["DeliveryNo"] = $("#DeliveryNo").val();
+        ModelData["Lrno"] = $("#Lrno").val();
+        ModelData["DeliveryTime"] = $("#DeliveryTime").val();
+        ModelData["DeliveryDate"] = $("#DeliveryDate").val();
+        ModelData["DeliveryRemark"] = $("#DeliveryRemark").val();
+        ModelData["PODRemark"] = $("#PODRemark").val();
+        ModelData["PODTime"] = $("#PODTime").val();
+        ModelData["PODDate"] = $("#PODDate").val();
+
+        ModelData["DeliveryGoodStatus"] = $('input[name="DeliveryStatus"]:checked').val();
+        ModelData["POD"] = $('input[name="POD"]:checked').val();
+
+        ModelData["ShortQty"] = $("#ShortQty").val();
+        ModelData["PersonName"] = $("#PersonName").val();
+        ModelData["MobileNO"] = $("#MobileNO").val();
+
+        ModelData["VehicleNo"] = $("#VehicleNo").val();
+        if (DelGenerate) {
+            ModelData["DelGenerate"] = "A";
+        } else {
+            ModelData["DelGenerate"] = "M";
+        }
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+
+        var ChargeList = [];
+        var TotQty = 0;
+
+        var Mod='@Model.Mode';
+        if (Mod == "Edit")
+        {
+            debugger;
+            $('#tabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    ParentKey: tds.eq(7).text(),
+                    Type: tds.eq(2).text(),
+                    StkBranch: tds.eq(1).text(),
+                    DelQty: tds.find(".txtfDelQty").val(),
+                    DelWeight: tds.find(".txtDelWeight").val(),
+                }
+                TotQty += parseInt(tds.find(".txtfDelQty").val());
+                ChargeList.push(myDets);
+            });
+        }
+        else
+        {
+            $('#tabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    ParentKey: tds.eq(6).text(),
+                    Type: tds.eq(1).text(),
+                    StkBranch: tds.eq(0).text(),
+                    DelQty: tds.find(".txtfDelQty").val(),
+                    DelWeight: tds.find(".txtDelWeight").val(),
+                }
+                TotQty += parseInt(tds.find(".txtfDelQty").val());
+                ChargeList.push(myDets);
+            });
+        }
+        ModelData["DelRetions"] = ChargeList;
+        if (TotQty==0) {
+            $("#ErrorMessage1").show();
+            $("#ErrorMessage1").text('Atleast One Delivery Required...!');
+            return;
+        }
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    if ('@Model.Mode' == "Add") {
+                        alert("Document Saved as " + data.SerialNo + "");
+                        window.location.href = "/Logistics/Delivery/Index?TableName=DeliveryMaster&MainType=&Mode=Add&Header=Delivery&ViewDataId=Delivery&Controller2=Delivery&Module=Transactions&optiontype=M&optioncode=Delivery";
+                    } else
+                    {
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                    }
+                    $("#ErrorMessage").hide();
+                }
+                else {
+
+                    $('.spinner').hide();
+                    alert(data.Message);
+                    $('.spinner').hide();
+                }
+            },
+        });
+    }
+    function LrDetailsLoad() {
+
+        var ModelData = {};
+        ModelData["Lrno"] = null;
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+        ModelData["MinDate"] = '@Model.MinDate';
+        ModelData["MaxDate"] = '@Model.MaxDate';
+        ModelData["Document"] = '@Model.Document';
+        ModelData["DelGenerate"] = DelGenerate;
+        ModelData["DeliveryNo"] = $("#DeliveryNo").val();
+
+        var url = '@Url.Action("ShowLRDeliveryDetails")';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+
+                var LoadDownLoadFiles = $("#LRDetails");
+                LoadDownLoadFiles.html('');
+                LoadDownLoadFiles.html(data.Html);
+                $("#DeliveryRemark").val($('input[name="DeliveryStatus"]:checked').val());
+                $("#Lrno")[0].focus();
+            },
+        });
+    }
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<form class="form-horizontal" id="frmaccountLedger" role="form" style="margin-top:0%;">
+    <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+</form>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LRMaster" role="form" style="">
+            <fieldset class=" col-sm-12" style="margin-top: 3%;">
+                @if (Model.DeliverySetup.DeliveryBoth)
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="info" data-offstyle="danger" data-on="Manual" data-off="Auto" style="width: 73px !important;height: 34px;">
+                }
+                else if (Model.DeliverySetup.DeliveryGenerate)
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="info" data-offstyle="danger" data-on="Manual" data-off="Auto" style="width: 73px !important;height: 34px;" disabled>
+                }
+                else
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="danger" data-offstyle="info" data-on="Auto" data-off="Manual" style="width: 73px !important;height: 34px;" disabled>
+                }
+                <button class="btn btn-info legend2" id="btnDeliveryAddDoc">Attachment</button>
+
+                <div class="panel panel-default" style="height:470px;">
+                    <div class="panel-body " style="padding-left: 0px !important;">
+                        <div class="col-sm-12" id="LRDetails">
+                            @Html.Partial("_ShowLRDeliveryDetails", Model)
+                            <script>
+                                $(document).ready(function () {
+                                    $("#Lrno")[0].focus();
+                                });
+                            </script>
+                        </div>
+
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+
+
+
+
+</section>
+
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4">
+            <div class="pull-left">
+
+
+            </div>
+        </div>
+        <div class="col-sm-4" style="margin-top:0px;">
+            <div class="col-sm-12" id="" style="overflow: hidden;padding-left: 0px!important;">
+                <label class="col-sm-offset-4 col-sm-8 control-label" style="margin-top:5px;">ALT AIR-3.0, Shruham Software</label>
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode == "Delete")
+                {
+                    <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+
+                }
+                else
+                {
+                    <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!--All Destination Modal -->
+<div class="modal fade" id="LRComboList" style="overflow:scroll;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" @*style="margin-top: 60px;"*@>
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: 100%;margin: auto;margin-top: 5%;">
+        <div class="modal-content">
+            <div class="modal-body" style="height:480px;">
+                <div class="tab">
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable1')" id="Default">Current Branch</button>
+                    <button class="tablinks" onclick="openCity(event, 'divLedgerTable2')" id="Default1">ALL</button>
+                    <div>
+                        <div class="col-sm-1" style="width:auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Select By</label>
+                        </div>
+                        <div class="col-sm-2" style="width:auto;">
+                            <input type="text" id="SelectDelLrNO" tabindex="2" class="form-control" placeholder="Search LR NO" />
+                        </div>
+                        <div class="col-sm-1" style="width:auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-sm-2" style="width:auto;">
+                            <input type="text" id="DelLrSearch" class="form-control" placeholder="Search Here" />
+                        </div>
+                        <div class="col-sm-2" style="width:auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Serach LRNO</label>
+                        </div>
+                        <div class="col-sm-2" style="width:auto;">
+                            <input type="text" id="txtDataSearch1" class="form-control" placeholder="Search LRNO" />
+                        </div>
+                        <div class="col-sm-2" style="width:auto;margin-top:-5px; padding-left: 0px !important;">
+                            <button class="btn btn-danger" style="height: 28px;margin-top:5px;width: 35px !important;" id="btnDataSearch1" data-toggle="tooltip" data-placement="top"><i class="glyphicon glyphicon-search"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div id="divLedgerTable1" style="height:430px;overflow: auto;" class="tabcontent">
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="pager" style="height:32px;width:100%;"></div>
+                    </div>
+
+
+                    @*@Html.Partial("_LRComboList", Model.CurrentBranch)*@
+                </div>
+                <div id="divLedgerTable2" style="height:430px;overflow: auto;" class="tabcontent">
+                    @*@Html.Partial("_LRComboList1", Model.All)*@
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="list2" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="pager2" style="height:32px;width:100%;"></div>
+                    </div>
+                </div>
+
+                <script>
+                    function GridReload() {
+                        $('#list').jqGrid('clearGridData');
+                        $("#list").jqGrid("GridUnload");
+                        $('#list').trigger('reloadGrid');
+
+                        $("#Search").val("");
+                        $("#SelectLR").val("");
+
+                        var ColName, Coldata;
+                        var lPath = window.location.pathname;
+                        var arrPath = lPath.split("/");
+                        var code = $("#btncode").val();
+                        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=CurrentBranchStock';
+                        var sUrlpath = '@Url.Action("GetGridData")?ViewDataId=CurrentBranchStock&searchString=' + $('#txtDataSearch1').val();
+                        var ModelData = {};
+                        ModelData["ViewDataId"] = "CurrentBranchStock";
+                        ModelData["searchString"] = $('#txtDataSearch1').val();
+                        $('#txtDataSearch1').val("");
+                        var DTO = { Model: ModelData };
+                        $.ajax({
+                            url: sPathUrl,
+                            type: "POST",
+                            contentType: "application/json; charset=utf-8",
+                            dataType: "json",
+                            beforeSend: function () {
+                                $('.spinner').show();
+                            },
+                            success: function (data) {
+                                var obj = $.parseJSON(data);
+                                ColName = obj[0].split(",");
+                                Coldata = obj[1];
+                                CreateGridData();
+                                $('.spinner').hide();
+                            },
+                            error: function () {
+                                alert("Error with AJAX callback");
+                            }
+                        });
+
+                        function CreateGridData() {
+                            $('#list').jqGrid({
+                                url: sUrlpath,
+                                datatype: 'json',
+                                mtype: 'POST',
+                                sortable: true,
+                                colNames: ColName,
+                                colModel: Coldata,
+                                pager: $('#pager'),
+                                rowNum: @Session["GridRows"],
+                                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                                height:330,
+                                sortname: '',
+                                frozen: false,
+                                sortorder: 'asc',
+                                gridview: true,
+                                viewrecords: true,
+                                //scroll: false,
+                                autowidth: false,
+                                shrinkToFit: false,
+                                search: true,
+                                scrollrows: true,
+                                onSelectRow: function (id, status, e) {
+                                    $('.spinner').hide();
+                                },
+                                ondblClickRow: function (id) {
+                                    //event.preventDefault();
+                                    var myGrid = $('#list');
+                                    var cellVal = myGrid.jqGrid('getCell', id, 'Authenticate');
+
+                                    if (cellVal == "A")
+                                    {
+                                        $("#LRComboList").modal("hide");
+                                        var Reco = myGrid.jqGrid('getCell', id, 'LrNo');;
+                                        var LRNO = myGrid.jqGrid('getCell', id, 'LrNo');;
+                                        var TableKey = myGrid.jqGrid('getCell', id, 'TableKey');;
+                                        var ModelData = {};
+                                        $("#Parentkey").val(TableKey);
+                                        ModelData["Lrno"] = TableKey;
+                                        ModelData["Mode"] = '@Model.Mode';
+                                        ModelData["CurrentBranchLR"] = $("#CurrentBranchLRFlg").val();
+                                        ModelData["DelGenerate"] = DelGenerate;
+                                        ModelData["DeliveryNo"] = $("#DeliveryNo").val();
+                                        var url = '@Url.Action("ShowLRDeliveryDetails")';
+                                        var DTO = { mModel: ModelData };
+
+                                        $.ajax({
+                                            type: "POST",
+                                            dataType: "json",
+                                            data: JSON.stringify(DTO),
+                                            cache: false,
+                                            url: url,
+                                            contentType: "application/json; charset=utf-8",
+                                            beforeSend: function () {
+                                                $('.spinner').show();
+                                            },
+                                            success: function (data) {
+                                                $("#ErrorMessage").hide();
+                                                $('.spinner').hide();
+
+
+
+                                                var LoadDownLoadFiles = $("#LRDetails");
+                                                LoadDownLoadFiles.html('');
+                                                LoadDownLoadFiles.html(data.Html);
+                                                $("#DeliveryRemark").val($('input[name="DeliveryStatus"]:checked').val());
+                                                AlertNoteMaster(TableKey);
+                                            },
+                                        });
+                                    }
+                                    else if (cellVal == "N")
+                                    {
+                                        alert("This Is Unthorise Lr So U Cant Pick IT...\n Please Contact To The Admin.");
+                                    }
+                                    else if (cellVal == "R")
+                                    {
+                                        alert("This Is Rejected Lr So U Cant Pick IT...\n Please Contact To The Admin.");
+                                    }
+                                },
+
+                                beforeRequest: function () {
+                                    responsive_jqgridData($(".jqGrid"));
+                                },
+                                gridComplete: function () {
+                                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                                    for (var i = 0; i < ids.length; i++) {
+                                        var rowId = ids[i];
+                                        var gridId = jQuery("#list").getDataIDs();
+                                        //loop through grid rows
+
+                                        var Auth = jQuery("#list").getCell(rowId, "Authenticate");
+                                        if (Auth == "A")
+                                        {
+
+                                        }
+                                        else if (Auth == "N")
+                                        {
+                                            jQuery("#list").jqGrid('setRowData', ids[i], false, { background: 'rgb(80 121 212)' });
+                                        }
+                                        else if (Auth == "R")
+                                        {
+                                            jQuery("#list").jqGrid('setRowData', ids[i], false, { background: 'rgb(191 104 96)' });
+                                        }
+                                    }
+                                },
+                            });
+                            jQuery("#list").jqGrid('navGrid', "#pager",
+                            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+                            jQuery("#list").jqGrid("setFrozenColumns");
+                        };
+
+                        function responsive_jqgridData(jqgrid) {
+                            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+                            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+                            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('#pager_right').css('width', '180px');
+                            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+                            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+                            //$('#GetLRLIst').modal('show');
+                        };
+                    }
+                    function GridReload1() {
+
+                        $('#list2').jqGrid('clearGridData');
+                        $("#list2").jqGrid("GridUnload");
+                        $('#list2').trigger('reloadGrid');
+
+                        $("#Search").val("");
+                        $("#SelectLR").val("");
+
+
+                        var ColName, Coldata;
+                        var lPath = window.location.pathname;
+                        var arrPath = lPath.split("/");
+                        var code = $("#btncode").val();
+                        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=AllBranchStock';
+                        var sUrlpath = '@Url.Action("GetGridData1")?ViewDataId=AllBranchStock&searchString=' + $('#txtDataSearch1').val();
+                        var ModelData = {};
+                        ModelData["ViewDataId"] = "AllBranchStock";
+                        ModelData["searchString"] = $('#txtDataSearch1').val();
+                        $('#txtDataSearch1').val("");
+                        var DTO = { Model: ModelData };
+                        $.ajax({
+                            url: sPathUrl,
+                            type: "POST",
+                            contentType: "application/json; charset=utf-8",
+                            dataType: "json",
+                            beforeSend: function () {
+                                $('.spinner').show();
+                            },
+                            success: function (data) {
+                                var obj = $.parseJSON(data);
+                                ColName = obj[0].split(",");
+                                Coldata = obj[1];
+                                CreateGridData();
+                                $('.spinner').hide();
+                            },
+                            error: function () {
+                                alert("Error with AJAX callback");
+                            }
+                        });
+
+                        function CreateGridData() {
+                            $('#list2').jqGrid({
+                                url: sUrlpath,
+                                datatype: 'json',
+                                mtype: 'POST',
+                                sortable: true,
+                                colNames: ColName,
+                                colModel: Coldata,
+                                pager: $('#pager2'),
+                                rowNum: @Session["GridRows"],
+                                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                                height:330,
+                                sortname: '',
+                                frozen: false,
+                                sortorder: 'asc',
+                                gridview: true,
+                                viewrecords: true,
+                                //scroll: false,
+                                autowidth: false,
+                                shrinkToFit: false,
+                                search: true,
+                                scrollrows: true,
+                                onSelectRow: function (id, status, e) {
+                                    $('.spinner').hide();
+                                },
+                                ondblClickRow: function (id) {
+                                    //event.preventDefault();
+                                    var myGrid = $('#list2');
+                                    var cellVal = myGrid.jqGrid('getCell', id, 'Authenticate');
+
+                                    if (cellVal == "A")
+                                    {
+                                        $("#LRComboList").modal("hide");
+                                        var Reco = myGrid.jqGrid('getCell', id, 'LrNo');
+                                        var LRNO = myGrid.jqGrid('getCell', id, 'LrNo');
+                                        var TableKey = myGrid.jqGrid('getCell', id, 'TableKey');;
+                                        var ModelData = {};
+                                        ModelData["Lrno"] = TableKey;
+                                        ModelData["Mode"] = '@Model.Mode';
+                                        ModelData["CurrentBranchLR"] = $("#CurrentBranchLRFlg").val();
+                                        ModelData["DelGenerate"] = DelGenerate;
+                                        ModelData["DeliveryNo"] = $("#DeliveryNo").val();
+                                        var url = '@Url.Action("ShowLRDeliveryDetails")';
+                                        var DTO = { mModel: ModelData };
+
+                                        $.ajax({
+                                            type: "POST",
+                                            dataType: "json",
+                                            data: JSON.stringify(DTO),
+                                            cache: false,
+                                            url: url,
+                                            contentType: "application/json; charset=utf-8",
+                                            beforeSend: function () {
+                                                $('.spinner').show();
+                                            },
+                                            success: function (data) {
+                                                $("#ErrorMessage").hide();
+                                                $('.spinner').hide();
+
+                                                var LoadDownLoadFiles = $("#LRDetails");
+                                                LoadDownLoadFiles.html('');
+                                                LoadDownLoadFiles.html(data.Html);
+                                                $("#DeliveryRemark").val($('input[name="DeliveryStatus"]:checked').val());
+                                                AlertNoteMaster(TableKey);
+                                            },
+                                        });
+                                    }
+                                    else if (cellVal == "N")
+                                    {
+                                        alert("This Is Unthorise Lr So U Cant Pick IT...\n Please Contact To The Admin.");
+                                    }
+                                    else if (cellVal == "R")
+                                    {
+                                        alert("This Is Rejected Lr So U Cant Pick IT...\n Please Contact To The Admin.");
+                                    }
+                                },
+
+                                beforeRequest: function () {
+                                    responsive_jqgridData($(".jqGrid"));
+                                },
+                                gridComplete: function ()
+                                {
+                                    var ids = jQuery("#list2").jqGrid('getDataIDs');
+                                    for (var i = 0; i < ids.length; i++) {
+                                        var rowId = ids[i];
+                                        var gridId = jQuery("#list2").getDataIDs();
+                                        //loop through grid rows
+
+                                        var Auth = jQuery("#list2").getCell(rowId, "Authenticate");
+                                        if (Auth == "A")
+                                        {
+
+                                        }
+                                        else if (Auth == "N")
+                                        {
+                                            jQuery("#list2").jqGrid('setRowData', ids[i], false, { background: 'rgb(80 121 212)' });
+                                        }
+                                        else if (Auth == "R")
+                                        {
+                                            jQuery("#list2").jqGrid('setRowData', ids[i], false, { background: 'rgb(191 104 96)' });
+                                        }
+                                    }
+                                },
+                            });
+                            jQuery("#list2").jqGrid('navGrid', "#pager2",
+                            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+                            jQuery("#list2").jqGrid("setFrozenColumns");
+                        };
+
+                        function responsive_jqgridData(jqgrid) {
+                            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+                            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+                            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('#pager_right').css('width', '180px');
+                            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+                            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+                            //$('#GetLRLIst').modal('show');
+                        };
+                    }
+                    function CurrentBranchTab() {
+                        $('#list').jqGrid('clearGridData');
+                        $("#list").jqGrid("GridUnload");
+                        $('#list').trigger('reloadGrid');
+                        $('#list2').jqGrid('clearGridData');
+                        $("#list2").jqGrid("GridUnload");
+                        $('#list2').trigger('reloadGrid');
+                        GridReload();
+                    }
+                    function SecondBranchTab() {
+                        $('#list').jqGrid('clearGridData');
+                        $("#list").jqGrid("GridUnload");
+                        $('#list').trigger('reloadGrid');
+                        $('#list2').jqGrid('clearGridData');
+                        $("#list2").jqGrid("GridUnload");
+                        $('#list2').trigger('reloadGrid');
+                        GridReload1();
+                    }
+                    function openCity(evt, cityName) {
+
+                        var i, tabcontent, tablinks;
+                        tabcontent = document.getElementsByClassName("tabcontent");
+                        for (i = 0; i < tabcontent.length; i++) {
+
+                            tabcontent[i].style.display = "none";
+                        }
+
+                        tablinks = document.getElementsByClassName("tablinks");
+                        for (i = 0; i < tablinks.length; i++) {
+
+                            tablinks[i].className = tablinks[i].className.replace(" active", "");
+                        }
+
+                        if (cityName == "divLedgerTable1") {
+                            debugger;
+                            $("#CurrentBranchLRFlg").val(true);
+                            $("#hdnSearchFld").val("");
+                            //ResetSearch();
+                            CurrentBranchTab();
+
+                        } else {
+                            $("#CurrentBranchLRFlg").val(false);
+                            $("#hdnSearchFld").val("");
+                            //ResetSearch();
+                            SecondBranchTab();
+                        }
+                        document.getElementById(cityName).style.display = "block";
+                        evt.currentTarget.className += " active";
+                    }
+                    document.getElementById("Default").click();
+                </script>
+            </div>
+            <div class="modal-footer">
+                <div class=" col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Rejected LR :</label>
+                    <svg width="20" height="20" style="margin-top:0px;">
+                        <title>Rejected LR</title>
+                        <rect width="20" height="20" style="fill:#bf6860;stroke-width:3;stroke:rgb(0,0,0)" />
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Un-Authorise LR:</label>
+                    <svg width="20" height="20" style="margin-top:0px;">
+                        <title>Un-Authorise LR</title>
+                        <rect width="20" height="20" style="fill:#5079d4;stroke-width:3;stroke:rgb(0,0,0)" />
+                    </svg>
+                </div>
+                <button type="button" style="float:right" class="btn btn-danger" data-dismiss="modal">Close</button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--All Destination Modal -->
+<div class="modal fade" id="SearchLRComboList" style="overflow:scroll;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" @*style="margin-top: 60px;"*@>
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: 100%;margin: auto;margin-top: 5%;">
+        <div class="modal-content">
+            <div class="modal-body" style="height:480px;">
+                <div id="divLedgerTable3" style="height:430px;overflow: auto;">
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="list3" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="pager3" style="height:32px;width:100%;"></div>
+                    </div>
+                </div>
+                <script>
+                    function GridReload2() {
+                        $('#list3').jqGrid('clearGridData');
+                        $("#list3").jqGrid("GridUnload");
+                        $('#list3').trigger('reloadGrid');
+
+                        $("#Search").val("");
+                        $("#SelectLR").val("");
+
+                        var ColName, Coldata;
+                        var lPath = window.location.pathname;
+                        var arrPath = lPath.split("/");
+                        var code = $("#btncode").val();
+                        var sPathUrl = '@Url.Action("GetGridStructureRecords")?id=SearchBranchStock';
+                        var sUrlpath = '@Url.Action("GetGridData2")?ViewDataId=SearchBranchStock&Value3=' + $('#Lrno').val();
+                        var ModelData = {};
+                        ModelData["ViewDataId"] = "SearchBranchStock";
+                        ModelData["searchString"] = $('#txtDataSearch1').val();
+                        $('#txtDataSearch1').val("");
+                        var DTO = { Model: ModelData };
+                        $.ajax({
+                            url: sPathUrl,
+                            type: "POST",
+                            contentType: "application/json; charset=utf-8",
+                            dataType: "json",
+                            beforeSend: function () {
+                                $('.spinner').show();
+                            },
+                            success: function (data) {
+                                var obj = $.parseJSON(data);
+                                ColName = obj[0].split(",");
+                                Coldata = obj[1];
+                                CreateGridData();
+                                $('.spinner').hide();
+                            },
+                            error: function () {
+                                alert("Error with AJAX callback");
+                            }
+                        });
+
+                        function CreateGridData() {
+                            $('#list3').jqGrid({
+                                url: sUrlpath,
+                                datatype: 'json',
+                                mtype: 'POST',
+                                sortable: true,
+                                colNames: ColName,
+                                colModel: Coldata,
+                                pager: $('#pager3'),
+                                rowNum: @Session["GridRows"],
+                                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                                height:330,
+                                sortname: '',
+                                frozen: false,
+                                sortorder: 'asc',
+                                gridview: true,
+                                viewrecords: true,
+                                //scroll: false,
+                                autowidth: false,
+                                shrinkToFit: false,
+                                search: true,
+                                scrollrows: true,
+                                onSelectRow: function (id, status, e) {
+                                    $('.spinner').hide();
+                                },
+                                ondblClickRow: function (id) {
+                                    //event.preventDefault();
+                                    var myGrid = $('#list3');
+                                    var cellVal = myGrid.jqGrid('getCell', id, 'Authenticate');
+
+                                    if (cellVal == "A")
+                                    {
+                                        $("#SearchLRComboList").modal("hide");
+                                        var Reco = myGrid.jqGrid('getCell', id, 'LrNo');
+                                        var LRNO = myGrid.jqGrid('getCell', id, 'LrNo');
+                                        var TableKey = myGrid.jqGrid('getCell', id, 'TableKey');;
+                                        $("#Parentkey").val(TableKey);
+                                        var ModelData = {};
+                                        ModelData["Lrno"] = TableKey;
+                                        ModelData["Mode"] = '@Model.Mode';
+                                        ModelData["CurrentBranchLR"] = false;
+                                        ModelData["DelGenerate"] = DelGenerate;
+                                        ModelData["DeliveryNo"] = $("#DeliveryNo").val();
+                                        var url = '@Url.Action("ShowLRDeliveryDetails")';
+                                        var DTO = { mModel: ModelData };
+
+                                        $.ajax({
+                                            type: "POST",
+                                            dataType: "json",
+                                            data: JSON.stringify(DTO),
+                                            cache: false,
+                                            url: url,
+                                            contentType: "application/json; charset=utf-8",
+                                            beforeSend: function () {
+                                                $('.spinner').show();
+                                            },
+                                            success: function (data) {
+                                                $("#ErrorMessage").hide();
+                                                $('.spinner').hide();
+
+                                                var LoadDownLoadFiles = $("#LRDetails");
+                                                LoadDownLoadFiles.html('');
+                                                LoadDownLoadFiles.html(data.Html);
+                                                $("#DeliveryRemark").val($('input[name="DeliveryStatus"]:checked').val());
+                                                AlertNoteMaster(TableKey);
+                                                $("#DeliveryDate")[0].focus();
+                                            },
+                                        });
+                                    }
+                                    else if (cellVal == "N")
+                                    {
+                                        alert("This Is Unthorise Lr So U Cant Pick IT...\n Please Contact To The Admin.");
+                                    }
+                                    else if (cellVal == "R")
+                                    {
+                                        alert("This Is Rejected Lr So U Cant Pick IT...\n Please Contact To The Admin.");
+                                    }
+                                },
+
+                                beforeRequest: function () {
+                                    responsive_jqgridData($(".jqGrid"));
+                                },
+                                gridComplete: function () {
+                                    var ids = jQuery("#list3").jqGrid('getDataIDs');
+                                    for (var i = 0; i < ids.length; i++) {
+                                        var rowId = ids[i];
+                                        var gridId = jQuery("#list3").getDataIDs();
+                                        //loop through grid rows
+
+                                        var Auth = jQuery("#list3").getCell(rowId, "Authenticate");
+                                        if (Auth == "A")
+                                        {
+
+                                        }
+                                        else if (Auth == "N")
+                                        {
+                                            jQuery("#list3").jqGrid('setRowData', ids[i], false, { background: 'rgb(80 121 212)' });
+                                        }
+                                        else if (Auth == "R")
+                                        {
+                                            jQuery("#list3").jqGrid('setRowData', ids[i], false, { background: 'rgb(191 104 96)' });
+                                        }
+                                    }
+                                },
+                            });
+                            jQuery("#list3").jqGrid('navGrid', "#pager3",
+                            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+                            jQuery("#list3").jqGrid("setFrozenColumns");
+                        };
+
+                        function responsive_jqgridData(jqgrid) {
+                            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+                            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+                            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+                            jqgrid.find('#pager_right').css('width', '180px');
+                            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+                            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+                            //$('#GetLRLIst').modal('show');
+                        };
+                    }
+
+                    //function openCity(evt, cityName) {
+
+                    //    var i, tabcontent, tablinks;
+                    //    tabcontent = document.getElementsByClassName("tabcontent");
+                    //    for (i = 0; i < tabcontent.length; i++) {
+
+                    //        tabcontent[i].style.display = "none";
+                    //    }
+
+                    //    tablinks = document.getElementsByClassName("tablinks");
+                    //    for (i = 0; i < tablinks.length; i++) {
+
+                    //        tablinks[i].className = tablinks[i].className.replace(" active", "");
+                    //    }
+
+
+                    //    document.getElementById(cityName).style.display = "block";
+                    //    evt.currentTarget.className += " active";
+                    //}
+                    //document.getElementById("Default3").click();
+                </script>
+            </div>
+            <div class="modal-footer">
+                <div class=" col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Rejected LR :</label>
+                    <svg width="20" height="20" style="margin-top:0px;">
+                        <title>Rejected LR</title>
+                        <rect width="20" height="20" style="fill:#bf6860;stroke-width:3;stroke:rgb(0,0,0)" />
+                    </svg>
+                </div>
+                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Un-Authorise LR:</label>
+                    <svg width="20" height="20" style="margin-top:0px;">
+                        <title>Un-Authorise LR</title>
+                        <rect width="20" height="20" style="fill:#5079d4;stroke-width:3;stroke:rgb(0,0,0)" />
+                    </svg>
+                </div>
+                <button type="button" style="float:right" class="btn btn-danger" data-dismiss="modal">Close</button>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@*Suchan Attachment*@
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="attachdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="AttachDoc">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!--Only Alert Note Modal -->
+<div class="example-modal">
+    <div id="AlertNoteModal" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div class="modal-body">
+                <div class="modal-content">
+                    <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title"><b>Alert Note System</b></h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group" id="AlertNoteDiv" style="min-height:430px;max-height:430px;overflow:auto;">
+
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                        <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.CurrentBranchLR, new { @id = "CurrentBranchLRFlg" })
+@Html.HiddenFor(x => x.Parentkey)

@@ -1,0 +1,172 @@
+﻿<script type="text/javascript">
+
+    $(document).ready(function () {
+        $("#btnfind11").click(function (event) {
+            event.preventDefault(event);
+            jQuery("#acclist").jqGrid('setGridParam', {
+                postData: { searchtype: $("#searchtype").val(), searchtext: $("#searchtext").val() }
+            },
+        { page: 1 }).trigger('reloadGrid');
+        });
+
+        $("#btnSelectAcc").click(function () {
+            var selectedRowId = $('#acclist').jqGrid('getGridParam', 'selrow');
+            var columnIndex = 1;
+            var cellValue1 = $("#" + selectedRowId).find('td').eq(columnIndex).text();
+            var columnIndex2 = 2;
+            var cellValue2 = $("#" + selectedRowId).find('td').eq(columnIndex2).text();
+            $("#hdnCode").val(cellValue1);
+            $("#hdnAccountName").val(cellValue2);
+            loadaccount1()
+        });
+
+    });
+
+
+
+    function loadlist() {
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+        var arrPath = lPath.split("/");
+        var code = $("#btncode").val();
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")';
+        var sUrlpath = '@Url.Action("GetAccDetailList")?MainType='+ $('#hdnMainType').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#acclist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager1'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                sortname: 'Code',
+                height: 300,
+                sortorder: 'asc',
+                gridview: true,
+                editable: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: true,
+                shrinkToFit: true,
+                //search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+
+                gridComplete: function () {
+                    $('#' + rowId + ' input:checkbox').attr("disabled", false)
+                    var ids = jQuery("#acclist").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        $('#' + rowId + ' input:checkbox').attr("disabled", false)
+                        var rowData = jQuery('#acclist').jqGrid('getRowData', rowId);
+
+                    }
+                },
+                onSelectRow: function (id, status) {
+                    selectedRowId = jQuery("#acclist").jqGrid('getGridParam', 'selrow');
+                    var ch = jQuery("#acclist").find('#' + selectedRowId + ' input:checkbox').prop('checked');
+
+                    if (ch) {
+                        jQuery("#acclist").find('#' + selectedRowId + ' input:checkbox').prop('checked', false);
+                    } else {
+                        jQuery("#acclist").find('#' + selectedRowId + ' input:checkbox').prop('checked', true);
+
+                    }
+                },
+
+
+            });
+
+        };
+
+
+        function buttonclick() {
+            event.preventDefault();
+            var ids = jQuery("#acclist").jqGrid('getDataIDs');
+            var colname = jQuery('#acclist').jqGrid('getGridParam', 'colNames');
+            for (var i = 0; i < ids.length; i++) {
+                var rowId = ids[i];
+                var celValue = jQuery("#acclist").jqGrid('getCell', 'Code');
+                var selr = jQuery('#acclist').jqGrid('getGridParam', 'selrow');
+                var rowData = jQuery('#acclist').jqGrid('getRowData', rowId);
+                var abc = rowData.KeyCol;
+
+            }
+        }
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager1_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', ' #cccccc');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+
+        };
+    };
+
+
+
+</script>
+
+
+
+
+
+<div class="modal-content">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title" style="font-size:large"><b>Account Details</b></h4>
+    </div>
+    <div class="modal-body">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Search</label>
+                    <div class="col-sm-4">
+                        <select class="form-control" id="searchtype">
+                            <option value="0">--Select--</option>
+                            <option value="Code">Code</option>
+                            <option value="Name">Name</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-4">
+                        <input type="text" class="form-control"  id="searchtext" />
+                    </div>
+                    <div class="col-sm-1">
+                        <button type="button" id="btnfind11" class="btn btn-sm sc_button_blue" style="padding:1px 5px;"><i class="fa fa-refresh"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="overflow:scroll">
+            <table id="acclist" class="scroll" cellpadding="0" cellspacing="0"></table>
+            <div id="pager1" style="height:32px;"></div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-warning" data-dismiss="modal" id="btnSelectAcc">Save</button>
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+    </div>
+</div>

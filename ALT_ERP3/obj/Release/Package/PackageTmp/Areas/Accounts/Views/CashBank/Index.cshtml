@@ -1,0 +1,642 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.LedgerVM
+@using Common
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<style>
+    .form-control {
+        height: 28px;
+        border: 1px solid #BBBABA;
+        color: black;
+    }
+
+    .form-horizontal .control-label {
+        padding-top: 6px;
+        color: black;
+        text-align: left;
+    }
+
+    .headername {
+        font-size: medium;
+        font-family: Tahoma;
+        font-weight: 700;
+    }
+
+    .CodeSt {
+        font-size: 18px;
+    }
+
+    .fixhead {
+        text-transform: uppercase;
+    }
+
+    /*.modal-dialog {
+        align-self:center;
+    }*/
+
+    .form-group {
+        margin-bottom: 5px;
+    }
+
+    .SaveData {
+        background-color: #95b75d;
+        border-color: #95b75d;
+        color: #FFFFFF;
+        display: inline-block;
+        padding: 6px 12px;
+        margin-bottom: 0;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.42857143;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: middle;
+        -ms-touch-action: manipulation;
+        touch-action: manipulation;
+        cursor: pointer;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+        background-image: none;
+        border: 1px solid transparent;
+        border-radius: 4px;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+    GetMyFavorites('@Model.ViewDataId');
+        $("#DocuDate").focus();
+        $('#DocuDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        //loadBranch();
+        loadCashBank();
+        LoadCurrencyMain();
+        $('#CurrName').change(function () {
+            var url = '@Url.Action("GetCurrencyRate")?Code=' + $('#CurrName').val();
+            $.ajax({
+                type: "GET",
+                dataType: "json",
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data == parseFloat(0)) {
+                        $('#CurrRate').val(1)
+                    }
+                    else {
+                        var currRateI = parseFloat(data);
+                        $('#CurrRate').val(currRateI.toFixed(2));
+                    }
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#BankCashCode').change(function () {
+            var url = '@Url.Action("ChangeFirstEntry")';
+            var ModelData = {};
+
+            ModelData["Branch"] = $("#hdnBranch").val();
+            ModelData["Code"] = $("#BankCashCode").val();
+            ModelData["ConstantMode"] = $("#hdnConstantMode").val();
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#SelectedledgerTable').html(data.Html);
+                    if ($('#hdnMainType').val() == "RC") {
+                        $('#SumDebit').val(data.Sumdebit);
+                        $('#SumCredit').val(data.Sumcredit);
+                    }
+                    if ($('#hdnMainType').val() == "PM") {
+                        $('#SumDebit').val(data.Sumdebit);
+                        $('#SumCredit').val(data.Sumcredit);
+                    }
+                    if ($('#hdnMainType').val() == "JV") {
+                        $('#SumDebit').val(data.Sumdebit);
+                        $('#SumCredit').val(data.Sumcredit);
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        if ($("#hdnMainType").val() == "JV") {
+            $('#CBDetail').hide();
+            $("#BankCashCode").val("");
+        }
+        if ($("#hdnLockPosting").val() == "True" || $("#hdnLockPosting").val() == "true") {
+            if ($("#hdnRecoFlag").val() == "C") {
+                $('#frmaddnewbank :input').prop("disabled", true);
+                $('.form-horizontal :input').prop("disabled", true);
+                $('#divLedgerTable :input').prop('disabled', true);
+                $('#saveFooter :input').prop("disabled", true);
+            }
+        }
+
+        if ($("#hdnAudited").val() == "True" || $("#hdnAudited").val() == "true") {
+            $('#frmaddnewbank :input').prop("disabled", true);
+            $('.form-horizontal :input').prop("disabled", true);
+            $('#divLedgerTable :input').prop('disabled', true);
+            $('#saveFooter :input').prop("disabled", true);
+        }
+
+        $('#DeleteData').click(function () {
+            event.preventDefault();
+            $("#ErrorMessage").hide();
+            var url = '@Url.Action("DeleteData")';
+            var ModelData = {};
+            ModelData["ParentKey"] = $("#hdnParentKey").val();
+            ModelData["Header"] = '@Model.Header';
+            ModelData["Branch"] = '@Model.Branch';
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            ModelData["DocuDate"] = $("#DocuDate").val();
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    alert(data.Message);
+                    if (data.Status == 'Success') {
+                        window.location.href = "/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2"
+                    }
+                    else if (data.Status == 'Error') {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $('.SaveData').click(function () {
+            event.preventDefault();
+            if ($("#DocuDate").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select DocDate.');
+                return;
+            }
+            if ($("#hdnBranch").val() == 0 || $("#hdnBranch").val() == null) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select Branch.');
+                return;
+            }
+            if ($("#CurrName").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Select Currency.');
+                return;
+            }
+            if ($("#hdnMainType").val() != "JV") {
+                if ($("#BankCashCode").val() == '') {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Please Select Bank / Cash.');
+                    return;
+                }
+            }
+            if ($("#SumDebit").val() == 0 && $("#SumCredit").val() == 0) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Nothing Entered..');
+                return;
+            }
+            if ($("#SumDebit").val() != $("#SumCredit").val()) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Total of Debit Not Equal to Total of Credits.');
+                return;
+            }
+            $("#ErrorMessage").hide();
+            var AddonSerial = [];
+            $('#addongrid').find('tr[id="datacharge"]').each(function () {
+                var $tds = $(this).find('td');
+                var myDets = {
+                    Fld: $tds.eq(0).text(),
+                    ApplCode: ($tds.eq(4).text() == "C" || $tds.eq(4).text() == "M") ? $tds.find(".addontxtfvalue").val() : $tds.find("input[class='addontxtfvalue']").val(),
+                    FldType: $tds.eq(4).text()
+                }
+
+                AddonSerial.push(myDets);
+            });
+            var url = '@Url.Action("SaveData")';
+            var ModelData = {};
+            var currname = $('#CurrName').select2('data').text;
+            ModelData["DocuDate"] = $("#DocuDate").val();
+            ModelData["CurrName"] = currname;
+            ModelData["Branch"] = $("#hdnBranch").val();
+            ModelData["BankCashCode"] = $("#BankCashCode").val();
+            ModelData["MainType"] = $("#hdnMainType").val();
+            ModelData["SubType"] = $("#hdnSubType").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["Prefix"] = $("#hdnPrefix").val();
+            ModelData["SumDebit"] = $("#SumDebit").val();
+            ModelData["SumCredit"] = $("#SumCredit").val();
+            ModelData["Srl"] = $("#EdithdnSrl").val();
+            ModelData["ParentKey"] = $("#hdnParentKey").val();
+            ModelData["CurrRate"] = $("#CurrRate").val();
+            ModelData["ConstantMode"] = $("#hdnConstantMode").val();
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            ModelData["AddOnList"] = AddonSerial;
+            ModelData["Header"] = '@Model.Header';
+            ModelData["AUTHORISE"] = $("#hdnAUTHORISE").val();
+            ModelData["AuthReq"] = $("#hdnAuthReq").val();
+            ModelData["AuthNoPrint"] = $("#hdnAuthNoPrint").val();
+            ModelData["AuthLock"] = $("#hdnAuthLock").val();
+            ModelData["AuthAgain"] = $("#hdnAuthAgain").val();
+            ModelData["NarrStr"] = $("#addNarrStr").val();
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        alert("Document Saved as " + data.NewSrl + "");
+                        if ($('#hdnChangeLog').val() != "Add") {
+                            window.location.href = "/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2"
+                        }
+                        else
+                        {
+                            window.location.href = "/Accounts/" + '@Model.Controller2' + "/Index?Type=@Model.Type&ChangeLog=Add&Mode=Add&ViewDataId=@Model.ViewDataId&Header=@Model.Header&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.optiontype&OptionCode=@Model.OptionCode&Controller2=@Model.Controller2"
+                        }
+
+                    }
+                    else if (data.Status == 'failure') {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Select Atleast One Record For Ledger.');
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $("#btnAddOns").click(function (event) {
+            event.preventDefault();
+            $('#addonmodel').modal('show');
+        });
+
+        $("#btnAddNote").click(function (e) {
+            $('#addnotemodel').modal('show');
+        });
+
+        $("#btnAddDoc").click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("UploadFile")';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#attachdoc').modal('show');
+                    $('#controllername').val(data.Controller);
+                },
+            });
+        });
+
+    })
+
+    function loadBranch() {
+        var url = '@Url.Action("GetBranchList")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Branch").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                debugger;
+                $('#Branch').val('@Model.Branch').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadCashBank() {
+        var url = '@Url.Action("GetCashBankList")?SubType=' + $('#hdnSubType').val();
+        $('#BankCashCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 5,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BankCashCode', text:'@Model.BankCashName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCurrencyMain() {
+        var url = '@Url.Action("GetCurrency")'
+        $('#CurrName').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 5,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CurrCode', text: '@Model.CurrName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.id (@Model.Type)</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.ChangeLog Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <div class="form-horizontal " id="frmaddnewbank" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none; padding:3px;"></div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Doc.Date:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.DocuDate, new { @type = "text", @class = "form-control", @id = "DocuDate", @Name = "DocuDate", @style = "height:28px;font:size:13pt;font-weight:bolder;", @Value = Model.DocDate.ToString("dd-MM-yyyy") })
+                </div>
+                <label class="col-sm-1 control-label hidden">Plant / BU:</label>
+                <div class="col-sm-3 hidden">
+                    @Html.DropDownListFor(m => m.Branch, DropdownHelper.EmptyList(), new { @class = "form-control", @id = "Branch", @Name = "Branch", @style = "width:99%;" })
+                    @*@Html.TextBoxFor(m => m.Branch, new { @class = "input-large-query", @id = "Branch", @name = "Branch", @style = "width:99%;margin-top:2px;", @Value = Model.Branch })*@
+                </div>
+                <label class="col-sm-2 control-label hidden" style="font-weight:bolder;">Balance: @Model.BalanceAmt</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Doc.Serial:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.Srl, new { @class = "form-control", @id = "Srl", @Name = "Srl", @style = "height:28px;font-size:13pt;font-weight:bolder;", @Value = Model.Srl })
+                </div>
+                @if (Model.SubType == "CP" || Model.SubType == "HP" || Model.SubType == "CR")
+                {
+                    <label class="col-sm-1 control-label">Cash Account:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(m => m.BankCashCode, new { @class = "input-large-query", @id = "BankCashCode", @name = "BankCashCode", @style = "width:99%;margin-top:2px;" })
+                    </div>
+                }
+                @if (Model.SubType == "BP" || Model.SubType == "BR")
+                {
+                    <label class="col-sm-1 control-label">Bank Account:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(m => m.BankCashCode, new { @class = "input-large-query", @id = "BankCashCode", @name = "BankCashCode", @style = "width:99%;margin-top:2px;" })
+                    </div>
+                }
+            </div>
+            <div class="form-group hidden">
+                <label class="col-sm-1 control-label">Currency:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.CurrName, new { @type = "input-large-query", @id = "CurrName", @Name = "CurrName", @style = "width:99%;" })
+                </div>
+                <label class="col-sm-1 control-label">Curr.Rate:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(m => m.CurrRate, new { @class = "form-control", @id = "CurrRate", @Name = "CurrRate", @style = "width:99%;", @Value = Model.CurrRate })
+                </div>
+            </div>
+            <div id="divLedgerTable">
+                @Html.Partial("LedgerList", Model)
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer id="saveFooter" class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <button class="btn btn-warning" id="btnAddOns" style="font-size: 13px;padding:3px 12px;" name="Command">AddOns</button>
+            <button class="btn btn-info" id="btnAddNote" style="font-size: 13px;padding:3px 12px;" name="Command">Add Note</button>
+            <button class="btn btn-warning" id="btnAddDoc" style="font-size: 13px;padding:3px 12px;" name="Command">Attach Doc</button>
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT.air.3, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.ChangeLog != "Delete")
+                {
+                    <button class="SaveData" style="font-size: 13px;padding:3px 12px;" id="Save">Save</button>
+                }
+
+                @if (Model.ChangeLog == "Delete")
+                {<button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="DeleteData">Delete</button>
+                }
+                <a href="~/Accounts/TransactionMaintenanceGrid?Type=@Model.Type&Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.optiontype&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="margin-right:10px;font-size:13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div class="example-modal">
+    <div id="addonmodel" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="AddOnModel">
+                @Html.Partial("AddOnGrid")
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="addnotemodel" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="notemodel">
+                @Html.Partial("NarrPopUpView")
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="attachdoc" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="AttachDoc">
+                @Html.Partial("AttachmentDocument")
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="addgetrefmodel" class="modal modal-default" style="z-index:2500;">
+        <div class="modal-dialog">
+            <div id="AddGetRefModel">
+                @Html.Partial("RefPickUp")
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="dialog1" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="Dialog">
+                @Html.Partial("AccDetailsList")
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.MainType, new { @id = "hdnMainType" })
+@Html.HiddenFor(x => x.SubType, new { @id = "hdnSubType" })
+@Html.HiddenFor(x => x.Type, new { @id = "hdnType" })
+@Html.HiddenFor(x => x.Document, new { @id = "hdnDocument" })
+@Html.HiddenFor(x => x.ParentKey, new { @id = "hdnParentKey" })
+@Html.HiddenFor(x => x.Prefix, new { @id = "hdnPrefix" })
+@Html.HiddenFor(x => x.Srl, new { @id = "EdithdnSrl" })
+@Html.HiddenFor(x => x.ConstantMode, new { @id = "hdnConstantMode" })
+@Html.HiddenFor(x => x.ChangeLog, new { @id = "hdnChangeLog" })
+<input type="hidden" id="controllername" />
+@Html.HiddenFor(x => x.hdnAddonSaved, new { @Id = "hdnAddonSaved" })
+@Html.HiddenFor(x => x.Authorise, new { @Id = "hdnAUTHORISE" })
+
+@Html.HiddenFor(x => x.AuthAgain, new { @Id = "hdnAuthAgain" })
+@Html.HiddenFor(x => x.AuthLock, new { @Id = "hdnAuthLock" })
+@Html.HiddenFor(x => x.AuthNoPrint, new { @Id = "hdnAuthNoPrint" })
+@Html.HiddenFor(x => x.AuthReq, new { @Id = "hdnAuthReq" })
+@Html.HiddenFor(x => x.RecoFlag, new { @Id = "hdnRecoFlag" })
+
+@Html.HiddenFor(x => x.LockPosting, new { @Id = "hdnLockPosting" })
+@Html.HiddenFor(x => x.Audited, new { @Id = "hdnAudited" })
+@Html.HiddenFor(x => x.Branch, new { @Id = "hdnBranch" })
+
+

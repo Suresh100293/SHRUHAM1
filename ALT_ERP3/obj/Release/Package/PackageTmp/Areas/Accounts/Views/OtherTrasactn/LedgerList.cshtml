@@ -1,0 +1,285 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.OtherTransactModel
+@using Common
+
+<div class="grid" id="SelectedledgerTable" style="max-height:300px; width:100%; overflow-y: scroll;">
+    <table id="tabledata" class="zui-table" style="width:100%;word-wrap:break-word">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%;">
+                <td style="width:1%"></td>
+                <td style="width:32%;border-right:double">
+                    <input type="text" id="txtAccount" class="input-large search-query" style="width:99%; margin-top:2px;height:25px;" />
+                </td>
+                <td style="width:34%;border-right:double">
+                    <div id="actyperadio">
+
+                        <div class="col-sm-4 control-label" style="padding-top:0px;">
+                            Payment:  @Html.RadioButtonFor(x => x.AmtType, "Payment", new { @style = "padding-left:0px;width:20px;height:20px;" })
+                        </div>
+
+                        <div class="col-sm-4 control-label" style="padding-top:0px;">
+                            Receipt: @Html.RadioButtonFor(x => x.AmtType, "Receipt", new { @style = "padding-left:0px;width:20px;height:20px;" })
+                        </div>
+                    </div>
+                </td>
+
+                <td style="width:22%;border-right:double">
+                    @Html.TextBoxFor(x => x.Amt, new { @class = "form-control", @id = "addAmt", @Name = "addAmt", @style = "text-align:right;" })
+                </td>
+
+                <td style="width:1%;border-right:double">
+                    <button type="button" class="btn btn-success" id="btnDetails">Details</button>
+                </td>
+                <td style="width:1%;border-right:double">
+                    <button type="button" class="btn btn-success" id="btnAddLedger">Add</button>
+                </td>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Selectedleger != null)
+            {
+                foreach (var item in @Model.Selectedleger.Where(x => x.tempIsDeleted == false).ToList())
+                {
+                    <tr style="font-family:Tahoma;font-size:9pt;">
+                        <td style="vertical-align:inherit;">@item.tempId</td>
+
+                        <td style="vertical-align:inherit;">@item.AccountName</td>
+                        <td style="vertical-align:inherit;"> @item.AmtType</td>
+                        <td style="text-align:right;vertical-align:inherit;">@GetFixedTwo(@item.Debit)</td>
+                        <td style="text-align:right;vertical-align:inherit;">@GetFixedTwo(@item.Credit)</td>
+
+                        <td style="vertical-align:inherit;">@item.Narr</td>
+
+                        <td style="vertical-align: inherit;">
+                            <button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@item.tempId" title="Edit"><i class="fa fa-edit"></i></button>
+                        </td>
+                        <td style="vertical-align:inherit;">
+                            <button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button>
+                        </td>
+
+                    </tr>
+                }
+            }
+        </tbody>
+        <tfoot>
+            <tr style="font-family:Tahoma;font-size:9pt;font-weight:bolder;border-top:solid 1px;background-color:lightgray">
+                <td colspan="3" style="text-align:center;vertical-align:inherit;border-top:solid 1px;">Total >></td>
+                <td style="width: 8%;vertical-align: inherit;border-top: solid 1px;">@Html.TextBoxFor(m => m.SumDebit, new { @style = "text-align:right;width:99%;margin-top:2px;height:24px;", @class = "form-control", @disabled = "disabled", @id = "SumDebit" })</td>
+                <td style="width: 8%;vertical-align:inherit;border-top:solid 1px;">@Html.TextBoxFor(m => m.SumCredit, new { @style = "text-align:right;width:99%;margin-top:2px;height:24px;", @class = "form-control", @disabled = "disabled", @id = "SumCredit" })</td>
+                <td colspan="3" style="vertical-align:inherit;border-top:solid 1px;"></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+@functions
+{
+    string GetFixedTwo(decimal dcb)
+    {
+        decimal d = Math.Floor(100 * dcb) / 100;
+        string s = d.ToString("N2");
+        return s;
+    }
+}
+
+<script>
+    $(document).ready(function () {
+
+        loadaccount1()
+
+
+        $('button[action|="DeleteLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+
+            ModelData["SubType"] = $("#hdnSubType").val();
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("Deleteledger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+
+                    $('#divLedgerTable').html(data.Html);
+                    $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                    $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnAddLedger").click(function (event) {
+            event.preventDefault();
+            var myBatchArray = [];
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempId: tds.eq(0).text(),
+                    LRNumber: tds.eq(1).text(),
+                    Amt: tds.eq(2).text(),
+                }
+                myBatchArray.push(myDets);
+            })
+
+            var rlarray = [];
+            $('#truckrelatedtable tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = {
+                    Fld: tds.eq(0).text(),
+                    ApplCode: tds.eq(2).text(),
+
+                }
+                rlarray.push(myDets2);
+            })
+            var ModelData = {};
+            ModelData["SessionFlag"] = "Add";
+            ModelData["SubType"] = $("#hdnSubType").val();
+            ModelData["MainType"] = $("#hdnMainType").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["AmtType"] = $("input[name=AmtType]:checked").val();
+            ModelData["Code"] = $("#txtAccount").val();
+            ModelData["Amt"] = $("#addAmt").val();
+            ModelData["AccountName"] = $("#txtAccount").select2('data').text;
+            ModelData["LRDetailList"] = myBatchArray;
+            ModelData["AddOnList"] = rlarray;
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddCashLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable').html(data.Html);
+                    $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                    $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+
+        $('button[action|="EditLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+
+            ModelData["SessionFlag"] = "Edit";
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetCashLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable').html(data.Html);
+                    $('#txtAccount').select2('data', { id: data.Code, text: data.AccountName });
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnDetails").click(function (event) {
+            event.preventDefault();
+            $('#truckrlmodel').modal('show');
+         });
+    });
+     function loadaccount1() {
+
+        var url = '@Url.Action("GetAccountList")';
+         $('#txtAccount').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Code', text:'@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<div class="example-modal">
+    <div id="lrmodel" class="modal modal-default" style="z-index:2500">
+        <div class="modal-dialog modal-lg" style="width: 650px;">
+            <div id="LRDetailsDialog">
+                @Html.Partial("LRDetails")
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="truckrlmodel" class="modal modal-default" style="z-index:2500">
+        <div class="modal-dialog modal-lg" style="width: 650px;">
+            <div id="TruckRelatedDialog">
+                @Html.Partial("TruckDetails")
+            </div>
+        </div>
+    </div>
+</div>

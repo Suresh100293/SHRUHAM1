@@ -1,0 +1,182 @@
+﻿@model ALT_ERP3.PurchaseVM
+@using Common
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Send Email</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="form-horizontal">
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">Email To:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.EmailTo, new { @class = "form-control", @id = "EmailTo", @Name = "EmailTo", @Value = Model.EmailTo })
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">CC:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.EmailCC, new { @class = "form-control", @id = "EmailCC", @Name = "EmailCC" })
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">BCC:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.EmailBCC, new { @class = "form-control", @id = "EmailBCC", @Name = "EmailBCC" })
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">Subject:</label>
+                    <div class="col-sm-6">
+                        @Html.TextBoxFor(x => x.EmailSubject, new { @class = "form-control", @id = "EmailSubject", @Name = "EmailSubject" })
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">Message:</label>
+                    <div class="col-sm-10">
+                        @Html.TextAreaFor(x => x.EmailMessage, new { @class = "form-control", @id = "EmailMessage", @Name = "EmailMessage", @cols = "160", @rows = "10" })
+                    </div>
+                </div>
+                <div class="form-group" style="margin-top:5px;">
+                    <label class="col-sm-2 control-label">File input</label>
+                    <div class="col-sm-6">
+                        <input type="file" id="FileUplEmail" multiple />
+                        <input type="submit" value="Upload" class="btn btn-warning" id="btnUploadInEmail" />
+                    </div>
+                </div>
+                </div>
+            <input hidden="hidden" id="hdnSendEmailDocument" />
+            <input hidden="hidden" id="hdnFileEmailBase64" />
+            <input hidden="hidden" id="hdnFileEmailNames" />
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <label class="col-sm-2 control-label" style="text-align:left;color:black;padding-top:5px;">Email Template:</label>
+            @*<label class="col-sm-2 control-label">Email Template:</label>*@
+            <div class="col-sm-6">
+                @Html.DropDownListFor(x => x.EmailTemplate, DropdownHelper.EmptyList(), new { @Id = "EmailTemplate", @Name = "EmailTemplate", @class = "form-control" })
+            </div>
+            <button type="button" class="btn btn-success" id="btnEmailPurSale">Send</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        loadEmailTemplates()
+        $('#EmailTemplate').change(function (){
+            var url = '@Url.Action("GetMsgTextByTemplate")?Code=' + $('#EmailTemplate').val();
+            $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#EmailMessage').text(result.EmailTemplate);
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("1-An error occurred while processing the request.");
+            }
+        });
+        })
+        $('#btnEmailPurSale').click(function (event) {
+            if ($("#EmailTo").val() == '') {
+                alert('Email To is Required');
+                return;
+            }
+            var ModelData = {};
+            ModelData["Document"] = $("#hdnSendEmailDocument").val();
+            ModelData["EmailCC"] = $("#EmailCC").val();
+            ModelData["EmailTo"] = $("#EmailTo").val();
+            ModelData["EmailBCC"] = $("#EmailBCC").val();
+            ModelData["EmailMessage"] = $("#EmailMessage").val();
+            ModelData["EmailSubject"] = $("#EmailSubject").val();
+            ModelData["FileName"] = $("#hdnFileEmailNames").val();
+            ModelData["ImageStr"] = $("#hdnFileEmailBase64").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("EmailData")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert('Email Sent')
+                    $('#emailprint').modal('hide');
+                    if ($('#hdnchangelog').val() == "Add") {
+                        $('#fixedbottom :input').prop("disabled", true);
+                        $('#frmpurchase :input').prop("disabled", true);
+                        $('.form-horizontal :input').prop("disabled", true);
+                        $('#ItemListTable :input').prop('disabled', true);
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnUploadInEmail").click(function () {
+            event.preventDefault();
+            var formData = new FormData();
+            var totalFiles = document.getElementById("FileUplEmail").files.length;
+            for (var i = 0; i < totalFiles; i++) {
+                var file = document.getElementById("FileUplEmail").files[i];
+                formData.append("FileUpload", file);
+            }
+            $.ajax({
+                type: "POST",
+                url: '/Purchase/AddImage',
+                data: formData,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    $('#hdnFileEmailBase64').val(data.AllFileStr);
+                    $('#hdnFileEmailNames').val(data.AllFileName);
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+    })
+      function loadEmailTemplates() {
+        var url = '@Url.Action("GetEmailTemplates")';
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#EmailTemplate").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("2-An error occurred while processing the request.");
+            }
+        });
+    };
+</script>

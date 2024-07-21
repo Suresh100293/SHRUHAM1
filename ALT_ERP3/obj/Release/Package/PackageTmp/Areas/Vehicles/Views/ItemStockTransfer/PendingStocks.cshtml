@@ -1,0 +1,240 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.SparePartTransferVM
+@using Common;
+@{
+    ViewBag.Title = "LRSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<style>
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+        /*Suresh*/
+        text-align: center;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .btncolor {
+        background-color: slategray;
+        color: white;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+</style>
+<script type="text/javascript">
+    $(document).ready(function () {
+        gridreload();
+        //LoadAcType();
+        //loadTDSCodeList();
+    });
+    function LoadAcType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetAcType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $(".SearchVehicle").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('.spinner').hide();
+                $(".SearchVehicle").select2({});
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function loadmasterCodeList() {
+        var url = '@Url.Action("GetVehicle")'
+        $('.SearchVehicle').select2({
+             minimumInputLength: 0,
+             placeholder: 'Search',
+             ajax: {
+                 url: url,
+                 dataType: 'json',
+                 quietMillis: 100,
+                 enableFiltering: true,
+                 allowClear: true,
+                 minimumInputLength: 0,
+                 multiple: true,
+                 width: 300,
+                 data: function (term, page) {
+                     return {
+                         types: ["exercise"],
+                         limit: -1,
+                         term: term
+                     };
+                 },
+                 results: function (data, page) {
+                     clientObj = JSON.stringify(data);
+                     return {
+                         results: $.map(data, function (item) {
+                             return {
+                                 text: item.Name,
+                                 id: item.Code
+                             }
+                         })
+                     };
+                 }
+             },
+             initSelection: function (element, callback) {
+                 var data = { id: '@Model.VehicleNo', text: '@Model.VehicleNoN' };
+                 callback(data);
+             },
+             formatResult: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+             formatSelection: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+         })
+    };
+    function gridreload() {
+    var ColName, Coldata;
+    var lPath = window.location.pathname;
+
+        var sPathUrl = "/Vehicles/SparePartTransfer/GetGridStructureRecords/?id=PendingGeneralStock&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Vehicles/SparePartTransfer/GetMasterGridData/?ViewDataId=PendingGeneralStock&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+    $.ajax({
+        url: sPathUrl,
+        type: "POST",
+        contentType: "application/json; charset=utf-8",
+        dataType: "json",
+        success: function (data) {
+            var obj = $.parseJSON(data);
+            ColName = obj[0].split(",");
+            Coldata = obj[1];
+            CreateGridData();
+        },
+        error: function () {
+            alert("Error with AJAX callback");
+        }
+    });
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    debugger;
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#list").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++)
+                    {
+                        var rowId = ids[i];
+                        var TextBox = "<center><input type ='text' value='0' id=LGQty" + rowId + " class='LGQty form-control' name='LGQty' onblur='QtyCheck()'  style='width:85px;' disabled /></center>";
+                        var Demo1 = "<select id='AcType' disabled name='AcType' class='SearchVehicle' style='width:150px;'><option value='0'>-- Select --</option></select>";
+                        var Demo = "<input id='AcType' disabled name='AcType' class='SearchVehicle input-large search-query' style='width:300px;'/>";
+                        var CheckBox = "<input type ='checkbox' id='" + rowId + "' value='" + jQuery("#list").getCell(rowId, "Recordekey") + "'  onclick='JQGridCheckbox();' class='ItemDebitGrid' name='ItemDebitGrid'  style='height: 22px;width: 19px;' />";
+
+                        jQuery("#list").jqGrid('setRowData', rowId, { 'Select': CheckBox, 'Qty': TextBox, 'Account': Demo });
+                    }
+                    loadmasterCodeList();
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, print: false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+
+
+</script>
+<div class="panel-body" style="height:auto;padding-left:0px;padding-right:0px;padding-top:5px;">
+    <div id="page-contentgrid">
+        <div class="jqGrid">
+            <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+            <div id="pager" style="height:34px;"></div>
+        </div>
+    </div>
+</div>
+

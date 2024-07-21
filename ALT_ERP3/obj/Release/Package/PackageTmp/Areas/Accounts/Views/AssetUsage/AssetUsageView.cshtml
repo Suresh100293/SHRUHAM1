@@ -1,0 +1,238 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AssetUsageVM
+@{
+    ViewBag.Title = "AssetUsage";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#AssetUsageEdit').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                AssetUsage_AssetID: {required: true,},
+                AssetUsage_Branch: {required: true,},
+                AssetUsage_CompCode: {required: true,},
+                AssetUsage_FromDate: {required: true,},
+                AssetUsage_Shift: {required: true,},
+                AssetUsage_ToDate: {required: true,},
+               },
+            messages: {
+                AssetUsage_AssetID: {required: 'AssetID is Required',},
+                AssetUsage_Branch: {required: 'Branch is Required',},
+                AssetUsage_CompCode: {required: 'CompCode is Required',},
+                AssetUsage_FromDate: {required: 'FromDate is Required',},
+                AssetUsage_Shift: {required: 'Shift is Required',},
+                AssetUsage_ToDate: {required: 'ToDate is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#AssetUsage_AssetID").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,./: ]" } });
+        $("#AssetUsage_Branch").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,./: ]" } });
+        $("#AssetUsage_CompCode").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,./: ]" } });
+        $("#AssetUsage_Shift").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,./: ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#EditSubmit').click(function () {
+            event.preventDefault();
+            if ($("#AssetUsageEdit").validate().form() == false)
+                return;
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["AssetUsage_AssetID"] = $("#AssetUsage_AssetID").val();
+            ModelData["AssetUsage_Branch"] = $("#AssetUsage_Branch").val();
+            ModelData["AssetUsage_CompCode"] = $("#AssetUsage_CompCode").val();
+            ModelData["AssetUsage_FromDate"] = $("#AssetUsage_FromDate").val();
+            ModelData["AssetUsage_Shift"] = $("#AssetUsage_Shift").val();
+            ModelData["AssetUsage_ToDate"] = $("#AssetUsage_ToDate").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/SetUp/AssetUsage?Mode=Edit"
+                        $("#ErrorMessage1").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage1").show();
+                        $("#ErrorMessage1").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $("#btnAddOns").click(function (e) {
+            event.preventDefault();
+            var url = '@Url.Action("AddOnGrid")?mCode=' + '@Model.AssetUsage_AssetID';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#dialog').modal('show');
+                    $('#controllername').val(data.Controller);
+                    jQuery("#grid").jqGrid('setGridParam', { url: "/" + data.Controller + "/GetAddOnList?Code=" + null }).trigger("reloadGrid");
+                },
+            });
+        });
+
+        $("#btnAddNote").click(function (e) {
+            event.preventDefault();
+            var url = '@Url.Action("AddNote")?mCode=' + '@Model.AssetUsage_AssetID';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#dialog1').modal('show');
+                    $('#controllername').val(data.Controller);
+                },
+            });
+        });
+    });
+
+</script>
+
+@* iX9: Date Picker Code *@
+<script type="text/javascript">
+    $(function () {
+        $("#datepicker").datepicker({
+            dateFormat: "dd/mm/yy",
+            changeMonth: true,
+            changeYear: true
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">AssetUsage</b>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <form class="form-horizontal " id="AssetUsageEdit" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="panel-body">
+                <div class="tab-content">
+                    <div id="General" class="tab-pane active" style="margin-top:-8px;">
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">AssetID:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.AssetUsage_AssetID, new { @class = "form-control", @Name = "AssetUsage_AssetID", @Id = "AssetUsage_AssetID" })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Branch:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.AssetUsage_Branch, new { @class = "form-control", @Name = "AssetUsage_Branch", @Id = "AssetUsage_Branch" })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">CompCode:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.AssetUsage_CompCode, new { @class = "form-control", @Name = "AssetUsage_CompCode", @Id = "AssetUsage_CompCode" })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">FromDate:</label>
+                            <div class="col-sm-3">
+                                <div class="input-group">
+                                    <div class="input-group-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </div>
+                                    @Html.TextBoxFor(x => x.AssetUsage_FromDate, null, new { @class = "form-control", id = "AssetUsage_FromDate" })
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Shift:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.AssetUsage_Shift, new { @class = "form-control", @Name = "AssetUsage_Shift", @Id = "AssetUsage_Shift" })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">ToDate:</label>
+                            <div class="col-sm-3">
+                                <div class="input-group">
+                                    <div class="input-group-addon">
+                                        <i class="fa fa-calendar"></i>
+                                    </div>
+                                    @Html.TextBoxFor(x => x.AssetUsage_ToDate, null, new { @class = "form-control", id = "AssetUsage_ToDate" })
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </form>
+    </div>
+</section>
+
+<footer class="footer-section" style="position:fixed;background-color:lightgray;padding:18px;padding:unset;color:unset;">
+    <div class="row">
+        <div class="col-sm-4">
+        </div>
+        <div class="col-sm-4" style="margin-top:8px;color:black;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="EditSubmit">Save</button>
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=AssetUsage&TableName=AssetUsage&Module=Finance&Header=" AssetUsage"" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Sat 26-Jan-2019 05:26 PM
+    Engine: iX6Generator, ver: 3.7 Revision: 0
+    by Team Shruham Software *@
+

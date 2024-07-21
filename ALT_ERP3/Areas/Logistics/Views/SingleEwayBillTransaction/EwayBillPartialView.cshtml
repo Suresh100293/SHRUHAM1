@@ -1,0 +1,3431 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.EwayBillVM
+@using Common;
+@{
+    ViewBag.Title = "LRSetupVM";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<style>
+    .SearchRow {
+        background-color: coral;
+    }
+</style>
+<script type="text/javascript">
+    var GridColumn = 0;
+    $(document).ready(function () {
+        $('#ExtendEwayModal').modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+
+        $("#ExtendEwayModal").modal("hide");
+
+        if ('@Model.tfatEwaySetup.ConsoleForUserBranch' == "True" && '@Model.tfatEwaySetup.ConsoleForAllBranch' == "True") {
+            $("#AllBranch").prop("checked", true);
+            $("#CurrentBranch").prop("checked", false);
+            $("#CurrentBranch,#AllBranch").prop("disabled", false);
+        } else if ('@Model.tfatEwaySetup.ConsoleForUserBranch' == "True"&& '@Model.tfatEwaySetup.ConsoleForAllBranch' == "False") {
+
+            $("#AllBranch").prop("checked", false);
+            $("#AllBranch").prop("disabled", true);
+
+            $("#CurrentBranch").prop("checked", true);
+            $("#CurrentBranch").prop("disabled", false);
+        }
+        else if ('@Model.tfatEwaySetup.ConsoleForAllBranch' == "True" && '@Model.tfatEwaySetup.ConsoleForUserBranch' == "False") {
+            $("#CurrentBranch").prop("checked", false);
+            $("#CurrentBranch").prop("disabled", true);
+
+            $("#AllBranch").prop("checked", true);
+            $("#AllBranch").prop("disabled", false);
+        } else {
+            $("#AllBranch").prop("checked", true);
+            $("#CurrentBranch").prop("checked", false);
+            $("#CurrentBranch,#AllBranch").prop("disabled", false);
+        }
+
+
+
+        $('#GetConsoleLRLIst').modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+        CNSloadTRNModeBP();
+        CNSLoadFromPlaceBP();
+        CNSLoadConsignorStateBP();
+        CNSLoadVehicleEWBBP();
+        $("#rdcnsbtnVehicle").change(function () {
+            if (this.checked) {
+                $(".MasterCNSVehicle").addClass("hidden");
+                $(".ManualCNSVehicle").removeClass("hidden");
+            }
+            else {
+                $(".MasterCNSVehicle").removeClass("hidden");
+                $(".ManualCNSVehicle").addClass("hidden");
+            }
+        });
+        $("#EWB_CNSBranch").change(function () {
+            var url = '@Url.Action("FetBranchState")';
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { Branch: $("#EWB_CNSBranch").val() },
+                success: function (result) {
+                    $('#EWB_CNSConsignorState').select2('data', { id: result.StateCode, text: result.StateName });
+                }
+            });
+        });
+        $("#ConsoleDeselectAll").click(function () {
+            var CheckBox = $("#ConsoleDeselectAll").prop("checked");
+            if (CheckBox) {
+                $(".ConsoleDebitGrid").prop('checked', true);
+            } else {
+                $(".ConsoleDebitGrid").prop('checked', false);
+            }
+            ConsoleJQGridCheckbox();
+        });
+        $("#ConsoleSelectLR").blur(function () {
+            var count = 0;
+            var WantToselectLRNO = $("#ConsoleSelectLR").val();
+            var ScrollRow;
+
+            if ($("#ConsoleSelectLR").val() != "" && $("#ConsoleSelectLR").val() != null) {
+                $('#Consolelist tbody tr').each(function () {
+
+                    var Row = $(this).closest('tr');
+                    var LRNO = Row.find('td:eq(9)').text();
+                    if (LRNO == WantToselectLRNO) {
+                        ScrollRow = Row;
+
+                        Row.find("input[class='ConsoleDebitGrid']").prop("checked", true);
+                        count++;
+
+
+                        var objTable = $("#Consolelist");
+                        var iRow = ScrollRow.find("td:eq(4)").text();
+                        objTable.jqGrid('setSelection', iRow);
+                    }
+                });
+
+                var check = $('#Consolelist').find("input[class='ConsoleDebitGrid']:checked").length;
+                $("#mTotalLR1").html(check);
+
+                if (count == 0) {
+                    alert("Not Found");
+                    $("#ConsoleSearch").focus();
+                }
+                else {
+                    $("#ConsoleSelectLR").focus();
+                }
+            }
+            $("#ConsoleSelectLR").val("");
+        });
+        // Search all columns
+        $('#ConsoleSearch').keyup(function () {
+            var value = $(this).val();
+            if (value != "") {
+                $("#Consolelist > tbody > tr > td ").each(function () {
+                    if ($(this).text().toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                        var dd = $(this).text().toLowerCase();
+                        $(this).addClass("SearchRow");
+                    }
+                    else {
+                        $(this).removeClass("SearchRow");
+                    }
+                });
+            }
+            else {
+                $('#Consolelist td').removeClass('SearchRow');
+            }
+        });
+        $("#GetConsoleLRLIst").modal("hide");
+        GetMyFavorites('@Model.ViewDataId');
+        $('#GENFromdate,#ListFromdate,#MisFromdate').val('@Model.FromDate');
+        $('#GENToDate,#ListToDate,#MisListToDate').val('@Model.ToDate');
+        $("#BPartDocument,#GenDocument,#MultiDocument,#EXTDocument,#CANDocument,#BPartSearchEway,#MultiSearchEway,#EXTSearchEway,#CANSearchEway").constrain({ allow: { regex: "[0-9]" } });
+        $('#EWB_CNSDocDate,#EXTSyncDate,#EXTSyncToDate,#NEXTSyncDate,#GENFromdate,#GENToDate,#ListToDate,#MisListToDate,#ListFromdate,#MisFromdate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+        $('#btnConsoleLCDocument').click(function (event) {
+            event.preventDefault();
+
+            if ($("#TxtConsoleLCno").val() == "" || $("#TxtConsoleLCno").val() == null) {
+                alert("Please Enter Lorry Challan Number...!");
+                return;
+            }
+            var ModelData = {};
+            ModelData["Lrno"] = $("#TxtConsoleLCno").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("FetchLCDocumentList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    $('.spinner').hide();
+                    if (data.Status == "ValidError")
+                    {
+                        alert(data.Message);
+                        return;
+                    }
+                    else if (data.Status == "Processed")
+                    {
+                        GetLorryChallanDetails(data.Message);
+                    }
+                    else
+                    {
+                        var AttachDoc = $("#consignmentmodels");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                        $('#ConsignmentModels').modal('show');
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#btnGENConsoleEwayBill').click(function (event) {
+            event.preventDefault();
+
+
+            if ($("#EWB_CNSMode").val() == '' || $("#EWB_CNSMode").val() == null) {
+                alert('Transaction Mode is required...!');
+                return;
+            }
+            if ($("#rdcnsbtnVehicle").is(':checked')) {
+                if ($("#EWB_CNSVehicleNoTxt").val() == '' || $("#EWB_CNSVehicleNoTxt").val() == null) {
+                    alert('VehicleNo is required...!');
+                    return;
+                }
+            }
+            else {
+                if ($("#EWB_CNSVehicleNo").val() == '' || $("#EWB_CNSVehicleNo").val() == null) {
+                    alert('VehicleNo is required...!');
+                    return;
+                }
+            }
+            if ($("#EWB_CNSBranch").val() == '' || $("#EWB_CNSBranch").val() == null) {
+                alert('Place is required...!');
+                return;
+            }
+            if ($("#EWB_CNSConsignorState").val() == '' || $("#EWB_CNSConsignorState").val() == null) {
+                alert('State is required...!');
+                return;
+            }
+
+            var rowCount = $("#CONEwayexample tbody tr").length;
+            if (rowCount==0) {
+                alert('Please select Eway Bill To Generate Console EwayBill...!');
+                return;
+            }
+            var myTableArray = [];
+            $("#CONEwayexample > tbody  > tr").each(function () {
+                var myDets = {
+                    LREwayNo: $(this).find('td:eq(0)').text(),
+                }
+                myTableArray.push(myDets);
+
+            });
+            var ModelData = {};
+            ModelData["ConsoleList"] = myTableArray;
+
+
+            ModelData["EWB_TRNMode"] = $("#EWB_CNSMode").val();
+            ModelData["EWBDocument"] = $("#EWB_CNSDocument").val();
+            ModelData["DocDate"] = $("#EWB_CNSDocDate").val();
+
+            if ($("#rdcnsbtnVehicle").is(':checked')) {
+                ModelData["EWB_VehicleNo"] = $("#EWB_CNSVehicleNoTxt").val();
+            } else {
+                ModelData["EWB_VehicleNo"] = $("#EWB_CNSVehicleNo").val();
+            }
+            ModelData["EWB_FromPlace"] = $("#EWB_CNSBranch").val();
+            ModelData["EWB_ConsignorState"] = $("#EWB_CNSConsignorState").val();
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GenerateConsoleBill")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    $('.spinner').hide();
+                    if (data.Status == "ValidError")
+                    {
+                        alert(data.Message);
+                        return;
+                    }
+                    else if (data.Status == "Processed")
+                    {
+                        GetLorryChallanDetails(data.Message);
+                    }
+                    else
+                    {
+                        var AttachDoc = $("#consignmentmodels");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                        $('#ConsignmentModels').modal('show');
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#btnGenData').click(function (event) {
+            event.preventDefault();
+
+            if ($("#GenDocument").val() == "" || $("#GenDocument").val() == null) {
+                alert("Please Enter Consignment Number...!");
+                return;
+            }
+            var ModelData = {};
+            ModelData["Lrno"] = $("#GenDocument").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("FetchDocumentList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    $('.spinner').hide();
+                    if (data.Status == "ValidError")
+                    {
+                        alert(data.Message);
+                        return;
+                    }
+                    else if (data.Status == "Processed")
+                    {
+                        GetConsignmentDetails(data.Message);
+                    }
+                    else
+                    {
+                        var AttachDoc = $("#consignmentmodels");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                        $('#ConsignmentModels').modal('show');
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        //Get Consignment List Whos Consignment Ready To Generate Eway Bill.
+        $('#btnGenDocument').click(function (event) {
+            event.preventDefault();
+
+            //$('#PendingEwayModal').modal('show');
+            var ModelData = {};
+            ModelData["Fromdate"] = $("#GENFromdate").val();
+            ModelData["ToDate"] = $("#GENToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchPendingConsignmentList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#GENPendingList').html(data.Html);
+                    $('#PendingEwayModal').modal('show');
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#PendingEwaySearch').keyup(function () {
+            var value = $(this).val();
+            $("#list > tbody > tr").filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+        $('#EXTPendingEwaySearch').keyup(function () {
+            var value = $(this).val();
+            $("#Extlist > tbody > tr").filter(function () {
+                $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+            });
+        });
+
+
+        $('#btnMultiVehicleData').click(function (event) {
+            event.preventDefault();
+            if ($("#MultiDocument").val() == "" || $("#MultiDocument").val() == null) {
+                if ($("#MultiSearchEway").val() == "" || $("#MultiSearchEway").val() == null) {
+                    alert("Please Enter Consignment Number Or Eway Bill NO...!");
+                    return;
+                }
+            }
+            if ($("#MultiDocument").val() != "" && $("#MultiDocument").val() != null)
+            {
+                var ModelData = {};
+                ModelData["Lrno"] = $("#MultiDocument").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError")
+                        {
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed")
+                        {
+                            GetConsignmentDetails(data.Message);
+                        }
+                        else
+                        {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+            else
+            {
+                var ModelData = {};
+                ModelData["SearchEway"] = $("#MultiSearchEway").val();
+                var url = '@Url.Action("GetMultiVehicleEway")';
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        if (data.Status == "Success")
+                        {
+
+                            var LoadDownLoadFiles = $("#DivMultiEway");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                            $("#btnMultiVehicleEway").show();
+                        }
+                        else
+                        {
+                            alert(data.Errmsg);
+                            var LoadDownLoadFiles = $("#DivMultiEway");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                            $("#btnMultiVehicleEway").hide();
+                        }
+                    },
+                });
+            }
+        });
+
+        $('#btnFetchBPartData').click(function (event) {
+            event.preventDefault();
+
+            if ($("#BPartDocument").val() == "" || $("#BPartDocument").val() == null) {
+                if ($("#BPartSearchEway").val() == "" || $("#BPartSearchEway").val() == null) {
+                    alert("Please Enter Consignment Number Or Eway Bill NO...!");
+                    return;
+                }
+            }
+
+            if ($("#BPartDocument").val() != "" && $("#BPartDocument").val() != null) {
+                var ModelData = {};
+                ModelData["Lrno"] = $("#BPartDocument").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError") {
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed") {
+                            GetConsignmentDetails(data.Message);
+                        }
+                        else {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+            else
+            {
+                var ModelData = {};
+                ModelData["SearchEway"] = $("#BPartSearchEway").val();
+                var url = '@Url.Action("GetBPartData")';
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        if (data.Status == "Success") {
+
+                            var LoadDownLoadFiles = $("#DivBPart");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                        }
+                        else {
+                            alert(data.Errmsg);
+                            var LoadDownLoadFiles = $("#DivBPart");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                        }
+                    },
+                });
+            }
+        });
+
+        $('#btnExtData').click(function (event) {
+            event.preventDefault();
+            if ($("#EXTDocument").val() == "" || $("#EXTDocument").val() == null) {
+                if ($("#EXTSearchEway").val() == "" || $("#EXTSearchEway").val() == null) {
+                    alert("Please Enter Consignment Number Or Eway Bill NO...!");
+                    return;
+                }
+            }
+            if ($("#EXTDocument").val() != "" && $("#EXTDocument").val() != null) {
+                var ModelData = {};
+                ModelData["Lrno"] = $("#EXTDocument").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError") {
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed") {
+                            GetConsignmentDetails(data.Message);
+                        }
+                        else {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+            else
+            {
+                var ModelData = {};
+                ModelData["SearchEway"] = $("#EXTSearchEway").val();
+                var url = '@Url.Action("GetExtendEway")';
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        if (data.Status == "Success") {
+
+                            var LoadDownLoadFiles = $("#DivExtEway");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                            $("#btnExtEway").show();
+                        }
+                        else {
+                            alert(data.Errmsg);
+                            var LoadDownLoadFiles = $("#DivExtEway");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                            $("#btnExtEway").hide();
+                        }
+                    },
+                });
+            }
+        });
+
+        //Avalable Eway Bills List To Extend (Combo)
+        $('#btnExtDocument').click(function (event) {
+            event.preventDefault();
+
+            var ModelData = {};
+            var DTO = {  };
+            var url = '@Url.Action("GetGownEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    ExtendEwayBillGridLoad();
+                    $('#ExtendEwayModal').modal('show');
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        
+        $('#btnCanData').click(function (event) {
+            event.preventDefault();
+            if ($("#CANDocument").val() == "" || $("#CANDocument").val() == null) {
+                if ($("#CANSearchEway").val() == "" || $("#CANSearchEway").val() == null) {
+                    alert("Please Enter Consignment Number Or Eway Bill NO...!");
+                    return;
+                }
+            }
+
+            if ($("#CANDocument").val() != "" && $("#CANDocument").val() != null) {
+                var ModelData = {};
+                ModelData["Lrno"] = $("#CANDocument").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError") {
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed") {
+                            GetConsignmentDetails(data.Message);
+                        }
+                        else {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+            else
+            {
+                var ModelData = {};
+                ModelData["SearchEway"] = $("#CANSearchEway").val();
+                var url = '@Url.Action("GetCancelEway")';
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        if (data.Status == "Success") {
+
+                            var LoadDownLoadFiles = $("#DivCanEway");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                            $("#btnCanEway").show();
+                        }
+                        else {
+                            alert(data.Errmsg);
+                            var LoadDownLoadFiles = $("#DivCanEway");
+                            LoadDownLoadFiles.html('');
+                            LoadDownLoadFiles.html(data.Html);
+                            $("#btnCanEway").hide();
+                        }
+                    },
+                });
+            }
+        });
+
+        $('#btnExtSync').click(function (event) {
+            event.preventDefault();
+            if ($("#EXTSyncDate").val() == "" || $("#EXTSyncDate").val() == null) {
+                alert("Please Select From Date...!");
+                return;
+            }
+            if ($("#EXTSyncToDate").val() == "" || $("#EXTSyncToDate").val() == null) {
+                alert("Please Select To Date...!");
+                return;
+            }
+            //var FromDate= new Date(Date.parse($("#EXTSyncDate").val()));
+            //var ToDate = new Date(Date.parse($("#EXTSyncToDate").val()));
+            //if (FromDate <= ToDate) {
+
+            //} else {
+            //    alert("sync from date always less than sync to date...!");
+            //    return;
+            //}
+
+
+            var ModelData = {};
+            ModelData["SyncDate"] = $("#EXTSyncDate").val();
+            ModelData["SyncToDate"] = $("#EXTSyncToDate").val();
+             var DTO = { Model: ModelData };
+            var url = '@Url.Action("SyncEwayBill")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert(data.errormsg);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('#btnExtSyncConsigner').click(function (event) {
+            event.preventDefault();
+            if ($("#NEXTSyncDate").val() == "" || $("#NEXTSyncDate").val() == null) {
+                alert("Please Select Date...!");
+                return;
+            }
+            if ($("#EXTConsignorGST").val() == "" || $("#EXTConsignorGST").val() == null) {
+                alert("Please Enter Consigner/Consignee GST NO...!");
+                return;
+            }
+
+            var ModelData = {};
+            ModelData["SyncDate"] = $("#NEXTSyncDate").val();
+            ModelData["EWB_ConsignorGST"] = $("#EXTConsignorGST").val();
+             var DTO = { Model: ModelData };
+            var url = '@Url.Action("SyncConsignerEwayBill")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    alert(data.errormsg);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        //Get Eway Bill List Useing Date Range.
+        $('#btnListDocument').click(function (event) {
+            event.preventDefault();
+            AllEwaygridreload();
+            //$('#PendingEwayModal').modal('show');
+            @*var ModelData = {};
+            ModelData["Fromdate"] = $("#ListFromdate").val();
+            ModelData["ToDate"] = $("#ListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivListEway').html('');
+                    $('#DivListEway').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+        });
+        //Get Mis Match Eway Bill List Useing Date Range.
+        $('#btnMisDocument').click(function (event) {
+            event.preventDefault();
+            misgridreload();
+            //$('#PendingEwayModal').modal('show');
+            @*var ModelData = {};
+            ModelData["Fromdate"] = $("#MisFromdate").val();
+            ModelData["ToDate"] = $("#MisListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchMisEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivMisEway').html('');
+                    $('#DivMisEway').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+        });
+        $("input[name$='ConsoleEway']").change(function () {
+            if ($("#rbnConsoleLcConsoleEwaylist").is(":checked") == true) {
+                $(".ConsoleLCPickDiv").addClass("hidden");
+                $(".ConsoleEwayPickDiv").removeClass("hidden");
+            }
+            else {
+                $(".ConsoleLCPickDiv").removeClass("hidden");
+                $(".ConsoleEwayPickDiv").addClass("hidden");
+            }
+            SetEmptySession();
+            $("#TxtConsoleLCno").val("");
+        });
+        $("input[name$='filBranch']").change(function () {
+            $("#ConsoleDeselectAll").prop('checked', false);
+            $("#ConsoleSearch").val("");
+            $("#ConsoleSelectLR").val("");
+            $('#Consolelist').jqGrid('clearGridData');
+            $("#Consolelist").jqGrid("GridUnload");
+            $('#Consolelist').trigger('reloadGrid');
+            ConsoleGridReload();
+        });
+        $('#btnConsoleDocument').click(function (event) {
+            event.preventDefault();
+            $("#ConsoleDeselectAll").prop('checked', false);
+            $("#ConsoleSearch").val("");
+            $("#ConsoleSelectLR").val("");
+            $('#Consolelist').jqGrid('clearGridData');
+            $("#Consolelist").jqGrid("GridUnload");
+            $('#Consolelist').trigger('reloadGrid');
+            ConsoleGridReload();
+        });
+        $('#btnConsoleGetLc').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("ConsoleGrid")';
+            var myTableArray = [];
+            $("#Consolelist > tbody  > tr").each(function () {
+                if ($(this).find("input[class='ConsoleDebitGrid']").prop("checked") == true) {
+
+                    var myDets = {
+                        LREwayNo: $(this).find('td:eq(5)').text(),
+                        LREwayValid: $(this).find('td:eq(6)').text(),
+                        LRno: $(this).find('td:eq(10)').text(),
+                        LRDate: $(this).find('td:eq(19)').text(),
+                        Consingor: $(this).find('td:eq(24)').text(),
+                        Consignee: $(this).find('td:eq(25)').text(),
+                        From: $(this).find('td:eq(20)').text(),
+                        To: $(this).find('td:eq(21)').text(),
+                        LRrefKey: $(this).find('td:eq(27)').text(),
+                    }
+                    myTableArray.push(myDets);
+                }
+            });
+            var check = $('#Consolelist').find("input[class='ConsoleDebitGrid']:checked").length;
+            if (check > 0)
+            {
+                $("#GetConsoleLRLIst").modal("hide");
+                var ModelData = {};
+                ModelData["ConsoleList"] = myTableArray;
+                var DTO = { Model:ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        var LoadDownLoadFiles1 = $("#SelectedLrConsoleShow");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles1.html('');
+                        LoadDownLoadFiles1.html(data.Html);
+                        $("#ConsoleSearch").val("");
+                    },
+                });
+            }
+            else
+            {
+                alert("Atleast One EwayBill Required...");
+            }
+        });
+        $('#btnMultiExpEwayBill').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("UpdateExtendEwayBill")';
+            var check = $('#Extlist').find("input[class='chkExtendEwayBill']:checked").length;
+            if (check > 0) {
+                var Error = false;
+                var ErrorMessage = "";
+                var myTableArray = [];
+
+
+                $("#Extlist > tbody  > tr").each(function () {
+                    if ($(this).find("input[class='chkExtendEwayBill']").prop("checked") == true) {
+                        var VehicleNO = "";
+                        debugger;
+                        if (Error == false) {
+                            if ($(this).find("input[class='chkManualVehicle']").prop("checked") == true) {
+                                if ($(this).find(".txtVehicle").val() == "" || $(this).find(".txtVehicle").val() == null) {
+                                    Error = true;
+                                    ErrorMessage += "Please Enter Proper VehicleNo...!\n";
+                                }
+                            }
+                            if ($(this).find(".txtPin").val() == "" || $(this).find(".txtPin").val() == null) {
+                                Error = true;
+                                ErrorMessage += "Please Enter Proper Pincode...!\n";
+                            } else if ($(this).find(".txtPin").val().length != 6) {
+                                Error = true;
+                                ErrorMessage += "Please Enter Proper Pincode And Pincode Must Have 6 Digit Only...!";
+                            }
+                        }
+                        if ($(this).find("input[class='chkManualVehicle']").prop("checked") == true)
+                        {
+                            VehicleNO = $(this).find(".txtVehicle").val();
+                        }
+                        else
+                        {
+                            VehicleNO = $(this).find("input[name='Vehicle']").val();
+                        }
+                        var myDets = {
+
+                            EWB_EwayNo: $(this).find('td:eq(6)').text(),
+                            DocDate: $(this).find('td:eq(5)').text(),
+                            Document: $(this).find('td:eq(7)').text(),
+
+                            //EWB_VehicleNo: $(this).find(".txtVehicleNo").val(),
+                            EWB_VehicleNo: VehicleNO,
+
+
+                            EWB_FromPlace: $(this).find("input[name='ddlFromPlace']").val(),
+                            EWB_ConsignorState: $(this).find("input[name='State']").val(),
+
+
+                            EWB_ConsignorPincode: $(this).find(".txtPin").val(),
+                            EWB_Distance: $(this).find(".txtKM").val(),
+
+                            EWB_ExtendReasonCode: $(this).find(".ddlExtendReason").val(),
+                            EWB_ExtendReasonRemark: $(this).find(".txtRemark").val(),
+                            EWB_ConsignorAddr1: $(this).find(".txtAddr1").val(),
+                            EWB_ConsignorAddr2: $(this).find(".txtAddr2").val(),
+                            EWB_ConsignorAddr3: $(this).find(".txtAddr3").val(),
+                        }
+                        myTableArray.push(myDets);
+                    }
+                });
+                if (Error == false) {
+                    $("#ExtendEwayModal").modal("hide");
+                    var ModelData = {};
+                    ModelData["ConsoleList"] = myTableArray;
+                    var DTO = { Model: ModelData };
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json; charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            $("#ErrorMessage").hide();
+                            $('.spinner').hide();
+                            alert(data.errormsg);
+                        },
+                    });
+                }
+                else {
+                    alert(ErrorMessage);
+                }
+
+            }
+            else {
+                alert("Please Select Proper EwayBill To Extend...");
+            }
+        });
+        
+        //$("input[name='chkManualVehicle']").change(function () {
+        //    debugger;
+        //    var row = $(this).closest("tr");
+        //    var isChecked = $(this).is(":checked");
+        //    if (isChecked) {
+        //        row.find(".txtVehicle").removeClass("hidden");
+        //        row.find(".ComboVehicle").addClass("hidden");
+
+        //    }
+        //    else {
+        //        row.find(".txtVehicle").addClass("hidden");
+        //        row.find(".ComboVehicle").removeClass("hidden");
+        //    }
+        //});
+    });
+    function handleClick() {
+
+        $("#Extlist > tbody  > tr").each(function () {
+            if ($(this).find("input[class='chkManualVehicle']").prop("checked") == true) {
+                debugger;
+                $(this).find(".txtVehicle").removeClass("hidden");
+                $(this).find(".ComboVehicle").addClass("hidden");
+            } else {
+                $(this).find(".txtVehicle").addClass("hidden");
+                $(this).find(".ComboVehicle").removeClass("hidden");
+            }
+        });
+        //var row = db.closest("tr");
+        //var isChecked = db.checked;
+        //if (isChecked) {
+        //    row.find(".txtVehicle").removeClass("hidden");
+        //    row.find(".ComboVehicle").addClass("hidden");
+
+        //}
+        //else {
+        //    row.find(".txtVehicle").addClass("hidden");
+        //    row.find(".ComboVehicle").removeClass("hidden");
+        //}
+    }
+    function CNSloadTRNModeBP() {
+    event.preventDefault();
+    var url = '@Url.Action("GetTrasactMode")';
+    $.ajax({
+        type: 'POST',
+        url: url,
+        dataType: 'json',
+        data: {  },
+        success: function (result) {
+            $("#EWB_CNSMode").empty();
+            $.each(result, function (i, item) {
+                $("#EWB_CNSMode").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+            });
+            $('#EWB_CNSMode').val('@Model.EWB_TRNMode').attr("selected", "selected");
+            $('.spinner').hide();
+        },
+        error: function (ex) {
+            alert("Error occured while processing your request." + ex);
+        }
+    });
+    return false;
+};
+
+function CNSLoadFromPlaceBP() {
+    var url = '@Url.Action("FromPlace")'
+    $('#EWB_CNSBranch').select2({
+        minimumInputLength: 0,
+        placeholder: 'Search',
+        ajax: {
+            url: url,
+            dataType: 'json',
+            quietMillis: 100,
+            enableFiltering: true,
+            allowClear: true,
+            minimumInputLength: 0,
+            multiple: true,
+            width: 300,
+            data: function (term, page) {
+                return {
+                    types: ["exercise"],
+                    limit: -1,
+                    term: term,
+                };
+            },
+            results: function (data, page) {
+                clientObj = JSON.stringify(data);
+                return {
+                    results: $.map(data, function (item) {
+                        return {
+                            text: item.Name,
+                            id: item.Code
+                        }
+                    })
+                };
+            }
+        },
+
+        initSelection: function (element, callback) {
+            var data = { id: '@Model.EWB_Branch', text: '@Model.EWB_BranchName' };
+            callback(data);
+        },
+
+        formatResult: function (exercise) {
+            return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                "</div></span></div></div>";
+        },
+
+        formatSelection: function (exercise) {
+            return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                "</div></span></div></div>";
+        },
+    });
+};
+function CNSLoadConsignorStateBP() {
+    var url = '@Url.Action("LoadState")'
+    $('#EWB_CNSConsignorState').select2({
+        minimumInputLength: 0,
+        placeholder: 'Search',
+        ajax: {
+            url: url,
+            dataType: 'json',
+            quietMillis: 100,
+            enableFiltering: true,
+            allowClear: true,
+            minimumInputLength: 0,
+            multiple: true,
+            width: 300,
+            data: function (term, page) {
+                return {
+                    types: ["exercise"],
+                    limit: -1,
+                    term: term
+                };
+            },
+            results: function (data, page) {
+                clientObj = JSON.stringify(data);
+                return {
+                    results: $.map(data, function (item) {
+                        return {
+                            text: item.Name,
+                            id: item.Code
+                        }
+                    })
+                };
+            }
+        },
+
+        initSelection: function (element, callback) {
+            var data = { id: '@Model.EWB_ConsignorState', text: '@Model.EWB_ConsignorStateName' };
+            callback(data);
+        },
+
+        formatResult: function (exercise) {
+            return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                "</div></span></div></div>";
+        },
+
+        formatSelection: function (exercise) {
+            return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                "</div></span></div></div>";
+        },
+
+    });
+    };
+
+    function CNSLoadVehicleEWBBP() {
+    var url = '@Url.Action("GetVehicle")'
+        $('#EWB_CNSVehicleNo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.EWB_VehicleNo', text: '@Model.EWB_VehicleName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function ConsoleJQGridCheckbox() {
+        var check = $('#Consolelist').find("input[class='ConsoleDebitGrid']:checked").length;
+        $("#mTotalLR1").html(check);
+    }
+
+    function SVGActive() {
+
+        $("#GetEaybill").val("Active");
+        misgridreload();
+        @*var ModelData = {};
+        ModelData["GetEaybill"] = "Active";
+            ModelData["Fromdate"] = $("#MisFromdate").val();
+            ModelData["ToDate"] = $("#MisListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchMisEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivMisEway').html('');
+                    $('#DivMisEway').html(data.Html);
+                    misgridreload();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+    }
+    function SVGClear() {
+        $("#GetEaybill").val("Clear");
+        misgridreload();
+        @*var ModelData = {};
+        ModelData["GetEaybill"] = "Clear";
+            ModelData["Fromdate"] = $("#MisFromdate").val();
+            ModelData["ToDate"] = $("#MisListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchMisEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivMisEway').html('');
+                    $('#DivMisEway').html(data.Html);
+                    misgridreload();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+    }
+    function SVGALL() {
+        $("#GetEaybill").val("ALL");
+        misgridreload();
+        @*var ModelData = {};
+        ModelData["GetEaybill"] = "ALL";
+            ModelData["Fromdate"] = $("#MisFromdate").val();
+            ModelData["ToDate"] = $("#MisListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchMisEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivMisEway').html('');
+                    $('#DivMisEway').html(data.Html);
+                    misgridreload();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+    }
+
+    function AllSVGActive() {
+
+        $("#GetEaybill").val("Active");
+        $("#AllActive").css("text-decoration", "underline");
+        $("#AllClear,#AllExpired,#AllAll").css({ 'text-decoration': '', 'opacity': '' });
+        AllEwaygridreload();
+        @*var ModelData = {};
+        ModelData["GetEaybill"] = "Active";
+        ModelData["Fromdate"] = $("#ListFromdate").val();
+        ModelData["ToDate"] = $("#ListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivListEway').html('');
+                    $('#DivListEway').html(data.Html);
+                    AllEwaygridreload();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+    }
+    function AllSVGExpire() {
+
+        $("#GetEaybill").val("Expired");
+        $("#AllExpired").css("text-decoration", "underline");
+        $("#AllClear,#AllActive,#AllAll").css({ 'text-decoration': '', 'opacity': '' });
+        AllEwaygridreload();
+        @*var ModelData = {};
+        ModelData["GetEaybill"] = "Expired";
+        ModelData["Fromdate"] = $("#ListFromdate").val();
+        ModelData["ToDate"] = $("#ListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivListEway').html('');
+                    $('#DivListEway').html(data.Html);
+                    AllEwaygridreload();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+    }
+    function AllSVGClear() {
+        $("#GetEaybill").val("Clear");
+        $("#AllClear").css("text-decoration", "underline");
+        $("#AllActive,#AllExpired,#AllAll").css({ 'text-decoration': '', 'opacity': '' });
+        AllEwaygridreload();
+        @*var ModelData = {};
+        ModelData["GetEaybill"] = "Clear";
+        ModelData["Fromdate"] = $("#ListFromdate").val();
+        ModelData["ToDate"] = $("#ListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivListEway').html('');
+                    $('#DivListEway').html(data.Html);
+                    AllEwaygridreload();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+    }
+    function AllSVGALL() {
+        $("#GetEaybill").val("ALL");
+        $("#AllAll").css("text-decoration", "underline");
+        $("#AllActive,#AllExpired,#AllClear").css({ 'text-decoration': '', 'opacity': '' });
+        AllEwaygridreload();
+        @*var ModelData = {};
+        ModelData["GetEaybill"] = "ALL";
+        ModelData["Fromdate"] = $("#ListFromdate").val();
+        ModelData["ToDate"] = $("#ListToDate").val();
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("FetchEwayBillList")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#DivListEway').html('');
+                    $('#DivListEway').html(data.Html);
+                    AllEwaygridreload();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });*@
+    }
+    function GetConsignmentDetails(value)
+    {
+        var TabID = "";
+        var tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            if (tabcontent[i].style.display != "none") {
+                TabID = tabcontent[i].id.trim();
+            }
+        }
+        $('#ConsignmentModels').modal('hide');
+        $("#ConsignmentKey").val(value);
+
+        //Generate Eway Bill
+        if (TabID == "divLedgerTable")
+        {
+            var ModelData = {};
+            ModelData["Document"] = value;
+            var url = '@Url.Action("GetEwayBill")';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == "Success")
+                    {
+
+                        var LoadDownLoadFiles = $("#DivGenEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnGenEway").show();
+                    }
+                    else
+                    {
+                        alert(data.Errmsg);
+                        var LoadDownLoadFiles = $("#DivGenEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnGenEway").hide();
+                    }
+                },
+            });
+        }
+        //Multi Vehicle Eway Bill
+        else if (TabID == "divLedgerTable1")
+        {
+            var ModelData = {};
+            ModelData["Document"] = value;
+            var url = '@Url.Action("GetMultiVehicleEway")';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == "Success")
+                    {
+
+                        var LoadDownLoadFiles = $("#DivMultiEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnMultiVehicleEway").show();
+                    }
+                    else
+                    {
+                        alert(data.Errmsg);
+                        var LoadDownLoadFiles = $("#DivMultiEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnMultiVehicleEway").hide();
+                    }
+                },
+            });
+        }
+        //B-Part Update Eway Bill
+        else if (TabID == "divLedgerTable2")
+        {
+            var ModelData = {};
+            ModelData["Document"] = value;
+            var url = '@Url.Action("GetBPartData")';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == "Success") {
+
+                        var LoadDownLoadFiles = $("#DivBPart");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                    }
+                    else {
+                        alert(data.Errmsg);
+                        var LoadDownLoadFiles = $("#DivBPart");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                    }
+                },
+            });
+        }
+        //Extend Eway Bill
+        else if (TabID == "divLedgerTable3")
+        {
+            var ModelData = {};
+            ModelData["Document"] = value;
+            var url = '@Url.Action("GetExtendEway")';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == "Success") {
+
+                        var LoadDownLoadFiles = $("#DivExtEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnExtEway").show();
+                    }
+                    else {
+                        alert(data.Errmsg);
+                        var LoadDownLoadFiles = $("#DivExtEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnExtEway").hide();
+                    }
+                },
+            });
+        }
+        //Cancel Eway Bill
+        else if (TabID == "divLedgerTable4")
+        {
+            var ModelData = {};
+            ModelData["Document"] = value;
+            var url = '@Url.Action("GetCancelEway")';
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    if (data.Status == "Success") {
+
+                        var LoadDownLoadFiles = $("#DivCanEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnCanEway").show();
+                    }
+                    else {
+                        alert(data.Errmsg);
+                        var LoadDownLoadFiles = $("#DivCanEway");
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $("#btnCanEway").hide();
+                    }
+                },
+            });
+        }
+    }
+    function GetLorryChallanDetails(value)
+    {
+        $('#ConsignmentModels').modal('hide');
+        var ModelData = {};
+        ModelData["LRrefKey"] = value;
+        var url = '@Url.Action("GetLorryChallanEwayBillsOfConsignment")';
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+                var LoadDownLoadFiles = $("#SelectedLrConsoleShow");
+                LoadDownLoadFiles.html('');
+                LoadDownLoadFiles.html(data.Html);
+                $("#TxtConsoleLCno").val("");
+                alert();
+
+                $('#EWB_CNSBranch').select2('data', { id: data.FromPLaceCode, text: data.FromPLace });
+                $('#EWB_CNSVehicleNo').select2('data', { id: data.VehicleNoCode, text: data.VehicleNo });
+                $('#EWB_CNSConsignorState').select2('data', { id: data.StateCode, text: data.StateName });
+            },
+        });
+    }
+    function SetEmptySession() {
+        var ModelData = {};
+        var url = '@Url.Action("SetEmptySession")';
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $("#ErrorMessage").hide();
+                $('.spinner').hide();
+                var LoadDownLoadFiles = $("#SelectedLrConsoleShow");
+                LoadDownLoadFiles.html('');
+            },
+        });
+    }
+    function misgridreload() {
+        //event.preventDefault();
+        $('#mislist').jqGrid('clearGridData');
+        $("#mislist").jqGrid("GridUnload");
+        $('#mislist').trigger('reloadGrid');
+        $('#AllEwaylist').jqGrid('clearGridData');
+        $("#AllEwaylist").jqGrid("GridUnload");
+        $('#AllEwaylist').trigger('reloadGrid');
+        $('#SynHistory').jqGrid('clearGridData');
+        $("#SynHistory").jqGrid("GridUnload");
+        $('#SynHistory').trigger('reloadGrid');
+
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+
+        var mDate = $("#MisFromdate").val() + ':' + $("#MisListToDate").val();
+        var Code = "";
+        if ($("#GetEaybill").val() == "" || $("#GetEaybill").val() == null || $("#GetEaybill").val() == "Active") {
+            Code = "s.Clear='false' and s.EWBValid >"+'@Model.SyncDate';
+        }
+        else if ($("#GetEaybill").val() == "Clear")
+        {
+            Code =  "s.Clear='true'";
+        }
+        else if ( $("#GetEaybill").val()== "ALL")
+        {
+            Code =  "1=1";
+        }
+
+
+        var sPathUrl = "/Logistics/MasterGrid/GetGridStructureRecords/?Date=" + mDate + "&id=MisMatchEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Logistics/MasterGrid/GetMasterGridData/?Date=" + mDate + "&ViewDataId=MisMatchEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked') + '&Code=' + Code;
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#mislist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#mispager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:250,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#mislist');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+
+                    var ids = jQuery("#mislist").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        if (jQuery("#mislist").getCell(rowId, "Clear") == "False")
+                        {
+                            var btn = "<button type='button' id='btnClear" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Clear' , title='clear' , attr='" + rowId + "'>Clear</button>";
+                            jQuery("#mislist").jqGrid('setRowData', rowId, { Actions: btn });
+                        }
+                        else
+                        {
+                            var btn = "<button type='button' id='btnForceActivity" + rowId + "' value='" + rowId + "' style='padding:3px 8px;border-radius:15px;' class='btn btn-danger' tooltip='UnClear' , title='Unclear' , attr='" + rowId + "'>Un-Clear</button>";
+                            jQuery("#mislist").jqGrid('setRowData', rowId, { Actions: btn });
+                        }
+                    }
+                    $("button").click(function (event)
+                    {
+
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#mislist');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'EwayBill No');
+                        var DocNo = myGrid.jqGrid('getCell', curRowId, 'FMNO');
+                        switch (btntype)
+                        {
+                            case "btnForceActivity":
+                                misUnclearFunction(cellVal);
+                                break;
+                            case "btnClear":
+                                misClearFunction(cellVal);
+                                break;
+                        }
+                    });
+                },
+            });
+            jQuery("#mislist").jqGrid('navGrid', "#mispager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#mislist").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#mispager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+    function misUnclearFunction(value)
+    {
+
+        var url = '@Url.Action("UnClearEwayBill")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    alert("UnClear Eway Bill From The List...!");
+                    SVGActive();
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function misClearFunction(value)
+    {
+
+        var url = '@Url.Action("ClearEwayBill")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    alert("Clear Eway Bill From The List...!");
+                    SVGActive();
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function AllEwaygridreload() {
+        //event.preventDefault();
+
+
+        $('#mislist').jqGrid('clearGridData');
+        $("#mislist").jqGrid("GridUnload");
+        $('#mislist').trigger('reloadGrid');
+        $('#AllEwaylist').jqGrid('clearGridData');
+        $("#AllEwaylist").jqGrid("GridUnload");
+        $('#AllEwaylist').trigger('reloadGrid');
+        $('#SynHistory').jqGrid('clearGridData');
+        $("#SynHistory").jqGrid("GridUnload");
+        $('#SynHistory').trigger('reloadGrid');
+
+        var SearchSring = "";
+        var ColName, Coldata;
+        var lPath = window.location.pathname;
+
+        var mDate =  $("#ListFromdate").val() + ':' + $("#ListToDate").val();
+        if ($("#GetEaybill").val() == "" || $("#GetEaybill").val() == null || $("#GetEaybill").val() == "Active") {
+            Code = "s.EWBType<>'Authe' and s.Clear='false' and ( s.LrTablekey is null or s.LrTablekey in (select L.TableKey from LRMaster L where L.TableKey not in (select D.ParentKey from DeliveryMaster D)))";
+        }
+        else if ($("#GetEaybill").val() == "Clear")
+        {
+            Code =  "s.Clear='true'";
+        }
+        else if ( $("#GetEaybill").val()== "ALL")
+        {
+            Code =  "1=1";
+        }
+        else if ($("#GetEaybill").val() == "Expired")
+        {
+            SearchSring = "Expired";
+            Code = "s.Clear='false' and s.EWBType<>'Authe' and ( s.LrTablekey is null or s.LrTablekey in (select L.TableKey from LRMaster L where L.TableKey not in (select D.ParentKey from DeliveryMaster D)))";
+        }
+
+        var sPathUrl = "/Logistics/SingleEwayBillTransaction/GetGridStructureRecords/?FromDate=" + $("#ListFromdate").val() + "&ToDate=" + $("#ListToDate").val() + "&ViewDataId=TFATEWBEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked') + "&Type=" + $("#GetEaybill").val() + '&Customer=' + $('#GetDate').is(':checked') + '&ComController=' + $('#ZoomSideBar').val();;
+        var sUrlpath = "/Logistics/SingleEwayBillTransaction/GetGridData/?Date=" + mDate + "&ViewDataId=TFATEWBEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked') + '&Code=' + Code + '&searchField=' + SearchSring + '&Customer=' + $('#GetDate').is(':checked') + '&ARAPReqOnly=' + $('#ZoomSideBar').val();
+        var Count = "0";
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                //var minfox = obj[4].split("|");
+                //Count=minfox[0];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#AllEwaylist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: false,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#AllEwaypager'),
+                rowNum: 1000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:250,
+                sortname: 'DocDate',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#AllEwaylist');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#AllEwaylist").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+
+                        if (jQuery("#AllEwaylist").getCell(rowId, "LR-EWB").trim() != "") {
+                            $('#AllEwaylist').setCell(rowId, 'LR-EWB', '', { 'background-color': 'rgb(200 207 93)' }, '');
+                        }
+                        else if (jQuery("#AllEwaylist").getCell(rowId, "Party-Invoice").trim() != "") {
+                            $('#AllEwaylist').setCell(rowId, 'Party-Invoice', '', { 'background-color': 'rgb(200 207 93)' }, '');
+                        }
+                        else if (jQuery("#AllEwaylist").getCell(rowId, "BE-Number").trim() != "") {
+                            $('#AllEwaylist').setCell(rowId, 'BE-Number', '', { 'background-color': 'rgb(200 207 93)' }, '');
+                        }
+
+                        if ($("#GetEaybill").val() == "Expired") {
+                            var beChecked = "<input type ='checkbox' id='" + rowId + "' value='" + jQuery("#AllEwaylist").getCell(rowId, "Recordekey") + "'  class='EwatlistDebitGrid' name='EwatlistDebitGrid' disabled  style='height: 22px;width: 19px;' />";
+                            jQuery("#AllEwaylist").jqGrid('setRowData', rowId, { Actions: beChecked });
+                        } else {
+                            var beChecked = "<input type ='checkbox' id='" + rowId + "' value='" + jQuery("#AllEwaylist").getCell(rowId, "Recordekey") + "'  class='EwatlistDebitGrid' name='EwatlistDebitGrid'  style='height: 22px;width: 19px;' />";
+                            jQuery("#AllEwaylist").jqGrid('setRowData', rowId, { Actions: beChecked });
+                        }
+
+
+                        //if (jQuery("#AllEwaylist").getCell(rowId, "Clear") == "False") {
+                        //    var btn = "<button type='button' id='btnClear" + rowId + "' value='" + rowId + "'  style='padding:4px 12px;border-radius:15px;' class='btn btn-info' tooltip='Clear' , title='clear' , attr='" + rowId + "'>Clear</button>";
+                        //    jQuery("#AllEwaylist").jqGrid('setRowData', rowId, { Actions: beChecked });
+                        //}
+                        //else {
+                        //    var btn = "<button type='button' id='btnForceActivity" + rowId + "' value='" + rowId + "' style='padding:3px 8px;border-radius:15px;' class='btn btn-danger' tooltip='UnClear' , title='Unclear' , attr='" + rowId + "'>Un-Clear</button>";
+                        //    jQuery("#AllEwaylist").jqGrid('setRowData', rowId, { Actions: beChecked });
+                        //}
+                    }
+                    $("#AllEwaylist").jqGrid('setLabel', 'Branch', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Consignment NO', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Stock At', '', { 'background': 'rgb(186 120 203)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Stock Type', '', { 'background': 'rgb(186 120 203)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Stock Branch', '', { 'background': 'rgb(186 120 203)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Exact Stock', '', { 'background': 'rgb(186 120 203)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'LR-EWB', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Party-Invoice', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'BE-Number', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Book Date', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', '[From]', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', '[To]', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Qty', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Weight', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Consignor', '', { 'background': 'rgb(120 203 184)' });
+                    $("#AllEwaylist").jqGrid('setLabel', 'Consignee', '', { 'background': 'rgb(120 203 184)' });
+
+                    $("button").click(function (event) {
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+                        var myGrid = $('#AllEwaylist');
+                        selectedRowId = myGrid.jqGrid('getGridParam', 'selrow');
+                        var cellVal = myGrid.jqGrid('getCell', curRowId, 'EwayBill No');
+                        switch (btntype) {
+                            case "btnForceActivity":
+                                UnclearFunction(cellVal);
+                                break;
+                            case "btnClear":
+                                ClearFunction(cellVal);
+                                break;
+                        }
+                    });
+                },
+            });
+            jQuery("#AllEwaylist").jqGrid('navGrid', "#AllEwaypager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#AllEwaylist").jqGrid("setFrozenColumns");
+            $('#pg_AllEwaypager').append($("<div class=\"col-sm-offset-1 col-md-4\" style=\"display: flex;margin-top:-2.6%;\"><label class='bold   col-sm-1 control-label' style='width:auto;'>Select All :</label><input value='False' class='form-control' data-val='true' data-val-required='The GetDate field is required.' id='EwatlistSelectAll' name='GetDate' style='height:20px;width:30px;' type='checkbox'><button class='btn btn-warning' style='color:black;font-size: 13px;padding:3px 12px;margin-right: 1%;' id='btnEwatListClear'>Clear</button><button class='btn btn-danger' style='color:black;font-size: 13px;padding:3px 12px;' id='btnEwatListUnClear'>UnClear</button></div>"));
+            $("#btnEwatListClear").click(function () {
+                var url = '@Url.Action("ClearEwayBill")';
+                var myTableArray = [];
+                $("#AllEwaylist > tbody  > tr").each(function () {
+                    if ($(this).find("input[class='EwatlistDebitGrid']").prop("checked") == true) {
+
+                        var myDets = {
+                            EWBNO: $(this).find('td:eq(8)').text(),
+                        }
+                        myTableArray.push(myDets);
+                    }
+                });
+                var check = $('#AllEwaylist').find("input[class='EwatlistDebitGrid']:checked").length;
+                if (check > 0)
+                {
+                    var ModelData = {};
+                    ModelData["ExtendEwayBillList"] = myTableArray;
+                    var DTO = { mModel:ModelData };
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json; charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            alert("Clear Eway Bill From The List...!");
+                            AllSVGActive();
+                        },
+                    });
+                }
+                else
+                {
+                    alert("Atleast One Eway Bill Select For Clear...");
+                }
+            });
+            $("#btnEwatListUnClear").click(function () {
+                var url = '@Url.Action("UnClearEwayBill")';
+                var myTableArray = [];
+                $("#AllEwaylist > tbody  > tr").each(function () {
+                    if ($(this).find("input[class='EwatlistDebitGrid']").prop("checked") == true) {
+
+                        var myDets = {
+                            EWBNO: $(this).find('td:eq(8)').text(),
+                        }
+                        myTableArray.push(myDets);
+                    }
+                });
+                var check = $('#AllEwaylist').find("input[class='EwatlistDebitGrid']:checked").length;
+                if (check > 0)
+                {
+                    var ModelData = {};
+                    ModelData["ExtendEwayBillList"] = myTableArray;
+                    var DTO = { mModel:ModelData };
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json; charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            alert("UnClear Eway Bill From The List...!");
+                            AllSVGActive();
+                        },
+                    });
+                }
+                else
+                {
+                    alert("Atleast One Eway Bill Select For UnClear...");
+                }
+            });
+            $("#EwatlistSelectAll").click(function () {
+                var CheckBox = $("#EwatlistSelectAll").prop("checked");
+                if (CheckBox) {
+                    $(".EwatlistDebitGrid").prop('checked', true);
+                } else {
+                    $(".EwatlistDebitGrid").prop('checked', false);
+                }
+            });
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#AllEwaypager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+    function ConsoleGridReload() {
+        //event.preventDefault();
+       $('#mislist').jqGrid('clearGridData');
+       $("#mislist").jqGrid("GridUnload");
+       $('#mislist').trigger('reloadGrid');
+       $('#AllEwaylist').jqGrid('clearGridData');
+       $("#AllEwaylist").jqGrid("GridUnload");
+       $('#AllEwaylist').trigger('reloadGrid');
+       $('#SynHistory').jqGrid('clearGridData');
+       $("#SynHistory").jqGrid("GridUnload");
+       $('#SynHistory').trigger('reloadGrid');
+       $('#Consolelist').jqGrid('clearGridData');
+       $("#Consolelist").jqGrid("GridUnload");
+       $('#Consolelist').trigger('reloadGrid');
+       var ExistEway = "";
+       $("#Consoleexample > tbody  > tr").each(function () {
+           var tds = $(this).find('td');
+           if (ExistEway == "") {
+               ExistEway = ExistEway + tds.eq(0).text() + "',"
+           }
+           else {
+               ExistEway = ExistEway + "'" + tds.eq(0).text() + "',"
+           }
+       });
+       if (ExistEway != "") {
+           ExistEway = ExistEway.substr(0, ExistEway.length - 2)
+       }
+       var Code = "s.EWBType<>'Authe' and s.Clear='false' and ( s.LrTablekey is null or s.LrTablekey in (select L.TableKey from LRMaster L where L.TableKey not in (select D.ParentKey from DeliveryMaster D)))";
+
+        @*var sPathUrl = "/Logistics/SingleEwayBillTransaction/GetGridStructureRecords/?FromDate=" + $("#ListFromdate").val() + "&ToDate=" + $("#ListToDate").val() + "&ViewDataId=TFATEWBEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked') + "&Type=" + $("#GetEaybill").val() + '&Customer=' + $('#GetDate').is(':checked') + '&ComController=' + $('#ZoomSideBar').val();;
+        var sUrlpath = "/Logistics/SingleEwayBillTransaction/GetGridData/?Date=" + mDate + "&ViewDataId=TFATEWBEway&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked') + '&Code=' + Code + '&searchField=' + SearchSring + '&Customer=' + $('#GetDate').is(':checked') + '&ARAPReqOnly=' + $('#ZoomSideBar').val();*@
+
+       var ColName, Coldata;
+        var sPathUrl = "/Logistics/SingleEwayBillTransaction/GetGridStructureRecords?ViewDataId=ConsoleTFATEWBEway" + '&ComController=' + $('#ZoomSideBar').val() + "&Type=Active" + "&mVar4=" + ExistEway + "&Customer=" + $("#CurrentBranch").is(':checked') ;
+        var sUrlpath = "/Logistics/SingleEwayBillTransaction/GetGridData?ViewDataId=ConsoleTFATEWBEway&Customer=" + $("#CurrentBranch").is(':checked') + "&mVar4=" + ExistEway + "&Code=" + Code;
+
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#Consolelist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#Consolepager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:320,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                //scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                scrollrows: true,
+                onSelectRow: function (id, status, e) {
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    var ids = jQuery("#Consolelist").jqGrid('getDataIDs');
+                    for (var i = 0; i < ids.length; i++) {
+                        var rowId = ids[i];
+                        //loop through grid rows
+                        var beChecked = "<input type ='checkbox' id='" + rowId + "' value='" + jQuery("#Consolelist").getCell(rowId, "Recordekey") + "' onclick='ConsoleJQGridCheckbox();' class='ConsoleDebitGrid' name='ConsoleDebitGrid'  style='height: 22px;width: 19px;' />";
+                        jQuery("#Consolelist").jqGrid('setRowData', rowId, { 'Actions': beChecked});
+                    }
+                },
+            });
+            jQuery("#Consolelist").jqGrid('navGrid', "#Consolepager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#Consolelist").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            $('#GetConsoleLRLIst').modal('show');
+        };
+    };
+    function UnclearFunction(value)
+    {
+
+        var url = '@Url.Action("UnClearEwayBill")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    alert("UnClear Eway Bill From The List...!");
+                    AllSVGActive();
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function ClearFunction(value)
+    {
+
+        var url = '@Url.Action("ClearEwayBill")';
+        var ModelData = {};
+        ModelData["Document"] = value;
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    alert("Clear Eway Bill From The List...!");
+                    AllSVGActive();
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function SynHistory() {
+        //event.preventDefault();
+        $('#mislist').jqGrid('clearGridData');
+        $("#mislist").jqGrid("GridUnload");
+        $('#mislist').trigger('reloadGrid');
+        $('#AllEwaylist').jqGrid('clearGridData');
+        $("#AllEwaylist").jqGrid("GridUnload");
+        $('#AllEwaylist').trigger('reloadGrid');
+        $('#SynHistory').jqGrid('clearGridData');
+        $("#SynHistory").jqGrid("GridUnload");
+        $('#SynHistory').trigger('reloadGrid');
+
+
+        var ColName, Coldata;
+        var mDate = $("#MisFromdate").val() + ':' + $("#MisListToDate").val();
+        var sPathUrl = "/Logistics/MasterGrid/GetGridStructureRecords/?Date=" + mDate + "&id=EwaySynHistory&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        var sUrlpath = "/Logistics/MasterGrid/GetMasterGridData/?Date=" + mDate + "&ViewDataId=EwaySynHistory&TableName=" + '@ViewBag.Table' + '&AcType=' + '@ViewBag.MainType' + '&MainType=' + '@ViewBag.MainType' + '&IsFormatSelected=' + $('#isdefault').is(':checked');
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#SynHistory').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#SynHistorypager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:150,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                    var myGrid = $('#SynHistory');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+
+                },
+            });
+            jQuery("#SynHistory").jqGrid('navGrid', "#SynHistorypager",
+            { edit: false, add: false, del: false, print:false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#SynHistory").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#SynHistorypager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+        };
+    };
+    function loadExtendReasonCodeinGrid(ID) {
+        event.preventDefault();
+
+        var url = '@Url.Action("GetExtendReasonCode")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {  },
+            success: function (result) {
+                debugger;
+                $("#" + ID).empty();
+                $.each(result, function (i, item) {
+                    $("#" + ID).append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $("#" + ID).val('5').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+    function loadStateCombo(ID) {
+        var url = '@Url.Action("LoadState")'
+        //$('.SearchState').select2({
+        $('#'+ID).select2({
+             minimumInputLength: 0,
+             placeholder: 'Search',
+             ajax: {
+                 url: url,
+                 dataType: 'json',
+                 quietMillis: 100,
+                 enableFiltering: true,
+                 allowClear: true,
+                 minimumInputLength: 0,
+                 multiple: true,
+                 width: 300,
+                 data: function (term, page) {
+                     return {
+                         types: ["exercise"],
+                         limit: -1,
+                         term: term
+                     };
+                 },
+                 results: function (data, page) {
+                     clientObj = JSON.stringify(data);
+                     return {
+                         results: $.map(data, function (item) {
+                             return {
+                                 text: item.Name,
+                                 id: item.Code
+                             }
+                         })
+                     };
+                 }
+             },
+             @*initSelection: function (element, callback) {
+                 var data = { id: '@Model.EWB_ConsignorState', text: '@Model.EWB_ConsignorStateName' };
+                 callback(data);
+             },*@
+             formatResult: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+             formatSelection: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+         })
+    };
+    function loadFromCombo(ID) {
+        var url = '@Url.Action("FromPlace")'
+        //$('.ddlFromPlace').select2({
+        $('#' + ID).select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+             @*initSelection: function (element, callback) {
+                 var data = { id: '@Model.EWB_ConsignorState', text: '@Model.EWB_ConsignorStateName' };
+                 callback(data);
+             },*@
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+    function loadVehicleCombo(ID) {
+    var url = '@Url.Action("GetVehicle")'
+        $('#' + ID).select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            @*initSelection: function (element, callback) {
+                var data = { id: '@Model.EWB_VehicleNo', text: '@Model.EWB_VehicleName' };
+                callback(data);
+            },*@
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });
+    };
+
+    function ExtendEwayBillGridLoad() {
+        $('#Extlist').jqGrid('clearGridData');
+        $("#Extlist").jqGrid("GridUnload");
+        $('#Extlist').trigger('reloadGrid');
+
+        var ColName, Coldata;
+        var sPathUrl = "/Logistics/MasterGrid/GetGridStructureRecords/?id=ExtendEwayBills";
+        var sUrlpath = "/Logistics/MasterGrid/GetMasterGridData/?ViewDataId=ExtendEwayBills";
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+        function CreateGridData() {
+            $('#Extlist').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#Extpager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                height:350,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+
+                    $('.spinner').hide();
+                },
+                ondblClickRow: function (id) {
+                    //event.preventDefault();
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+
+                gridComplete: function () {
+                    debugger;
+                    var ids = jQuery("#Extlist").jqGrid('getDataIDs');
+                    GridColumn = ids.length;
+                    for (var i = 0; i < ids.length; i++)
+                    {
+                        var rowId = ids[i];
+                        //var TextBoxFromPlace = "<center><input type ='text' value='0' id=LGQty" + rowId + " class='LGQty form-control' name='LGQty' onblur='QtyCheck()'  style='width:85px;' disabled /></center>";
+                        //var TextBoxFromPlace = "<center><input type ='text' value='0' id=LGQty" + rowId + " class='LGQty form-control' name='LGQty' onblur='QtyCheck()'  style='width:85px;' disabled /></center>";
+
+
+                        //-----------------CheckBox
+                        var CheckBox = "<input type ='checkbox' id='" + jQuery("#Extlist").getCell(rowId, "EWBNO") + "' value='" + jQuery("#Extlist").getCell(rowId, "EWBNO") + "' class='chkExtendEwayBill' name='chkExtendEwayBill'  style='height: 22px;width: 19px;' />";
+
+                        //-----------------Search Select2
+                        var FromPlaceSelect2 = "<input id='FromPlace" + rowId + "' value='" + jQuery("#Extlist").getCell(rowId, "From Place") + "' name='ddlFromPlace' class='ddlFromPlace input-large search-query' style='width:200px;'/>";
+
+                        var StateSelect2 = "<input id='State" + rowId + "'  name='State' value='" + jQuery("#Extlist").getCell(rowId, "State") + "' class='ddlSearchState input-large search-query' style='width:150px;'/>";
+
+
+                        var VehicleSelect2 = "<div title='Allow To Enter Manual Vehicle No.' style='display: flex;'><input type ='checkbox'  onclick='handleClick();' class='chkManualVehicle' name='chkManualVehicle'  style='height: 22px;width: 19px;' /><input type ='text' value='' id=txtVehicle" + rowId + " class='txtVehicle form-control hidden' name='txtKM' style='width:150px;margin-left:2%;'   /><span class='ComboVehicle'> <input id='Vehicle" + rowId + "'  name='Vehicle' value='" + jQuery("#Extlist").getCell(rowId, "Vehicle") + "' class='ddlSearchVehicle input-large search-query' style='width:150px;'/></span></div>";
+
+                        //-----------------Text Box
+                        //var TextBoxVehicle = "<center><input type ='text' value='" + jQuery("#Extlist").getCell(rowId, "Vehicle") + "' id=txtVehicleNo" + rowId + " class='txtVehicleNo form-control' name='txtVehicleNo'   /></center>";
+
+                        var TextBoxPin = "<center><input type ='text'  minlength='6' maxlength='6' value='" + jQuery("#Extlist").getCell(rowId, "aPin") + "' id=txtPin" + rowId + " class='txtPin form-control' name='txtPin'   /></center>";
+                        var TextBoxKM = "<center><input type ='text' value='0' id=txtKM" + rowId + " class='txtKM form-control' name='txtKM'   /></center>";
+
+                        //-----------------DropDown
+                        var DropDownReason = "<select id='ddlExtendReason" + rowId + "' name='ddlExtendReason' class='form-control ddlExtendReason'/></select>";
+
+                        //-----------------Text Area
+                        var TextBoxReamrk = "<textarea id='txtRemark" + rowId + "' name='txtRemark' value='' class='form-control txtRemark' cols='45' maxlength='100' rows='1'></textarea>";
+                        var TextBoxAddr1 = "<textarea id='txtAddr1" + rowId + "' name='Addr1' value='" + jQuery("#Extlist").getCell(rowId, "Addr1") + "' class='form-control txtAddr1' cols='45' maxlength='100' rows='1'>" + jQuery("#Extlist").getCell(rowId, "Addr1") + "</textarea>";
+                        var TextBoxAddr2 = "<textarea id='txtAddr2" + rowId + "' name='Addr2' value='" + jQuery("#Extlist").getCell(rowId, "Addr2") + "' class='form-control txtAddr2' cols='45' maxlength='100' rows='1'>" + jQuery("#Extlist").getCell(rowId, "Addr2") + "</textarea>";
+                        var TextBoxAddr3 = "<textarea id='txtAddr3" + rowId + "' name='Addr3' value='" + jQuery("#Extlist").getCell(rowId, "Addr3") + "' class='form-control txtAddr3' cols='45' maxlength='100' rows='1'>" + jQuery("#Extlist").getCell(rowId, "Addr3") + "</textarea>";
+
+
+                        jQuery("#Extlist").jqGrid('setRowData', rowId, { 'Select': CheckBox, 'Vehicle': VehicleSelect2, 'State': StateSelect2, 'Reason(Extention)': DropDownReason, 'From Place': FromPlaceSelect2,  'aPin': TextBoxPin, 'KM': TextBoxKM,  'Remark': TextBoxReamrk, 'Addr1': TextBoxAddr1, 'Addr2': TextBoxAddr2, 'Addr3': TextBoxAddr3 });
+
+                        loadStateCombo('State' + rowId);
+                        loadFromCombo('FromPlace' + rowId);
+                        loadVehicleCombo('Vehicle' + rowId);
+                        loadExtendReasonCodeinGrid('ddlExtendReason' + rowId);
+                        debugger;
+                        var StateID = jQuery("#Extlist").getCell(rowId, "StateH");
+                        var StateTEXT = jQuery("#Extlist").getCell(rowId, "StateName");
+                        var BranchID = jQuery("#Extlist").getCell(rowId, "FromPlc");
+                        var BranchTEXT = jQuery("#Extlist").getCell(rowId, "BranchName");
+                        var VehicleID = jQuery("#Extlist").getCell(rowId, "VehicleC");
+                        var VehicleTEXT = jQuery("#Extlist").getCell(rowId, "VehicleN");
+
+
+                        $('#State' + rowId).select2('data', { id: StateID, text: StateTEXT });
+                        $('#FromPlace' + rowId).select2('data', { id: BranchID, text: BranchTEXT });
+                        $('#Vehicle' + rowId).select2('data', { id: VehicleID, text: VehicleTEXT });
+
+                    }
+                    $(".txtPin,.txtKM").constrain({ allow: { regex: "[0-9]" } });
+                },
+            });
+            jQuery("#Extlist").jqGrid('navGrid', "#Extpager",
+                { edit: false, add: false, del: false, print: false, search: true, refresh: false, searchtext: "filter" });
+            jQuery("#Extlist").jqGrid("setFrozenColumns");
+        };
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+
+        };
+    };
+</script>
+
+<style>
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+</style>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/DashBoard/TransactionsDashBoard" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">Generate Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <span class="tools pull-right" style="    margin-right: 15px;">
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="LCSetupMaster" role="form" style="margin-top:2%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <fieldset class=" col-md-12" style="margin-top:0%;">
+                <legend>@Model.Header</legend>
+                <div class="panel panel-default" style="height:420px;">
+                    <div class="panel-body">
+                        <div class="tab" style="margin-top: -15px;">
+
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable')" style=" height: 45px;width: 135px!important;" id="GenerateEwayBill" title="Generate Eway Bill Using Consignment.">Generate EwayBill</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable1')" style="height: 45px;width: 130px!important;" id="MultiVehicle" title="Consignment of one e-way bill has to be moved in multiple vehicles.">Multi Vehicle</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable2')" style="height: 45px;width: 130px!important;" id="UpdateBPart" title="Set New Vehicle No To Eway Bill.">Update B-Part</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable8')" style="height: 45px;width: 130px!important;" id="ConsoleEwayBill" title="Multiple e-way bills for multiple consignments being carried in one conveyance (goods vehicle).">Console EwayBill</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable3')" style="height: 45px;width: 135px!important;" id="ExtendEwayBill" title="Extend Validity Of Particular Eway Bill / Consignment. ">Extend EwayBill</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable4')" style="height: 45px;width: 135px!important;" id="CancelEwayBill" title="Cancel Created Eway Bill.">Cancel EwayBill</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable5')" style="height: 45px;width: 135px!important;" id="SynEwayBill" title="Get All Eway Bill Of Transporter In System.">Syn EwayBill</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable6')" style="height: 45px;width: 200px!important;" id="MisMatchEwayBill" title="Portal Eway Not Connected Our Consignment For Reference.">Consignment Mis-Match With EwayBill</button>
+                            <button class="tablinks" onclick="openCity(event, 'divLedgerTable7')" style="height: 45px;width: 135px!important;" id="AllEwayBill">EwayBill List</button>
+                        </div>
+                        <div id="divLedgerTable" style="height:390px;position:absolute;width:97%;overflow-x:hidden;" class="tabcontent">
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">DOCUMENT NO:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Document, new { @id = "GenDocument", @placeholder = "Enter Consignment No", @class = "form-control", @style = "width:100%;", @Value = Model.Document })
+                                </div>
+                                <div class="col-sm-2">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;" id="btnGenData">Get Data For Eway Bill</button>
+                                </div>
+                                <div class="col-sm-3" style="padding-right:unset;">
+                                    <div class="col-sm-1" style="font-weight:bold;color:black;padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;width:unset;">
+                                        Period:
+                                    </div>
+                                    <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                                        <input type="text" class="form-control dpd1" name="from" id="GENFromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                                        <span class="input-group-addon">to</span>
+                                        <input type="text" class="form-control dpd2" name="to" id="GENToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                                    </div>
+                                </div>
+                                <div class="col-sm-1">
+                                    <button class="btn btn-primary" style="color:black;font-size: 13px;padding:3px 12px;" id="btnGenDocument">Pick Document</button>
+                                </div>
+                            </div>
+                            <div class="form-group" id="DivGenEway">
+                                @Html.Partial("GenerateEway", Model)
+                            </div>
+
+                        </div>
+                        <div id="divLedgerTable1" style="height:390px;position:absolute;width:97%;" class="tabcontent">
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">DOCUMENT NO:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Document, new { @id = "MultiDocument", @placeholder = "Enter Consignment No", @class = "form-control", @style = "width:100%;", @Value = Model.Document })
+                                </div>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.SearchEway, new { @id = "MultiSearchEway", @placeholder = "Enter EwayBill-NO", @class = "form-control", @style = "width:100%;", @Value = Model.SearchEway })
+                                </div>
+                                <div class="col-sm-1">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;" id="btnMultiVehicleData">Get Data For Multi-Vehicle Eway Bill</button>
+                                </div>
+                            </div>
+                            <div class="form-group" id="DivMultiEway">
+                                @Html.Partial("MultiVehicleEway", Model)
+                            </div>
+                        </div>
+                        <div id="divLedgerTable2" style="height:390px;position:absolute;width:97%;" class="tabcontent">
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">DOCUMENT NO:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Document, new { @id = "BPartDocument", @placeholder = "Enter Consignment No", @class = "form-control", @style = "width:100%;", @Value = Model.Document })
+                                </div>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.SearchEway, new { @id = "BPartSearchEway", @placeholder = "Enter EwayBill-NO", @class = "form-control", @style = "width:100%;", @Value = Model.SearchEway })
+                                </div>
+                                <div class="col-sm-1">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;" id="btnFetchBPartData">Get Data For B-Part</button>
+                                </div>
+                            </div>
+                            <div class="form-group" id="DivBPart">
+                                @Html.Partial("BPartEway", Model)
+                            </div>
+                        </div>
+                        <div id="divLedgerTable3" style="height:390px;position:absolute;width:97%;" class="tabcontent">
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">DOCUMENT NO:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Document, new { @id = "EXTDocument", @placeholder = "Enter Consignment No", @class = "form-control", @style = "width:100%;", @Value = Model.Document })
+                                </div>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.SearchEway, new { @id = "EXTSearchEway", @placeholder = "Enter EwayBill-NO", @class = "form-control", @style = "width:100%;", @Value = Model.SearchEway })
+                                </div>
+                                <div class="col-sm-4" style="width:auto;">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;" id="btnExtData">Get Data For Extend Eway Bill</button>
+                                    <button class="btn btn-primary" style="color:black;font-size: 13px;padding:3px 12px;" id="btnExtDocument" title="Extend Multiple Eway Bill At a Time.">Get Eway Bills To Extend </button>
+                                </div>
+                            </div>
+                            <div class="form-group" id="DivExtEway">
+                                @Html.Partial("ExtendEway", Model)
+                            </div>
+                        </div>
+                        <div id="divLedgerTable4" style="height:390px;position:absolute;width:97%;" class="tabcontent">
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">DOCUMENT NO:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.Document, new { @id = "CANDocument", @placeholder = "Enter Consignment No", @class = "form-control", @style = "width:100%;", @Value = Model.Document })
+                                </div>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.SearchEway, new { @id = "CANSearchEway", @placeholder = "Enter EwayBill-NO", @class = "form-control", @style = "width:100%;", @Value = Model.SearchEway })
+                                </div>
+                                <div class="col-sm-4">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;" id="btnCanData">Get Data For Cancel Eway Bill</button>
+                                </div>
+                            </div>
+                            <div class="form-group" id="DivCanEway">
+                                @Html.Partial("CancelEway", Model)
+                            </div>
+                        </div>
+                        <div id="divLedgerTable5" style="height:390px;position:absolute;width:97%;" class="tabcontent">
+                            <hr style="margin-top: 10px!important;margin-bottom: 10px!important;border: 1px solid #887ccd;">
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;">Sync From Date:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.SyncDate, new { @id = "EXTSyncDate", @placeholder = "Select Date", @class = "form-control", @style = "width:100%;", @Value = Model.SyncDate })
+                                </div>
+                                <label class="col-sm-1 control-label" style="font-weight:bold;"> Sync To Date:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.SyncToDate, new { @id = "EXTSyncToDate", @placeholder = "Select Date", @class = "form-control", @style = "width:100%;", @Value = Model.SyncToDate })
+                                </div>
+
+                                <div class="col-sm-1">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;background-color:#22f3af;border-color:#22f3af;" id="btnExtSync">Sync</button>
+                                </div>
+                                <label class="col-sm-5 control-label" style="font-weight:bold;">(Synchronize Eway Bill Using Date Generated By Self On Portal.)</label>
+                            </div>
+                            <hr style="margin-top: 10px!important;margin-bottom: 10px!important;border: 1px solid #887ccd;">                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;">Consiger GST:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.EWB_ConsignorGST, new { @id = "EXTConsignorGST", @placeholder = "Enter GST NO ", @class = "form-control", @style = "width:100%;", @Value = Model.EWB_ConsignorGST })
+                                </div>
+                                <label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">Sync Date:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.SyncDate, new { @id = "NEXTSyncDate", @placeholder = "Select Date", @class = "form-control", @style = "width:100%;", @Value = Model.SyncDate })
+                                </div>
+                                <div class="col-sm-1">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;background-color:#22f3af;border-color:#22f3af;" id="btnExtSyncConsigner">Sync</button>
+                                </div>
+                                <label class="col-sm-5 control-label" style="font-weight:bold;">(Synchronize Eway Bill Using Date And GSTNO(Consigner/Consignee) On Portal.)</label>
+
+                            </div>
+                            <hr style="margin-top: 10px!important;margin-bottom: 10px!important;border: 1px solid #887ccd;">
+
+                            <div class="form-group" style="padding-left:2%!important;padding-right:2%!important;">
+                                <div class="jqGrid">
+                                    <table id="SynHistory" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                                    <div id="SynHistorypager" style="height:34px;"></div>
+                                </div>
+                            </div>
+
+                        </div>
+                        <div id="divLedgerTable6" style="height:390px;position:absolute;width:97%;" class="tabcontent">
+                            <div class="form-group">
+
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;">
+                                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Active :</label>
+                                    <svg width="20" height="20">
+                                        <title>Active Eway Bills</title>
+                                        <a onclick="SVGActive();">
+                                            <rect width="20" height="20" style="fill:rgb(163,228,180);stroke-width:3;stroke:rgb(0,0,0)" />
+                                        </a>
+                                    </svg>
+                                </div>
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Clear :</label>
+                                    <svg width="20" height="20">
+                                        <title>Clear Eway Bills</title>
+                                        <a onclick="SVGClear();">
+                                            <rect width="20" height="20" style="fill:rgb(157,210,218);stroke-width:3;stroke:rgb(0,0,0)" />
+                                        </a>
+                                    </svg>
+                                </div>
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label" style="width:auto;color:black;">All :</label>
+                                    <svg width="20" height="20">
+                                        <title>All Eawy Bills</title>
+                                        <a onclick="SVGALL();">
+                                            <rect width="20" height="20" style="fill:rgb(201,201,199);stroke-width:3;stroke:rgb(0,0,0)" />
+                                        </a>
+                                    </svg>
+                                </div>
+                                <div class="col-sm-1" style="float:right;">
+                                    <button class="btn btn-primary" style="color:black;font-size: 13px;padding:3px 12px;" id="btnMisDocument">Reload</button>
+                                </div>
+                                <div class="col-sm-3" style="padding-right:unset;float:right;">
+                                    <div class="col-sm-1" style="font-weight:bold;color:black;padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;width:unset;">
+                                        Period:
+                                    </div>
+                                    <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                                        <input type="text" class="form-control dpd1" name="from" id="MisFromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                                        <span class="input-group-addon">to</span>
+                                        <input type="text" class="form-control dpd2" name="to" id="MisListToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="form-group" id="DivMisEway">
+                                @Html.Partial("MisMatchEway", Model)
+                            </div>
+                        </div>
+                        <div id="divLedgerTable7" style="height:390px;position:absolute;width:97%;" class="tabcontent">
+                            <div class="form-group">
+
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;">
+                                    <label class="col-sm-12 control-label" id="AllActive" style="width:auto;color:black;">Active :</label>
+                                    <svg width="20" height="20">
+                                        <title>Unclear,Undelivered and valid list.</title>
+                                        <a onclick="AllSVGActive();">
+                                            <rect width="20" height="20" style="fill:rgb(163,228,180);stroke-width:3;stroke:rgb(0,0,0)" />
+                                        </a>
+                                    </svg>
+                                </div>
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label" id="AllClear" style="width:auto;color:black;">Clear :</label>
+                                    <svg width="20" height="20">
+                                        <title>Clear Eway Bills</title>
+                                        <a onclick="AllSVGClear();">
+                                            <rect width="20" height="20" style="fill:rgb(157,210,218);stroke-width:3;stroke:rgb(0,0,0)" />
+                                        </a>
+                                    </svg>
+                                </div>
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label" id="AllExpired" style="width:auto;color:black;">Expired :</label>
+                                    <svg width="20" height="20">
+                                        <title>Expired Eway Bills</title>
+                                        <a onclick="AllSVGExpire();">
+                                            <rect width="20" height="20" style="fill:rgb(185 41 94);stroke-width:3;stroke:rgb(0,0,0)" />
+                                        </a>
+                                    </svg>
+                                </div>
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label" id="AllAll" style="width:auto;color:black;">All :</label>
+                                    <svg width="20" height="20">
+                                        <title>All Eawy Bills</title>
+                                        <a onclick="AllSVGALL();">
+                                            <rect width="20" height="20" style="fill:rgb(201,201,199);stroke-width:3;stroke:rgb(0,0,0)" />
+                                        </a>
+                                    </svg>
+                                </div>
+                                <label class="hidden bold   col-sm-1 control-label" style="width:auto;">Date Range Allow :</label>
+                                <div class="col-sm-1 hidden">
+                                    @Html.CheckBoxFor(x => x.GetDate, new { @class = "form-control", @style = "height:20px;width:20px;", @Value = Model.GetDate })
+                                </div>
+                                <div class="col-sm-3" style="padding-right:unset;">
+                                    <div class="col-sm-1" style="font-weight:bold;color:black;padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;width:unset;">
+                                        Period:
+                                    </div>
+                                    <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                                        <input type="text" class="form-control dpd1" name="from" id="ListFromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                                        <span class="input-group-addon">to</span>
+                                        <input type="text" class="form-control dpd2" name="to" id="ListToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                                    </div>
+                                </div>
+                                <div class="col-sm-1">
+                                    <button class="btn btn-primary" style="color:black;font-size: 13px;padding:3px 12px;" id="btnListDocument">Reload</button>
+                                </div>
+                                <label class=" bold   col-sm-1 control-label" style="width:auto;">Eway Bill Connected with Our Record By</label>
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <svg width="20" height="20">
+                                        <rect width="20" height="20" style="fill:rgb(200,207,93);stroke-width:3;stroke:rgb(0,0,0)" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="form-group" id="DivListEway">
+                                @Html.Partial("EwayBillList", Model)
+                            </div>
+                        </div>
+                        <div id="divLedgerTable8" style="height:390px;position:absolute;width:97%;overflow-x:hidden;" class="tabcontent">
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="font-weight:bold;width:auto;">Pick From:<span style="color:red;">*</span></label>
+                                <div class="col-sm-3" style="display: flex;width: auto;">
+                                    <input type="radio" class="form-control" name="ConsoleEway" id="rbnConsoleLcConsoleEwaylist" style="height:20px;width:35px;" checked=""><label class=" bold control-label"> Ewaybill List</label>
+                                    <input type="radio" class="form-control" name="ConsoleEway" id="rbnConsoleLc" style="height:20px;width:35px;"><label class=" bold control-label"> Lorry Challan</label>
+                                </div>
+                                <div class="col-sm-1 ConsoleEwayPickDiv">
+                                    <button class="btn btn-primary" style="color:black;font-size: 13px;padding:3px 12px;" id="btnConsoleDocument">Pick Document</button>
+                                </div>
+                                <div class="col-sm-2 ConsoleLCPickDiv hidden">
+                                    <div class="col-sm-9">
+                                        <input value="" class="form-control" id="TxtConsoleLCno" name="Document" placeholder="Enter Lorry Challan No" style="width:100%;" type="text">
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <button class="btn btn-primary" style="color:black;font-size: 13px;padding:3px 12px;" id="btnConsoleLCDocument"><i class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Get EwayBill From Particular Lorry Challan."></i></button>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="color:black;font-weight:bold;">TRN Mode:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.DropDownListFor(m => m.EWB_TRNMode, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "EWB_CNSMode", @Id = "EWB_CNSMode" })
+                                </div>
+                                <label class="col-sm-1 control-label" style="color:black;font-weight:bold;">TRN Doc NO:</label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.EWBDocument, new { @class = "form-control", @style = "width:100%;", @Value = Model.EWBDocument, @Name = "EWB_CNSDocument", @Id = "EWB_CNSDocument" })
+                                </div>
+                                <label class="col-sm-1 control-label" style="color:black;font-weight:bold;width:auto;">TRN Doc Date:</label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.DocDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.DocDate, @Name = "EWB_CNSDocDate", @Id = "EWB_CNSDocDate" })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class="col-sm-1 control-label" style="color:black;font-weight:bold;">Manual Vehi:</label>
+                                <div class="col-sm-1" style="width:auto;">
+                                    <input type="checkbox" title="Allow To Enter Manual VehicleNO" style="width:20px;height:20px;" id="rdcnsbtnVehicle" />
+                                </div>
+                                <label class="col-sm-1 control-label" style="color:black;font-weight:bold;">Vehicle No:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2 MasterCNSVehicle">
+                                    @Html.TextBoxFor(x => x.EWB_VehicleNo, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.EWB_VehicleNo, @Name = "EWB_CNSVehicleNo", @Id = "EWB_CNSVehicleNo" })
+                                </div>
+                                <div class="col-sm-2 ManualCNSVehicle hidden">
+                                    @Html.TextBoxFor(x => x.EWB_VehicleNoTxt, new { @class = "form-control", @style = "width:100%;", @Value = Model.EWB_VehicleNoTxt, @Name = "EWB_CNSVehicleNoTxt", @Id = "EWB_CNSVehicleNoTxt" })
+                                </div>
+                                <label class="col-sm-1 control-label" style="color:black;font-weight:bold;">From Place:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.EWB_Branch, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.EWB_Branch, @Name = "EWB_CNSBranch", @Id = "EWB_CNSBranch" })
+                                </div>
+                                <label class="col-sm-1 control-label" style="color:black;font-weight:bold;">From State:<span style="color:red;">*</span></label>
+                                <div class="col-sm-2">
+                                    @Html.TextBoxFor(x => x.EWB_ConsignorState, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.EWB_ConsignorState, @Name = "EWB_CNSConsignorState", @Id = "EWB_CNSConsignorState" })
+                                </div>
+                                <div class="col-sm-1" style="padding:0px;">
+                                    <button class="btn btn-warning" style="color:black;font-size: 13px;padding:3px 12px;" id="btnGENConsoleEwayBill">Gene. Console EwyBill</button>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-left: -10px;margin-right: -11px;">
+                                @*@Html.Partial("GenerateEway", Model)*@
+                                <div class="grid" id="SelectedLrConsoleShow" style="width: 100%;display: block !important;">
+                                    @*@Html.Partial("GridView", Model.ConsoleList)*@
+                                </div>
+                            </div>
+
+                        </div>
+                        <script>
+                            function openCity(evt, cityName) {
+                                var i, tabcontent, tablinks;
+                                tabcontent = document.getElementsByClassName("tabcontent");
+                                for (i = 0; i < tabcontent.length; i++) {
+
+                                    tabcontent[i].style.display = "none";
+                                }
+                                tablinks = document.getElementsByClassName("tablinks");
+                                for (i = 0; i < tablinks.length; i++) {
+
+                                    tablinks[i].className = tablinks[i].className.replace(" active", "");
+                                }
+                                document.getElementById(cityName).style.display = "block";
+                                evt.currentTarget.className += " active";
+                                if (cityName == "divLedgerTable6") {
+                                    $("#GetEaybill").val("Active");
+                                    misgridreload();
+                                } else if (cityName == "divLedgerTable7") {
+                                    $("#GetEaybill").val("Active");
+                                    AllSVGActive();
+                                } else if (cityName == "divLedgerTable5") {
+                                    SynHistory();
+                                }
+                            }
+
+                            document.getElementById("GenerateEwayBill").click();
+
+                        </script>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <a href="~/DashBoard/TransactionsDashBoard" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@*Pending Eway Bill Modal*@
+<div class="modal fade" id="PendingEwayModal" style="width: 100%;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 5%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-8">
+                        <h4 class="modal-title">
+                            <b>Pending Eway Bill Document</b>
+                        </h4>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="col-md-3">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-md-9">
+                            <input type="text" id="PendingEwaySearch" class="form-control" placeholder="Search  Here" />
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div class="grid" id="FormatTable">
+                    <div class="form-group col-sm-12" id="GENPendingList" style="overflow: auto;width: 100%;display: block;min-height:450px;max-height:450px;">
+                        @Html.Partial("PendingEwayList", Model)
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@*<div class="example-modal">
+        <div id="ExtendEwayModal" class="modal modal-default" style="margin-top:1%;">
+            <div class="modal-dialog modal-lg" style="width:1240px;height:500px;">
+                <div id="ShowEayList">
+                </div>
+            </div>
+        </div>
+    </div>*@
+<div class="modal fade" id="ExtendEwayModal" style="width: 100%;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 5%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-8">
+                        <h4 class="modal-title">
+                            <b>Eway Bill Documents</b>
+                        </h4>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="col-md-3">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-md-9">
+                            <input type="text" id="EXTPendingEwaySearch" class="form-control" placeholder="Search  Here" />
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div class="grid" id="FormatTable">
+                    <div class="form-group col-sm-12" id="ShowEayList" style="overflow: auto;width: 100%;display: block;min-height:450px;max-height:450px;">
+                        <div class="jqGrid">
+                            <table id="Extlist" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                            <div id="Extpager" style="height:34px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-warning" id="btnMultiExpEwayBill">Extend</button>
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!--LR Stock Modal -->
+<div class="modal fade" id="GetConsoleLRLIst" style="width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 5%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;height: 65px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-3">
+                        <h4 class="modal-title">
+                            <b>Add EwayBill In Console</b>
+                        </h4>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="col-md-4" style="width: auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;">Select All :</label>
+                        </div>
+                        <div class="col-md-1" style="width: auto;">
+                            <input type="checkbox" tabindex="1" id="ConsoleDeselectAll" style="height:20px;width:20px;" />
+                        </div>
+                        <div class="col-md-2" style="width: auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Select By</label>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" id="ConsoleSelectLR" tabindex="2" class="form-control" placeholder="Eway Bill NO" />
+                        </div>
+                        <div class="col-md-2" style="width: auto;">
+                            <label class=" bold control-label" style="margin-top: 5px;"> Search</label>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" id="ConsoleSearch" class="form-control" placeholder="Search Here" />
+                        </div>
+                    </div>
+                    <div class="col-sm-offset-3 col-md-5">
+                        <div class="col-sm-1 control-label" style="width: auto;padding-top: 5px;color: black;font-weight: bold;">Filter By:</div>
+                        <div class="col-sm-4" style="display:flex;width: auto;">
+                            <input type="radio" class="form-control" name="filBranch" id="CurrentBranch" value="CurrentBranch" style="height:20px;width:30px;" /><label class=" bold control-label" style="font-size: 14px;width:130px;padding-top: 4px;"> User Branch</label>
+                            <input type="radio" class="form-control" name="filBranch" id="AllBranch" value="AllBranch" style="height:20px;width:30px;" /><label class=" bold control-label" style="font-size: 14px;width:95px;padding-top: 4px;"> All Branch</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div id="tabLedger" style="height:420px;padding:0px 0px 0px 0px;display:block !important;">
+                    <div class="jqGrid" style="padding-left:0px;padding-right:0px;width:100%;overflow:scroll;">
+                        <table id="Consolelist" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;margin-top:0px;"></table>
+                        <div id="Consolepager" style="height:32px;width:100%;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="form-group">
+                    <div class="col-md-1" style="font-weight: bold;text-align:center;color: red;">Total -:</div>
+                    <div class="col-md-2" style="font-weight: bold;width:auto;">No. Of EwayBill :<label id="mTotalLR1" style="padding-left: 15px;font-weight: bold;color: red;">0</label></div>
+                </div>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnConsoleGetLc">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@Html.HiddenFor(x => x.ConsignemtKey, new { @id = "ConsignmentKey" })
+@Html.HiddenFor(x => x.GetEaybill)
+@Html.HiddenFor(x => x.FromDate)
+@Html.HiddenFor(x => x.ToDate)
+@Html.HiddenFor(x => x.ZoomSideBar)
+<!--Consignment Multi Document Modal -->
+<div class="example-modal">
+    <div id="ConsignmentModels" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="consignmentmodels">
+            </div>
+        </div>
+    </div>
+</div>

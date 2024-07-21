@@ -1,0 +1,152 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.AccountOpeningVM
+@using Common;
+
+<div class="grid" id="SelectedledgerTable" style="max-height:300px; width:100%; overflow-y: scroll;">
+    <table id="tabledata" class="zui-table" style="width:100%">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                <th style="width:1%">Sr.</th>
+                <th style="width:10%">Type</th>
+                <th style="width:10%;">Debit</th>
+                <th style="width:10%;">Credit</th>
+                <th style="width:5%">Currency</th>
+
+                <th colspan="4" style="width:6%"><button type="button" id="btnadddata" class="btn btn-primary btn-sm" title="Add" style="margin-left:10px;width:60%;height:25px;border:1px solid black"><i class="fa fa-plus" style="color:black;"></i></button></th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (Model.BreakUpList != null)
+            {
+                foreach (var item in @Model.BreakUpList.ToList())
+                {
+                    <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                        <td style="width:1%">@item.tempId</td>
+                        <td style="width:1%">@item.Type</td>
+                        <td style="width:1%;text-align:right">@item.Debit</td>
+                        <td style="width:1%;text-align:right">@item.Credit</td>
+                        <td style="width:1%">@item.CurrencyName</td>
+                        <td colspan="4" style="width:6%">
+
+                            <button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@item.tempId" title="Edit"><i class="fa fa-edit"></i></button>
+
+                            <button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button>
+
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="example-modal">
+    <div id="addnewledger" class="modal modal-default">
+        <div class="modal-dialog modal-lg" style="width:1040px;overflow:unset">
+            <div id="AddnNewLedgerList">
+                @Html.Partial("AddNewLedger")
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $("#btnadddata").click(function (event) {
+            if ($("#Account").val() == '' && ($("#hdnBaseGR").val() == "D" || $("#hdnBaseGR").val() == "S" || $("#hdnBaseGR").val() == "U")) {
+                alert('Select Account');
+                return;
+            }
+            event.preventDefault();
+            $('#ErrorMessage').hide();
+            var ModelData = {};
+            ModelData["SessionFlag"] = "Add";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetBreakLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addnewledger').modal('show');
+                    $('#AddnNewLedgerList').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="EditLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["SessionFlag"] = "Edit";
+            ModelData["Mode"] = $("#hdnMode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetBreakLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addnewledger').modal('show');
+                    $('#AddnNewLedgerList').html(data.Html);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+        $('button[action|="DeleteLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#SelectedledgerTable').html(data.Html);
+                    $('#Amount').val(data.Amount);
+                    if (data.AmtType == "Debit") {
+                        $('input:radio[name="AmtType"]').filter('[value="Debit"]').attr('checked', true);
+                    }
+                    if (data.AmtType == "Credit") {
+                        $('input:radio[name="AmtType"]').filter('[value="Credit"]').attr('checked', true);
+                    }
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    })
+</script>

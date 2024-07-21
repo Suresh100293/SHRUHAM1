@@ -1,0 +1,245 @@
+﻿@model GridOption
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+@*<style>
+    .ui-jqgrid tr.jqgrow td {
+        vertical-align: middle;
+        font-family: Tahoma;
+        font-size: 9pt;
+    }
+
+    .ui-state-default, .ui-widget-content .ui-state-default, .ui-widget-header .ui-state-default {
+        border: 1px solid #A9A9A9;
+    }
+
+    .ui-state-hover, .ui-widget-content .ui-state-hover, .ui-widget-header .ui-state-hover, .ui-state-focus, .ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus {
+        border: 1px solid gray;
+    }
+
+    .ui-widget-content {
+        background: unset;
+    }
+
+    .ui-jqgrid .ui-pg-table td {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-paging-info {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-input {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqgrid .ui-pg-selbox {
+        font-size: 9pt;
+        font-family: Tahoma;
+    }
+
+    .ui-jqdialog {
+        display: none;
+        width: 300px;
+        position: absolute;
+        padding: .2em;
+        font-size: 11px;
+        overflow: visible;
+        left: 30% !important;
+        top: 35% !important;
+        background-color: whitesmoke;
+    }
+
+    .ui-jqdialog-titlebar {
+        background-color: gray;
+    }
+
+    .form-group {
+        margin-bottom: 8px;
+    }
+
+    .form-horizontal .control-label {
+        padding-top: 5px;
+        color: black;
+    }
+
+    table {
+        border-collapse: unset;
+    }
+</style>*@
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#FromDate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+
+        $('#btnRefresh').click(function () {
+            $('#list').jqGrid('clearGridData');
+            $("#list").jqGrid("GridUnload");
+            $('#list').trigger('reloadGrid');
+            GridReload();
+        });
+
+        $('#btnExcel').click(function () {
+            var Date = ($('#FromDate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + Date + '&Code=' + '@Model.Code' + '&ViewDataId=' + '@Model.ViewDataId', '_blank');
+        });
+
+        $('#btnPrint').click(function () {
+            var Date = ($('#FromDate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDF")?Date=' + Date + '&Code=' + '@Model.Code' + '&ViewDataId=' + '@Model.ViewDataId', '_blank');
+        });
+
+        @*$('#btnClose').click(function () {
+            var sUrlpath = window.open('@Url.Action("GetPDF")?Date=' + Date + '&Code=' + '@Model.Code' + '&ViewDataId=' + '@Model.ViewDataId');
+        });*@
+    });
+
+    function GridReload() {
+        event.preventDefault();
+        var ColName, Coldata;
+        //var lPath = window.location.pathname;
+        //var arrPath = lPath.split("/");
+        var mDate = ($('#FromDate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&Code=' + $('#ItemCode').val();
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&Code=' + $('#ItemCode').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                if (data.Status == "Error")
+                {
+                    alert(data.Message);
+                }
+                else
+                {
+                    var obj = $.parseJSON(data);
+                    ColName = obj[0].split(",");
+                    Coldata = obj[1];
+                    CreateGridData();
+                }
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#list').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: 15,
+                rowList: [10, 15, 20, 50, 100],
+                height: $(window).height() - 111 - 35 - 68,
+                sortname: '',
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autowidth: false,
+                shrinkToFit: false,
+                search: true,
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                },
+            });
+            jQuery("#list").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, search: true, refresh: false, searchtext: "Search", });
+            jQuery("#list").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', ' #cccccc');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+</script>
+
+<header class="header fixed-top" id="infofooter" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-sm-5" style="padding-left:5px;">
+            <b class="CodeSt">@Model.Header</b>
+        </div>
+        <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+            Period:
+        </div>
+        <div class="col-sm-3" style="padding-right:unset;">
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="FromDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                <span class="input-group-addon">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+            </div>
+        </div>
+        <div class="col-sm-2 pull-right">
+            <button class="btn btn-info" style="font-size:10pt;padding:3px 3px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i> Refresh</button>
+            <button class="btn btn-success" style="font-size:10pt;padding:3px 3px;" id="btnExcel" title='Excel'><i class="fa fa-file-text-o"></i> Excel</button>
+            <button class="btn btn-warning" style="font-size:10pt;padding:3px 3px;" id="btnPrint" title='Print'><i class="fa fa-print"></i> Print</button>
+            @*            <button class="btn btn-danger" style="font-size:10pt;padding:3px 12px;" id="btnClose" title='Close'><i class="fa fa-power-off"></i></button>*@
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:29px;height:auto;padding-left:0px;padding-right:0px;">
+        <div id="page-contentgrid">
+            <div class="jqGrid">
+                <table id="list" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                <div id="pager" style="height:100%;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@*<div class="footer-section" style="position:fixed;background-color:whitesmoke;padding:2px;color:unset;height:70px;border:solid 1px black;">
+    <div class="row" style="padding-top:2px;">
+        <label class="col-sm-1 control-label" style="padding-top:4px;padding-left:20px;">Opening:</label>
+        <div class="col-sm-2">
+            <input type="text" id="openb" alt="" class="form-control" style="width:80%;text-align:right;font-weight:bolder;" disabled="disabled" />
+        </div>
+        <label class="col-sm-1 control-label" style="padding-top:4px;">Receipts:</label>
+        <div class="col-sm-2">
+            <input type="text" id="tdebit" alt="" class="form-control" style="width:80%;text-align:right;font-weight:bolder;" disabled="disabled" />
+        </div>
+        <label class="col-sm-1 control-label" style="padding-top:4px;">Issues:</label>
+        <div class="col-sm-2">
+            <input type="text" id="tcredit" alt="" class="form-control" style="width:80%;text-align:right;font-weight:bolder;" disabled="disabled" />
+        </div>
+        <label class="col-sm-1 control-label" style="padding-top:4px;">Closing:</label>
+        <div class="col-sm-2">
+            <input type="text" id="closeb" alt="" class="form-control" style="width:80%;text-align:right;font-weight:bolder;" disabled="disabled" />
+        </div>
+    </div>
+</div>*@
+
+<footer class="footer-section" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+    <div class="col-sm-5"></div>
+    <div class="col-sm-3" style="margin-top:0px;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>

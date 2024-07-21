@@ -1,0 +1,120 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.GridOption
+@using Common
+
+<script>
+    $(document).ready(function () {
+        $(".rolemaster_AccessType").click(function () {
+            var tds = $(this).closest("tr").find("td");
+            var Format = tds.eq(2).text();
+            tds.find('input[type="checkbox"]').prop('checked', true);
+            var StoreProcedure = tds.eq(3).text();
+            window.open("/Transactions/TransactionMaintenanceGrid/PrintSingleDocumentCrystal?StoreProcedure=" + StoreProcedure + '&Format=' + Format + '&Document=' + $('#PrintDocument').val(), "_blank");
+        });
+
+        //$('#btnPrint').click(function (event) {
+        //    event.preventDefault();
+        //    $('#printgrid tr:not(:first)').each(function () {
+        //        var tds = $(this).find('td');
+        //        if (tds.find('input[type="checkbox"]').is(':checked')) {
+
+        //            var Format = tds.eq(1).text();
+        //            alert(Format)
+        //            var StoreProcedure = tds.eq(2).text();
+        //            window.open("/Transactions/TransactionMaintenanceGrid/PrintSingleDocumentCrystal?StoreProcedure=" + StoreProcedure + '&Format=' + Format + '&Document=' + $('#PrintDocument').val(), "_blank");
+        //        }
+        //    })
+        //});
+
+        $('#btnMultiPrint').click(function (event) {
+            event.preventDefault();
+            var myFormatArray = []
+            $('#printgrid tr:not(:first)').each(function () {
+                var tds = $(this).find('td');
+                if (tds.find('input[type="checkbox"]').is(':checked')) {
+                    Format = tds.eq(2).text();
+                    myFormatArray.push(Format);
+                }
+            })
+            window.open("/Transactions/TransactionMaintenanceGrid/SendMultiReport?Format=" + myFormatArray.toString() + "&Type=" + $('#Type').val() + "&Document=" + $('#PrintDocument').val(), "_blank");
+        });
+
+        $('#btnPrint').click(function (event) {
+            event.preventDefault();
+            var myFormatArray = []
+            $('#printgrid tr:not(:first)').each(function () {
+                var tds = $(this).find('td');
+                if (tds.find('input[type="checkbox"]').is(':checked')) {
+                    Format = tds.eq(2).text();
+                    myFormatArray.push(Format);
+                }
+            })
+            var ModelData = {};
+
+            ModelData["Format"] = myFormatArray.toString();
+            ModelData["Type"] = $('#Type').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("SaveMultiPrint")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });
+</script>
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Print Documents</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" id="PickTable" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+                <table id="printgrid" class="zui-table" style="width:100%;">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                            <th>Print Format</th>
+                            <th>SQL Stored Procedure</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.list != null)
+                        {
+                            for (int i = 0; i < Model.list.Count; i++)
+                            {
+                                <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                    <td style="width:5%;"><button type="button" class="rolemaster_AccessType"><img src="/Content/Images/Print.ico" /></button></td>
+                                    <td style="width:5%;" align="center">@Html.CheckBoxFor(m => Model.list[i].IsFormatSelected, new { @Style = "width:28px;heigth:28px;font-size:18pt;font-weight:bolder;" })</td>
+                                    <td style="width:45%;font-size:12pt;font-weight:bolder;">@Html.DisplayFor(m => Model.list[i].Format)</td>
+                                    <td style="width:45%;font-size:12pt;font-weight:bolder;">@Html.DisplayFor(m => Model.list[i].StoreProcedure)</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <input id="PrintDocument" hidden="hidden" />
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;padding-left:6px;padding-right:5px;border-radius: 0px 0px 5px 5px;">
+            <button type="button" class="btn btn-success pull-left" style="font-family:Verdana; width:130px;" data-dismiss="modal" id="btnPrint">Save Preferences</button>
+            <button id="btnMultiPrint" class="btn btn-success" style="font-family:Verdana;" type="button">Print</button>
+            <button data-dismiss="modal" class="btn btn-danger" style="font-family:Verdana;" type="button">Close</button>
+        </div>
+    </div>
+</div>

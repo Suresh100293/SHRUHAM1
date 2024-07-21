@@ -1,0 +1,2299 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.LocalDeliverySheetVM
+@using Common;
+@{
+    ViewBag.Title = "LocalDeliverySheet";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<link href="~/Content/ToogleCreate/CreateTgl.css" rel="stylesheet" />
+<script src="~/Content/ToogleCreate/CreateTgl.js"></script>
+
+<script type="text/javascript">
+
+    var  LDSDate = true;
+    var Generate = true;
+
+    $(document).ready(function () {
+        if ('@Model.LDSsetup.LDSGenerate' == "True") {
+            Generate = true;
+        } else
+        {
+            Generate = false;
+        }
+
+        if ('@Model.Generate'=="M") {
+                $('#BothCHK').bootstrapToggle('on');
+        }
+         $("#AutoNo").val('@Model.LDSNo');
+        $('#BothCHK').change(function () {
+            if (this.checked) {
+                $("#LDSNo").removeAttr("disabled");
+                Generate = false;
+            } else {
+                $("#LDSNo").attr("disabled", "disabled");
+                Generate = true;
+                $("#LDSNo").val($("#AutoNo").val());
+
+            }
+        });
+
+        CalculateFreight();
+        AddButtonValidation();
+        LoadVehicleGroupStatus();
+        LoadVehicle("");
+        LoadVehicleGroup();
+        LoadBroker();
+        LoadFrom();
+        LoadTo();
+        ComboDestination();
+        ShowRouteDest();
+        LoadPayableAt();
+
+        $('#Date').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+        if ('@Model.Mode'!='Add') {
+            $("#Date").datepicker("setDate", '@Model.Date');
+        }
+
+        $("#AutoRetrive").change(function () {
+            debugger;
+            var Value = "";
+            var array = [];
+            var Flag = $(this).prop("checked");
+            if (Flag) {
+
+                $("#DestinationTable .RowData ").each(function () {
+                    debugger;
+                    var Row = $(this).closest("tr");
+                    Value = Value + Row.find(".FromCode").attr('id') + ",";
+                    array.push(Row.find(".FromCode").text().toLowerCase());
+                });
+                if ($("#To").val() != "") {
+                    debugger;
+                    var data = $('#To').select2('data');
+                    var n = data.text.indexOf(" ");
+                    var res = data.text.substring(0, n);
+                    Value = Value + $("#To").val() + ",";
+                    array.push(res.toLowerCase());
+                }
+                Value = Value.substring(0, Value.length - 1);
+            }
+
+            var url = "";
+            var FunctionName = $(this).attr('name');
+
+            if (FunctionName=="T") {
+                url = '@Url.Action("Transit_LR_List")';
+            } else if (FunctionName == "G") {
+                url = '@Url.Action("Godown_LR_Stock_List")';
+            }else if (FunctionName == "D") {
+                url = '@Url.Action("Door_LR_Stock_List")';
+            }else if (FunctionName == "A") {
+                url = '@Url.Action("All_LR_List")';
+            }
+
+                var DTO = { To: Value};
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#ShowLRList");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+
+                        $('#GetLRLIst').modal('show');
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        //var data = $('#LcTODest').select2('data');
+                        //var n = data.text.indexOf(" ");
+                        //var res = data.text.substring(0, n);
+                        if (data != null) {
+                            if (Flag) {
+                                debugger;
+                                $("#example1 > tbody  > tr").each(function () {
+                                    if (jQuery.inArray($(this).find(".To").text().toLowerCase(), array) !== -1) {
+                                        $(this).addClass("AutoRetrive");
+                                    }
+
+                                    //if ($(this).find(".To").text().toLowerCase() == res.toLowerCase()) {
+
+                                    //}
+                                });
+                            } else {
+                                $("#example1 > tbody  > tr").each(function () {
+                                    $(this).removeClass("AutoRetrive");
+                                });
+                            }
+                        }
+                    },
+                });
+        });
+
+
+
+        $('#Date').change(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("CheckLDSDate")';
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { DocDate: $("#Date").val(), DocTime: $("#Time").val()},
+                success: function (result) {
+                    if (result.Message == "T") {
+                        LDSDate = true;
+                    } else {
+                        LDSDate = false;
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Please Check The Date');
+                        return;
+
+                    }
+                }
+            });
+        });
+
+        $('#LDSNo').blur(function () {
+            CheckManual();
+        });
+
+        $("#VehicleNo").change(function (event) {
+            LoadVehicleGrpStatus($("#VehicleNo").val());
+        })
+        $('#AddDest').click(function (event) {
+            event.preventDefault();
+            $("#DestCombo").prop("disabled", false);
+        });
+
+        $('#btnAddFromSubmit').click(function (event) {
+            event.preventDefault();
+
+            if ($("#NewFromName").val()=='') {
+                $("#ErrorMessage1").show();
+                $("#ErrorMessage1").text('Name Required..');
+                return;
+            }
+
+            var url = '@Url.Action("AddFrom")';
+            var DTO = { From: $("#NewFromName").val() };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                    },
+                });
+        });
+
+        $('#btnAddToSubmit').click(function (event) {
+            event.preventDefault();
+
+            if ($("#NewToName").val() == '') {
+                $("#ErrorMessage2").show();
+                $("#ErrorMessage2").text('Name Required..');
+                return;
+            }
+
+            if ($("#ParentOfTo").val()=='') {
+                $("#ErrorMessage2").show();
+                $("#ErrorMessage2").text('Parent Required..');
+                return;
+            }
+
+            var url = '@Url.Action("AddTo")';
+            var DTO = { To: $("#NewToName").val(), WhereToAdd: $("#ParentOfTo").val()};
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                    },
+                });
+        });
+
+
+
+
+
+
+
+
+        $("#btnAttachSubmit").click(function (event) {
+            event.preventDefault();
+            //$("#LockModal").modal("hide");
+            if ($("#Document").val()!="")
+            {
+                var url = '@Url.Action("SaveAttachment")';
+                var ModelData = {};
+
+                ModelData["Document"] = $("#Document").val();
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                            $("#ErrorMessage").hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            alert(data.Message);                    }
+                    },
+                    });
+            }
+        });
+        $("#SaveLock").click(function (event) {
+            event.preventDefault();
+            //$("#LockModal").modal("hide");
+            if ($("#Document").val()!="")
+            {
+                var url = '@Url.Action("SaveLock")';
+                var ModelData = {};
+
+                if ($("#All").prop("checked") == true) {
+                    ModelData["Dispach"] = true;
+                    ModelData["Delivery"] = true;
+                    ModelData["Billing"] = true;
+                    ModelData["All"] = true;
+                } else
+                {
+                    if ($("#Dispach").prop("checked") == true) {
+                        ModelData["Dispach"] = true;
+                    } else {
+                        ModelData["Dispach"] = false;
+                    }
+                    if ($("#Delivery").prop("checked") == true) {
+                        ModelData["Delivery"] = true;
+                    } else {
+                        ModelData["Delivery"] = false;
+                    }
+                    if ($("#Billing").prop("checked") == true) {
+                        ModelData["Billing"] = true;
+                    } else {
+                        ModelData["Billing"] = false;
+                    }
+                }
+                ModelData["Document"] = $("#Document").val();
+                ModelData["LockRemark"] = $("#LockRemark").val();
+                var DTO = { mModel: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        if (data.Status == 'Success') {
+                            $('.spinner').hide();
+                            $("#ErrorMessage").hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            alert(data.Message);                    }
+                    },
+                    });
+            }
+        });
+
+
+        $("#btnPhotoupload").click(function (event) {
+            event.preventDefault();
+            var size = 0;
+            var formData = new FormData();
+            var totalFiles = document.getElementById("Attachment_UploadFile").files.length;
+            for (var i = 0; i < totalFiles; i++) {
+                var file = document.getElementById("Attachment_UploadFile").files[i];
+                size += file.size;
+                if (file.size < 1048576) {
+                    formData.append("UploadFile", file);
+                }
+                else {
+                    alert('File Size Must Not Exceed 1 MB')
+                    return;
+                }
+            }
+            if (size > 1048576) {
+                alert('File Size Must Not Exceed 1 MB')
+                return;
+            }
+            $.ajax({
+                type: "POST",
+                url: '@Url.Action("AttachDocument")',
+                data: formData,
+                dataType: 'json',
+                contentType: false,
+                processData: false,
+                success: function (data) {
+                    $('#ShowAllFile').html(data.Html);
+                    AttachMentList();
+                    //hideorshowtable();
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+
+          $('#lstAdd').click(function (event) {
+                event.preventDefault();
+
+                var url = '@Url.Action("Godown_LR_Stock_List")';
+                var DTO = { To: "" };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#ShowLRList");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        $('#AutoRetrive').attr('name', 'G');
+                        $("#AutoRetrive").prop("checked", false);
+                        $('#GetLRLIst').modal('show');
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+
+                    },
+                });
+            });
+            $('#lstPickUP').click(function (event) {
+                event.preventDefault();
+
+                var url = '@Url.Action("Door_LR_Stock_List")';
+                var DTO = { To: "" };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#ShowLRList");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        $('#AutoRetrive').attr('name', 'D');
+                        $("#AutoRetrive").prop("checked", false);
+                        $('#GetLRLIst').modal('show');
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+
+                    },
+                });
+            });
+            $('#lstTransit').click(function (event) {
+                event.preventDefault();
+
+                var url = '@Url.Action("Transit_LR_List")';
+                var DTO = { To: "" };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#ShowLRList");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        $('#AutoRetrive').attr('name', 'T');
+                        $("#AutoRetrive").prop("checked", false);
+                        $('#GetLRLIst').modal('show');
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+
+                    },
+                });
+            });
+            $('#lstAll').click(function (event) {
+                event.preventDefault();
+                var Value = "";
+                //var Value = $("#LcTODest option:selected").text();
+
+                var url = '@Url.Action("All_LR_List")';
+                var DTO = { To: Value};
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#ShowLRList");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        $('#AutoRetrive').attr('name', 'A');
+                        $("#AutoRetrive").prop("checked", false);
+                        $('#GetLRLIst').modal('show');
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+
+                    },
+                });
+            });
+        $('#btnGetLc').click(function (event) {
+            event.preventDefault();
+            $("#GetLRLIst").modal("hide");
+
+            var LrList = "", Pick = "", Delivery = "", LoadGQty = "", LoadDQty = "",PickType="",Weight="",Amount="";
+            $("#example1 > tbody  > tr").each(function () {
+                if ($(this).find('input[type=checkbox]').prop("checked") == true) {
+
+                    var LRValue = $(this).find(".LRValue").text();
+                    var item_PickUp = $(this).find("#item_PIckUp").val();
+                    var item_DeliveryAt = $(this).find("#item_DeliveryAt").val();
+                    var item_GLoadQty = $(this).find(".LGQty").val();
+                    var item_DLoadQty = $(this).find(".LDQty").val();
+                    var item_PickType = $(this).find(".PickType").text();
+                    var item_LoadWeight = $(this).find(".CalculateWeight").val();
+                    var item_Amount = $(this).find(".AmountEdit").val();
+                    LrList = LrList + LRValue + ",";
+                    Pick = Pick + item_PickUp + ",";
+                    Delivery = Delivery + item_DeliveryAt + ",";
+                    LoadGQty = LoadGQty + item_GLoadQty + ",";
+                    LoadDQty = LoadDQty + item_DLoadQty + ",";
+                    PickType = PickType + item_PickType + ",";
+                    Weight = Weight + item_LoadWeight + ",";
+                    Amount = Amount + item_Amount + ",";
+                }
+            });
+
+                var url = '@Url.Action("GridView")';
+            var DTO = { AllLrList: LrList.substr(0, LrList.length - 1), PickUp: Pick.substr(0, Pick.length - 1), Delivery: Delivery.substr(0, Delivery.length - 1), LoadGQty: LoadGQty.substr(0, LoadGQty.length - 1), LoadDQty: LoadDQty.substr(0, LoadDQty.length - 1), PickType: PickType.substr(0, PickType.length - 1), LoadWeight: Weight.substr(0, Weight.length - 1), Amount: Amount.substr(0, Amount.length - 1) };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+
+                        var LoadDownLoadFiles1 = $("#SelectedLrShow");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles1.html('');
+                        LoadDownLoadFiles1.html(data.Html);
+                        CalculateFreight();
+                    },
+                });
+
+        });
+
+
+    function CheckManual() {
+        $("#ErrorMessage").hide();
+        var url = '@Url.Action("CheckManual")';
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: url,
+            data: { No: $("#LDSNO").val(), document: $("#Document").val() },
+            success: function (result) {
+                if (result.Message == "T") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text(result.Msg);
+                    return;
+                }
+            }
+        });
+    }
+    function CheckAuto() {
+        $("#ErrorMessage").hide();
+        var url = '@Url.Action("CheckAuto")';
+        $.ajax({
+            type: "POST",
+            traditional: true,
+            url: url,
+            data: { No: $("#LDSNO").val(), document: $("#Document").val() },
+            success: function (result) {
+                if (result.Message == "T") {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text(result.Msg);
+                    return;
+                }
+            }
+        });
+    }
+        $('#Submit').click(function (event) {
+
+            event.preventDefault();
+
+            if (!LDSDate) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Please Check Date');
+                return;
+            }
+            if ($("#LDSNO").val() == '0' || $("#LDSNO").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('LDSNO is required..');
+                return;
+            } else {
+                if (Generate) {
+                    CheckAuto();
+                } else {
+                    CheckManual();
+                }
+            }
+
+            if ($("#VehicleType").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('VehicleType Required..');
+                return;
+            }
+            if ($("#VehicleNo").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('VehicleNo Required..');
+                return;
+            }
+            if ($("#KM").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('KM Required..');
+                return;
+            }
+            if ($("#To").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To Required..');
+                return;
+            }
+            if ($("#PayableAt").val() == '') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('PayableAt Required..');
+                return;
+            }
+
+
+            //if ($("#KM").val() == '' || $("#KM").val() == '0') {
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('KM Required..');
+            //    return;
+            //}
+            var FreightAmt = 0;
+            $("#example> tbody  > tr").each(function () {
+
+                var amount = $(this).find(".AmountEdit1").val();
+                FreightAmt += parseInt(amount);
+            });
+            if (FreightAmt != parseInt($("#Freight").val())) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Freight Cannot Match Please Check IT..');
+                return;
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["LDSNo"] = $("#LDSNo").val();
+            ModelData["Time"] = $("#Time").val();
+            ModelData["Date"] = $("#Date").val();
+            ModelData["VehicleType"] = $("#VehicleType").val();
+            ModelData["VehicleNo"] = $("#VehicleNo").val();
+            ModelData["Broker"] = $("#Broker").val();
+            ModelData["KM"] = $("#KM").val();
+            ModelData["From"] = $("#From").val();
+            var Route = "";
+            $("#DestinationTable .RowData ").each(function () {
+                var Row = $(this).closest("tr");
+                Route = Route + Row.find(".FromCode").attr('id') + ",";
+            });
+            ModelData["DestCombo"] = Route.substring(0, (Route.length-1));
+            ModelData["To"] = $("#To").val();
+            ModelData["VehicleCategory"] = $("#VehicleCategory").val();
+            ModelData["ReceiptNo"] = $("#ReceiptNo").val();
+            ModelData["DriverName"] = $("#DriverName").val();
+            ModelData["LicenceNo"] = $("#LicenceNo").val();
+            ModelData["LicenceExpDate"] = $("#LicenceExpDate").val();
+            ModelData["Owner"] = $("#Owner").val();
+            ModelData["ChallanNo"] = $("#ChallanNo").val();
+            ModelData["ContactNo"] = $("#ContactNo").val();
+            ModelData["Freight"] = $("#Freight").val();
+            ModelData["Advance"] = $("#Advance").val();
+            ModelData["PayableAt"] = $("#PayableAt").val();
+            ModelData["Remark"] = $("#Remark").val();
+            ModelData["PayLoad"] = $("#PayLoad").val();
+            ModelData["Loaded"] = $("#Loaded").val();
+            ModelData["AvailablePayload"] = $("#AvailablePayload").val();
+            ModelData["OverLoadLoad"] = $("#OverLoadLoad").val();
+            ModelData["Balance"] = $("#Balance").val();
+            var LrNO = "", LoadQty = "", LoadWeight = "", Amount = "", TotalAmount = 0, PickType="",RecordKey="";
+            $("#example> tbody  > tr").each(function () {
+
+                var Row = $(this);
+                LrNO += Row.find(".LRValue ").text() + ",";
+                LoadQty += Row.find(".LoadGQty ").val() + ",";
+                LoadWeight += Row.find(".LoadWeight ").val() + ",";
+                Amount += Row.find(".AmountEdit1 ").val() + ",";
+                TotalAmount += parseInt(Row.find(".AmountEdit1 ").val());
+                PickType += Row.find(".PickType ").text() + ",";
+                RecordKey += Row.find(".RecordeKey ").text() + ",";
+            });
+            ModelData["LRNoList"] = LrNO.substring(0, (LrNO.length - 1));
+            ModelData["LoadQuantity"] = LoadQty.substring(0, (LoadQty.length - 1));
+            ModelData["LoadWeight"] = LoadWeight.substring(0, (LoadWeight.length - 1));
+            ModelData["Amount"] = Amount.substring(0, (Amount.length - 1));
+            ModelData["PickType"] = PickType.substring(0, (PickType.length - 1));
+            ModelData["RecordKey"] = RecordKey.substring(0, (RecordKey.length - 1));
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            if (Generate) {
+                ModelData["Generate"] = "A";
+            } else {
+                ModelData["Generate"] = "M";
+            }
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+
+        //$("#Freight").blur(function myfunction() {
+        //    if ($("#Freight").val() == '' || $("#Freight").val() == '0') {
+        //        flag = true;
+        //    }
+        //});
+    });
+
+    function LoadVehicleGroupStatus() {
+
+            var url = '@Url.Action("GetVehicleGroupStatus")'
+        $('#VehicleType').select2({
+                minimumInputLength: 0,
+                placeholder: 'Search',
+                ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+                initSelection: function (element, callback) {
+                    var data = { id: '@Model.VehicleType', text: '@Model.VehicleTypeName' };
+                    callback(data);
+                },
+
+                formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+                formatSelection: function (exercise) {
+
+                    AddButtonValidation();
+                    LoadVehicle($("#VehicleType").val());
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            })
+    };
+
+    function LoadVehicle(value) {
+
+
+        var url = '@Url.Action("GetVehicle")'
+        $('#VehicleNo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        TruckStatus: value,
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehicleNo', text: '@Model.VehicleNo' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+
+    function LoadVehicleGrpStatus(value) {
+
+        //var VehicleNo = $('#VehicleNo').val();
+
+        var url = '@Url.Action("FetChGrupStatus")';
+
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                //url: "/Base/CheckExist",
+                url: url,
+                data: { VehicleNo: value},
+                success: function (result) {
+
+                    $("#Owner").val(result.OwnerName);
+                    $("#DriverName").val(result.DriverName);
+                    $("#LicenceNo").val(result.LicenNo);
+                    $("#LicenceExpDate").val(result.LicenceExpDate);
+                    $("#PayLoad").val(result.Payload);
+                    $("#KM").val(result.KM);
+
+                    $('#VehicleType').select2('data', { id: result.VehicleGroupStatusCode, text: result.VehicleGroupStatusName });
+                    $('#Broker').select2('data', { id: result.BroCode, text: result.BroNAme });
+                    $('#VehicleCategory').select2('data', { id: result.VehicleCategoryCode, text: result.VehicleCategoryName });
+                    $('#VehicleNo').select2('data', { id: result.VehicleNo, text: result.VehicleNo });
+                }
+            });
+    }
+
+    function LoadVehicleGroup() {
+
+            var url = '@Url.Action("GetVehicleGroup")'
+            $('#VehicleCategory').select2({
+                minimumInputLength: 0,
+                placeholder: 'Search',
+                ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+                initSelection: function (element, callback) {
+                    var data = { id: '@Model.VehicleCategory', text: '@Model.VehicleCategoryName' };
+                    callback(data);
+                },
+
+                formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+                formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            })
+        };
+
+    function LoadBroker() {
+        var url = '@Url.Action("GetBroker")'
+        $('#Broker').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Broker', text: '@Model.BrokerName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+
+
+
+
+
+
+
+
+
+
+
+    function LoadTo() {
+        var url = '@Url.Action("To")'
+        $('#To').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.To', text: '@Model.ToName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function AddViaRoute() {
+        var url = '@Url.Action("StoreAllDestination")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+        var DTO = { ViaRoute: $("#DestCombo").val() };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+
+                    var LoadDownLoadFiles = $("#GetDestView");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    //$('#GETDestMODAL').modal('show');
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                    $("#DestCombo").prop("disabled", true);
+                    ShowRouteDest();
+                },
+            });
+    }
+    function AttachMentList() {
+
+        var url = '@Url.Action("AttachDocumentList")';
+                //var ModelData = {};
+                //ModelData["Document"] = $("#Document").val();
+        var DTO = {  };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        var LoadDownLoadFiles = $("#AttachList");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+
+                    },
+                    error: function (error) {
+                        alert("errror");
+                    }
+                    });
+    }
+    function CalculateFreight() {
+
+       var Freight = 0,LoadedWeight=0;
+        $("#example> tbody  > tr").each(function () {
+
+            var amount = $(this).find(".AmountEdit1").val();
+            var Weight = $(this).find(".LoadWeight").val();
+            Freight += parseInt(amount);
+            LoadedWeight += parseInt(Weight);
+        });
+
+        if ('@Model.LDSsetup.AutoFreight'=='True') {
+            $("#Freight").val(Freight);
+        }
+        $("#Loaded").val(LoadedWeight);
+        var BalPayload = parseInt($("#PayLoad").val()) - LoadedWeight;
+        $("#AvailablePayload").val(BalPayload);
+    }
+
+
+
+
+    function LoadBroker() {
+        var url = '@Url.Action("GetBroker")'
+        $('#Broker').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Broker', text: '@Model.BrokerName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function AddButtonValidation() {
+
+        var VehicleStatus = $("#VehicleType").val();
+        if (VehicleStatus == "100001") {
+            $("#HideHireBtn").hide();
+            $("#ShowHireBtn").show();
+        } else {
+            $("#HideHireBtn").show();
+            $("#ShowHireBtn").hide();
+        }
+    }
+
+    function LoadFrom() {
+
+
+        var url = '@Url.Action("From")'
+        $('#From').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.From', text: '@Model.FromName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function ComboDestination() {
+        var url = '@Url.Action("AddDestination")'
+        $('#DestCombo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DestCombo', text: '@Model.DestCombo_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                AddViaRoute();
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function AddViaRoute() {
+        var url = '@Url.Action("StoreAllDestination")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+        var DTO = { ViaRoute: $("#DestCombo").val() };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+
+                    var LoadDownLoadFiles = $("#GetDestView");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    //$('#GETDestMODAL').modal('show');
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+                    $("#DestCombo").prop("disabled", true);
+                    ShowRouteDest();
+                },
+            });
+    }
+
+    function ShowRouteDest() {
+        var url = '@Url.Action("ShowListBox")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+        var DTO = {  };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+
+                    var LoadDownLoadFiles = $("#ListBoxDiv");
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    //$('#GETDestMODAL').modal('show');
+                    LoadDownLoadFiles.html('');
+                    LoadDownLoadFiles.html(data.Html);
+
+                    $(".listbox").prop('disabled', 'disabled');
+                },
+            });
+    }
+    function LoadPayableAt() {
+        var url = '@Url.Action("PayableAt")'
+        $('#PayableAt').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.PayableAt', text: '@Model.PayableAtName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function ComboDestination() {
+        var url = '@Url.Action("AddDestination")'
+        $('#DestCombo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        From: $('#From').val(),
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DestCombo', text: '@Model.DestCombo_Name' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                AddViaRoute();
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadPayableAt() {
+        var url = '@Url.Action("PayableAt")'
+        $('#PayableAt').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.PayableAt', text: '@Model.PayableAtName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+<style>
+
+
+    .AutoRetrive {
+        background: #95cac7;
+        color: black;
+    }
+
+    .circle {
+        width: 38px;
+        height: 77px;
+        position: relative;
+    }
+
+    .icon {
+        position: absolute;
+        top: 39%;
+        left: 33%;
+        transform: translate(-50%, -50%);
+        width: 10px;
+        height: 10px;
+        display: block;
+    }
+
+    .multiselect-container > li {
+        width: 200px !important;
+    }
+
+    .multiselect {
+        width: 205px !important;
+        text-align: left !important;
+    }
+
+    /*.multiselect .dropdown-toggle .btn btn-default .disabled:hover{
+        background-color:aqua !important;
+    }*/
+    .btn-group > .multiselect:hover {
+        color: red !important;
+    }
+
+    .bold {
+        font-weight: bold !important;
+    }
+
+    hr {
+        border: 1px solid #dec0c0;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+
+    legend {
+        /*margin-left: 30%;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        width: 35%;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px 5px 5px 10px;
+        background-color: #dec0c0;*/
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    .legend2 {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        background-color: #57c8f1;
+        color: white !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 20px 5px 20px;
+        margin-bottom: 0px !important;
+        margin-top: -40px;
+    }
+
+    .legend3 {
+        top: -0.0em;
+        color: white !important;
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #57c8f1;
+        line-height: 1.2em;
+        margin-top: -40px;
+        padding: 5px 20px 5px 20px;
+    }
+
+    .legend4 {
+        top: -0.0em;
+        color: white !important;
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #57c8f1;
+        line-height: 1.2em;
+        margin-top: -40px;
+        padding: 5px 20px 5px 20px;
+    }
+
+    .legend5 {
+        top: -0.0em;
+        color: white !important;
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #57c8f1;
+        line-height: 1.2em;
+        margin-top: -40px;
+        padding: 5px 30px 5px 30px;
+    }
+
+
+    .toggle {
+        border-radius: 15px !important;
+        margin-top: -35px !important;
+    }
+
+        .toggle.btn {
+            min-width: 77px !important;
+            min-height: 34px;
+        }
+
+
+
+    .example {
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        width: max-content;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .example th {
+            background-color: #F7F7F7;
+            font-weight: bold;
+        }
+
+        .example th, .example td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .example, .example table td {
+            border: 0px solid #ccc;
+        }
+</style>
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/LocalDeliverySheet/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <span class="tools pull-right" style="    margin-right: 15px;">
+        </span>
+    </div>
+</header>
+<form class="form-horizontal" id="frmaccountLedger" role="form" style="margin-top:32px;">
+    <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+</form>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+
+        <div class="form-horizontal " id="FreightMemo" role="form" style="margin-top:0px;">
+            <fieldset class=" col-sm-12" style="margin-top:0%;">
+                @if (Model.LDSsetup.LDSBoth)
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="info" data-offstyle="danger" data-on="Manual" data-off="Auto" style="width: 73px !important;height: 34px;">
+                }
+                else if (Model.LDSsetup.LDSGenerate)
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="info" data-offstyle="danger" data-on="Manual" data-off="Auto" style="width: 73px !important;height: 34px;" disabled>
+                }
+                else
+                {
+                    <input type="checkbox" data-toggle="toggle" id="BothCHK" data-onstyle="danger" data-offstyle="info" data-on="Auto" data-off="Manual" style="width: 73px !important;height: 34px;" disabled>
+                }
+                @*<button type="button" class="btn  btn-lg legend2" data-toggle="modal" data-target="#LorryDraftmodal">Pick From Draft</button>*@
+
+                <div class="panel panel-default">
+                    <div class="panel-body " style="padding-left: 20px;">
+                        <div class="col-sm-9">
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">LDS No:</label>
+                                <div class="col-sm-1 ">
+                                    @if (Model.LDSsetup.LDSGenerate == true || Model.LDSsetup.LDSBoth == true)
+                                    {
+                                        @Html.TextBoxFor(x => x.LDSNo, new { @class = "form-control", @style = "width:100px;", @Value = Model.LDSNo, @disabled = "disabled" })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.LDSNo, new { @class = "form-control", @style = "width:100px;", @Value = Model.LDSNo })
+                                    }
+
+                                </div>
+                                <div class="col-sm-2">
+                                    <label class=" bold   col-sm-3  control-label">Time:</label>
+                                    <div class="col-sm-1 ">
+                                        @if (Model.LDSsetup.LDSDate)
+                                        {
+                                            @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @type = "time", @style = "width:105px;", @Value = Model.Time })
+                                        }
+                                        else
+                                        {
+                                            @Html.TextBoxFor(x => x.Time, new { @class = "form-control", @type = "time", @style = "width:105px;", @Value = Model.Time, @disabled = "disabled" })
+                                        }
+                                    </div>
+                                </div>
+                                <label class=" bold   col-sm-1  control-label" style="margin-left: 0px;">Date:</label>
+                                <div class="col-sm-3 ">
+                                    @if (Model.LDSsetup.LDSDate)
+                                    {
+                                        @Html.TextBoxFor(x => x.Date, new { @class = "form-control", @style = "width:236px;", @Value = Model.Date })
+                                    }
+                                    else
+                                    {
+                                        @Html.TextBoxFor(x => x.Date, new { @class = "form-control", @style = "width:236px;", @Value = Model.Date, @disabled = "disabled" })
+                                    }
+                                </div>
+                                <label class=" bold  col-sm-1 control-label">Vehicle Status:</label>
+                                <div class="col-sm-3">
+                                    @Html.TextBoxFor(x => x.VehicleType, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.VehicleType })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-sm-1  control-label">VehicleNo:</label>
+                                <div class="col-sm-3 " style="padding-left: 0px;">
+
+                                    <div class="col-sm-3" style="padding-right: 0px !important;" id="ShowHireBtn">
+                                        <a href="~/Vehicles/VehicleMaster/Index?TableName=VehicleMaster&MainType=&Mode=Add&Header=Vehicle%20Master&ViewDataId=VehicleMaster&Controller2=VehicleMaster&Module=Master&optiontype=M&optioncode=VehicleMaster" target="_blank" class="btn btn-info" style="font-size: 12px;padding:3px 15px;" id="AddHireVehicle"><i class="glyphicon glyphicon-plus"></i></a>
+                                    </div>
+                                    <div class="col-sm-3" style="padding-right: 0px !important;" id="HideHireBtn">
+                                        <a href="#" class="btn btn-info" style="font-size: 12px;padding:3px 15px;" id="AddHireVehicle" disabled><i class="glyphicon glyphicon-plus"></i></a>
+                                    </div>
+                                    <div class="col-sm-9" style="padding-left:0px !important;padding-right:0px !important;">
+                                        @Html.TextBoxFor(x => x.VehicleNo, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.VehicleNo })
+                                    </div>
+                                </div>
+
+                                <label class=" bold   col-sm-1  control-label">Broker:</label>
+                                <div class="col-sm-3 " style="">
+                                    @Html.TextBoxFor(x => x.Broker, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.Broker, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">KM:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.KM, new { @class = "form-control", @style = "width:110px;", @Value = Model.KM })
+                                </div>
+                            </div>
+                            <div class="form-group ">
+                                <label class=" bold   col-sm-1  control-label">From:</label>
+                                <div class="col-sm-3 " style="padding-left: 0px;">
+
+                                    @*<div class="col-sm-3" style="padding-right: 0px !important;" id="ShowHireBtn">
+                                            <a href="~/Logistics/ConsignerOrConsignee/Index?TableName=&MainType=&Mode=Add&Header=Consigner%20/%20Consignee%20Master&ViewDataId=ConsignerOrConsignee&Controller2=ConsignerOrConsignee&Module=Master&optiontype=M&optioncode=ConsignerOrConsignee" target="_blank" class="btn btn-info" style="font-size: 12px;padding:3px 15px;" id="AddHireVehicle"><i class="glyphicon glyphicon-plus"></i></a>
+                                        </div>*@
+                                    <div class="col-sm-3" style="padding-right: 0px !important;">
+                                        <button class="btn btn-info" data-toggle="modal" data-target="#AddFromModal" style="font-size: 12px;padding:3px 15px;"><i class="glyphicon glyphicon-plus"></i></button>
+                                    </div>
+                                    <div class="col-sm-9" style="padding-left:0px !important;padding-right:0px !important;">
+                                        @Html.TextBoxFor(x => x.From, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.From })
+                                    </div>
+                                </div>
+
+
+
+
+                                <label class=" bold   col-sm-1  control-label">Add-Dest.:</label>
+                                <div class="col-sm-3 ">
+                                    <div class="col-sm-2" style="padding-left:0px;">
+                                        <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="AddDest"><i class="glyphicon glyphicon-plus"></i></button>
+                                    </div>
+                                    <div class="col-sm-10" style="padding-left:0px;">
+                                        @Html.TextBoxFor(x => x.DestCombo, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.DestCombo, @disabled = "disabled" })
+                                    </div>
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Final-Dest:</label>
+                                <div class="col-sm-3 " style="padding-left: 0px;">
+                                    <div class="col-sm-3" style="padding-right: 0px !important;">
+                                        <button class="btn btn-info" data-toggle="modal" data-target="#AddToModal" style="font-size: 12px;padding:3px 15px;"><i class="glyphicon glyphicon-plus"></i></button>
+                                    </div>
+                                    <div class="col-sm-9" style="padding-left:0px !important;padding-right:0px !important;">
+                                        @Html.TextBoxFor(x => x.To, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.To })
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">Vehicle Cate.:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.VehicleCategory, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.VehicleCategory, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1 control-label">View-Dest:</label>
+                                <div class="col-sm-3 ">
+                                    <div class="col-sm-2" style="padding-left:0px;">
+                                        <button class="btn btn-primary" style="font-size: 13px;padding:5px 12px;" data-toggle="modal" data-target="#GETDestMODAL"><i class="glyphicon glyphicon-eye-open"></i></button>
+                                    </div>
+                                    <div class="col-sm-10" style="padding-left:0px;" id="ListBoxDiv">
+                                        @*@Html.ListBoxFor(x => x.PayLoadL, Model.Branches, new { @class = "listbox",@style="width:200px;" ,@id = "AppBranch" })*@
+                                    </div>
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Receipt No:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.ReceiptNo, new { @class = "form-control", @style = "width:236px;", @Value = Model.ReceiptNo })
+                                </div>
+                            </div>
+                            @*<div class="form-group">
+                                    <label class=" bold   col-sm-1 control-label">Pay-Load:</label>
+                                    <div class="col-sm-3 ">
+                                        @Html.TextBoxFor(x => x.PayLoad, new { @class = "form-control", @style = "width:100%;", @Value = Model.PayLoad, @disabled = "disabled" })
+                                    </div>
+                                </div>*@
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">Driver-Name:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.DriverName, new { @class = "form-control", @style = "width:100%;", @Value = Model.DriverName, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1 control-label">Licence-No:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.LicenceNo, new { @class = "form-control", @style = "width:236px;", @Value = Model.LicenceNo, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Lic.Exp-Date:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.LicenceExpDate, new { @class = "form-control", @style = "width:236px;", @Value = Model.LicenceExpDate, @disabled = "disabled" })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">Owner-Name:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.Owner, new { @class = "form-control", @style = "width:100%;", @Value = Model.Owner, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Challan-No:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.ChallanNo, new { @class = "form-control", @style = "width:236px;", @Value = Model.ChallanNo })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Contact-No:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.ContactNo, new { @class = "form-control", @style = "width:236px;", @Value = Model.ContactNo })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">Freight:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.Freight, new { @class = "form-control", @style = "width:100%;", @Value = Model.Freight })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Advance:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.Advance, new { @class = "form-control", @style = "width:236px;", @Value = Model.Advance })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label">Payable-At:</label>
+                                <div class="col-sm-3 ">
+                                    @Html.TextBoxFor(x => x.PayableAt, new { @class = "input-large-query", @style = "width:100%;", @Value = Model.PayableAt })
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">Remark:</label>
+                                <div class="col-sm-11 ">
+                                    @Html.TextAreaFor(x => x.Remark, new { @class = "form-control", @style = "width:100%;", @rows = "1", @maxlength = "100", @Value = Model.Remark })
+                                </div>
+
+                            </div>
+                            <div class="form-group">
+                                <label class=" bold   col-sm-1  control-label">PayLoad:</label>
+                                <div class="col-sm-1 " style="">
+                                    @Html.TextBoxFor(x => x.PayLoad, new { @class = "form-control", @Value = Model.PayLoad, @readonly = "readonly" })
+                                </div>
+
+                                <label class=" bold   col-sm-1  control-label" style="margin-left: 0px;width:auto;">Loaded :</label>
+                                <div class="col-sm-1 ">
+                                    @Html.TextBoxFor(x => x.Loaded, new { @class = "form-control", @style = "", @Value = Model.Loaded, @readonly = "readonly" })
+                                </div>
+                                <label class=" bold   col-sm-2  control-label" style="margin-left: 0px;width: auto;">Available PayLoad:</label>
+                                <div class="col-sm-1 ">
+                                    @Html.TextBoxFor(x => x.AvailablePayload, new { @class = "form-control", @style = "", @Value = Model.AvailablePayload, @readonly = "readonly" })
+                                </div>
+                                <label class=" bold   col-sm-1  control-label" style="margin-left: 0px;width: auto;">Over Load:</label>
+                                <div class="col-sm-1 ">
+                                    @Html.TextBoxFor(x => x.OverLoadLoad, new { @class = "form-control", @style = "", @Value = Model.OverLoadLoad, @readonly = "readonly" })
+                                </div>
+
+                            </div>
+                        </div>
+                        <div class="col-sm-3">
+
+                            <div style="border: 2px solid #d3d3d3;height:215px;">
+                                <div class="form-group ">
+                                    <label class=" bold   col-sm-12  control-label" style="text-align: center;font-size: 15px;color: red;text-decoration: underline;">Other Charges</label>
+                                </div>
+                                <div class="form-group ">
+                                    <label class=" bold  col-sm-offset-1 col-sm-11 control-label">Partial View:</label>
+                                </div>
+                                <div class="form-group ">
+                                    <label class=" bold   col-sm-offset-1  col-sm-3 control-label">Balance:</label>
+                                    <div class="col-sm-5">
+                                        @Html.TextBoxFor(x => x.Balance, new { @class = "form-control", @style = "width:100%;", @Value = Model.Balance })
+                                    </div>
+                                </div>
+                                <br />
+                            </div>
+                            <div style="border: 2px solid #d3d3d3;height:88px;" id="AttachList">
+                                @Html.Partial("_AttachmentList", Model)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+</section>
+
+<section class="panel" style="margin-top: 20px;">
+    <div class="panel-body" style="margin-top:-30px;">
+        <div class="form-horizontal " role="form" style="">
+            <fieldset class=" col-md-12" style="">
+                <button class="btn btn-info legend5" id="lstAll">All</button>
+                <button class="btn btn-info legend2" id="lstAdd">Godown Stock</button>
+                <button class="btn btn-info legend3" id="lstPickUP">PickUP Stock</button>
+                <button class="btn btn-info legend4" id="lstTransit">Transit</button>
+
+                <div class="panel panel-default" style="margin-bottom: 0px !important;">
+                    <div class="panel-body " style="max-height:350px;min-height:350px;padding-left: 20px;padding: 1px !important;">
+                        <div class="grid" id="SelectedLrShow" style="overflow: auto;width: 100%;display: block !important;max-height:340px;min-height:340px; width:auto;">
+                            @Html.Partial("GridView", Model.lcDetailsVMs)
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+    </div>
+</section>
+
+
+<footer class="footer-section" style="height:60px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+
+                <button class="btn btn-danger" data-toggle="modal" data-target="#LockModal" style="font-size: 13px;padding:3px 12px;" id="btnBlock"><i class="glyphicon glyphicon-ban-circle" style="font-size: 2em;"></i><br />Lock</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnListPrint"><i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />List Print</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnShare"><i class="glyphicon glyphicon-share" style="font-size: 2em;"></i><br />Share</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnDownload"><i class="glyphicon glyphicon-download" style="font-size: 2em;"></i><br />Download</button>
+                @*<button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnAttachment" data-toggle="modal" data-target="#Attachmentmodal"><i class="glyphicon glyphicon-paperclip" style="font-size: 2em;"></i><br />Attachment</button>*@
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnPrint"><i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />Print</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="SaveDraft" data-toggle="modal" data-target="#SaveNamePopUp"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i><br />Save Draft</button>
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="" data-toggle="modal" data-target="#Notemodal"><i class="glyphicon glyphicon-file" style="font-size: 2em;"></i><br />Save Note</button>
+            </div>
+        </div>
+        <div class="col-sm-offset-1 col-sm-2" style="">
+            <div class="pull-left">
+
+            </div>
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Submit"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i><br />Save</button>
+                <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="SubmitPrint"><i class="glyphicon glyphicon-floppy-saved" style="font-size: 2em;"></i>&nbsp;&nbsp;&nbsp;<i class="glyphicon glyphicon-print" style="font-size: 2em;"></i><br />Save And Print</button>
+                <button class="btn btn-primary" style="font-size: 13px;padding:3px 12px;" id="Edit" onclick="EditEntry();"><i class="glyphicon glyphicon-edit" style="font-size: 2em;"></i><br /> Edit</button>
+                <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnDelete"><i class="glyphicon glyphicon-trash" style="font-size: 2em;"></i><br />Delete</button>
+                <a href="~/Logistics/LocalDeliverySheet/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel"><i class="glyphicon glyphicon-remove" style="font-size: 2em;"></i><br />Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+
+
+
+
+@Html.HiddenFor(x => x.Document)
+@Html.HiddenFor(x => x.AppBranch, new { @id = "hdnAppBranch" })
+<input type="hidden" id="hdnBranchCodeArray" />
+
+
+
+
+<!--All Destination Modal -->
+<div class="modal fade" id="GETDestMODAL" style="overflow:scroll;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true" @*style="margin-top: 60px;"*@>
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: fit-content;margin: auto;margin-top: 5%;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div id="GetDestView">
+                    @Html.Partial("_Get_Destination_List", Model)
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<!--Attachment Modal -->
+<div class="example-modal">
+    <div id="Attachmentmodal" class="modal modal-default">
+        <div class="modal-dialog " style="width:1080px;">
+            <div id="AttachmentmodalDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Attachment</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="grid" id="FormatTable" style="max-height:600px;min-height:600px; width:100%; overflow: scroll;">
+                                <div id="" class="" style="width:100%;">
+                                    <div class="form-group">
+                                        <div class="col-sm-3" style="padding-top: 5px;">
+                                            <label class="col-sm-12 control-label" style="font-weight:bold;color:black;">Upload File:</label>
+                                        </div>
+                                        <div class="col-sm-5">
+                                            @Html.TextBoxFor(x => x.Attachment.UploadFile, new { @type = "file", @class = "form-control"@*, @style = "font-size:12pt;font-weight:bolder;"*@})
+                                        </div>
+                                        <div class="col-sm-4">
+
+                                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPhotoupload">Upload</button>
+                                        </div>
+                                    </div>
+                                    <div class="form-group col-sm-12" id="ShowAllFile">
+                                        <hr />
+                                        @Html.Partial("_Attachment", Model)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnAttachSubmit" data-dismiss="modal">Save</button>
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Note Modal -->
+<div class="example-modal">
+    <div id="Notemodal" class="modal modal-default">
+        <div class="modal-dialog " style="width:1080px;">
+            <div id="NotemodalDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                            <h4 class="modal-title"><b>Note</b></h4>
+                        </div>
+                        <div class="modal-body">
+                            <div class="grid" id="FormatTable" style="max-height:600px;min-height:600px; width:100%; overflow: scroll;">
+                                <div id="" class="" style="width:100%;">
+                                    <div class="form-group">
+                                        <div class="col-sm-1" style="padding-top: 5px;">
+                                            <label class="col-sm-12 control-label" style="font-weight:bold;color:black;">Note:</label>
+                                        </div>
+                                        <div class="col-sm-10">
+                                            @Html.TextAreaFor(x => x.Note, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "1", @Value = Model.Note })
+                                        </div>
+
+                                    </div>
+                                    <div class="form-group col-sm-12" id="ShowAllFile" style="padding-top:5px;">
+                                        <div class="col-sm-2" style="float:right;">
+                                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnNote" data-dismiss="modal">Submit</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--View Modal -->
+<div class="example-modal">
+    <div id="updTfatsearch1" class="modal modal-default">
+        <div class="modal-dialog" style="width:1080px;">
+            <div id="updTfatsearchDiv1">
+                @*@Html.Partial("ImageView")*@
+            </div>
+        </div>
+    </div>
+</div>
+<!--Lock Modal -->
+<div class="modal" id="LockModal" style="margin-top: 8%;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title" style="font-weight:bold;text-align:center;">Lock System</h4>
+            </div>
+
+            <!-- Modal body -->
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class=" bold  col-sm-1 control-label" style="color:black;">ALL </label>
+                    <div class="col-sm-1" style="">
+                        @Html.CheckBoxFor(x => x.All, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.All })
+                    </div>
+                    <label class=" bold  col-sm-1 control-label" style="color:black;">Dispach </label>
+                    <div class="col-sm-1" style="">
+                        @Html.CheckBoxFor(x => x.Dispach, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.Dispach })
+                    </div>
+                    <label class=" bold  col-sm-1 control-label" style="color:black;">Delivery </label>
+                    <div class="col-sm-1" style="">
+                        @Html.CheckBoxFor(x => x.Delivery, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.Delivery })
+                    </div>
+                    <label class=" bold  col-sm-1 control-label" style="color:black;">Billing </label>
+                    <div class="col-sm-1" style="">
+                        @Html.CheckBoxFor(x => x.Billing, new { @class = "form-control", @style = "margin-top: -1px;height: 18px;width: 20px;", @Value = Model.Billing })
+                    </div>
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class=" bold  col-sm-1 control-label" style="color:black;">Remark </label>
+                <div class="col-sm-11" style="margin-left: -15px;">
+                    @Html.TextAreaFor(x => x.LockRemark, new { @class = "form-control", @style = "", @maxlength = 100, @rows = "2", @Value = Model.LockRemark })
+                </div>
+            </div>
+            <br />
+            <br />
+            <br />
+            <br />
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <div class="form-group">
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="SaveLock" data-dismiss="modal">Save</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<!--Add From Modal -->
+<div class="example-modal">
+    <div id="AddFromModal" class="modal modal-default">
+        <div class="modal-dialog " style="">
+            <div id="AddFromModalDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:10px;">
+
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="float:right;">&times;</button>
+                            <div id="ErrorMessage1" name="ErrorMessage" class="alert alert-danger col-sm-8" style="display: none;float: right;height: 30px;margin-top: -5px;margin-right: 20px;text-align: left;padding: 5px;"></div>
+                            <h4 class="modal-title col-sm-3"><b>Add From</b></h4>
+
+
+                        </div>
+                        <div class="modal-body">
+                            <div class="grid" id="FormatTable" style="max-height:30px;min-height:30px; width:100%;">
+                                <div id="" class="" style="width:100%;">
+                                    <div class="form-group">
+                                        <div class="col-sm-2" style="padding-top: 5px;">
+                                            <label class="col-sm-12 control-label" style="font-weight:bold;color:black;">Name:</label>
+                                        </div>
+                                        <div class="col-sm-4">
+                                            @Html.TextBoxFor(x => x.NewFromName, new { @class = "form-control", @style = "width:100%;" })
+                                        </div>
+                                        <div class="col-sm-2" style="float:right;">
+                                            <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnAddFromSubmit">Submit</button>
+                                        </div>
+                                    </div>
+
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Add To Modal -->
+<div class="example-modal">
+    <div id="AddToModal" class="modal modal-default">
+        <div class="modal-dialog " style="width:525px;">
+            <div id="AddToModalDiv">
+                <div class="modal-body">
+                    <div class="modal-content">
+                        <div class="modal-header" style="background-color:#cccccc;padding-top:10px;">
+                            <button type="button" class="close" data-dismiss="modal" aria-hidden="true" style="float:right;">&times;</button>
+                            <div id="ErrorMessage2" name="ErrorMessage" class="alert alert-danger col-sm-8" style="display: none;float: right;height: 30px;margin-top: -5px;margin-right: 20px;text-align: left;padding: 5px;"></div>
+                            <h4 class="modal-title col-sm-3"><b>Add To</b></h4>
+
+                        </div>
+                        <div class="modal-body">
+                            <div class="grid" id="FormatTable" style="max-height:30px;min-height:30px; width:100%;">
+                                <div id="" class="" style="width:100%;">
+                                    <div class="form-group">
+                                        <label class="control-label col-sm-2" style="font-weight:bold;color:black;">Name:</label>
+                                        <div class="col-sm-3">
+                                            @Html.TextBoxFor(x => x.NewToName, new { @class = "form-control", @style = "width:100%;" })
+                                        </div>
+                                        <label class="col-sm-3 control-label" style="font-weight:bold;color:black;">Parent Branch:</label>
+                                        <div class="col-sm-4">
+                                            @Html.DropDownListFor(m => m.ParentOfTo, Model.BranchList, "--Select Parent--", new { @class = "form-control", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                                        </div>
+
+
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+                            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+                            <button class="btn btn-success" style="" id="btnAddToSubmit">Submit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="GetLRLIst" style="width: 100% ;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-sm modal-xl" role="document" style="width: auto;margin: auto;margin-top: 3%;">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <div class="form-group">
+                    <div class="col-md-2"><h4 class="modal-title"><b>Add Lorry Receipt</b></h4></div>
+                    <div class="col-md-5">
+                        <div class="col-md-5" style="display: flex;">
+
+                            <div><label class=" bold control-label" style="margin-top: 5px;">Auto Retrive</label></div>
+                            <div class="col-md-5"><input type="checkbox" id="AutoRetrive" style="height:20px;width:20px;" /></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4" style="float:right;">
+                        <div class="col-md-5" style="display: flex;">
+
+                            <div><label class=" bold control-label" style="margin-top: 5px;"> Select By</label></div>
+                            <div class="col-md-5"><input type="text" id="SelectLR" class="form-control" placeholder="LR NO" /></div>
+                        </div>
+                        <div class="col-md-5" style="float:left;display: flex;">
+                            <div><label class=" bold control-label" style="margin-top: 5px;"> Search</label></div>
+                            <div class="col-md-10"><input type="text" id="Search" class="form-control" placeholder="Search Here" /></div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+            <div class="modal-body" style="padding: 0px !important;">
+                <div class="grid" id="FormatTable">
+                    <div class="form-group col-sm-12" id="ShowLRList" style="overflow: auto;width: 100%;display: block;">
+
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="btnGetLc">Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<input type="hidden" id="AutoNo" />

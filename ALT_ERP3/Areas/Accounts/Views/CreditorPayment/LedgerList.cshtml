@@ -1,0 +1,203 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.CreditorPaymentVM
+@using Common
+
+
+
+<div class="fixTableHead" id="SelectedledgerTable" style="max-height:300px;min-height:300px; width: auto; overflow: auto;">
+    <table id="tabledata" class="zui-table" style="border-color:gray;">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                <th style="width: 3%;vertical-align:inherit;" colspan="2">
+
+                </th>
+                <th style="width:1%;vertical-align:inherit;">Sr.</th>
+                <th style="width:6%;vertical-align:inherit;">Branch</th>
+                <th style="width:7%;vertical-align:inherit;">Type</th>
+                <th style="width:7%;vertical-align:inherit;">Serial</th>
+                <th style="width:7%;vertical-align:inherit;">Bill No</th>
+                <th style="width:7%;vertical-align:inherit;">Bill Date</th>
+
+                <th style="width:8%;vertical-align:inherit;">Amount</th>
+                <th style="width:8%;vertical-align:inherit;">TDS Amt</th>
+
+
+                @if (Model.HeaderList != null)
+                {
+                    foreach (var a in @Model.HeaderList)
+                    {
+                        <th style="width:10%">@a</th>
+                    }
+                }
+                <th style="width: 13%;vertical-align:inherit;">Narration</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.SelectedLedger != null)
+            {
+                foreach (var item in @Model.SelectedLedger.ToList())
+                {
+                    var btnDelete = @item.tempid;
+                    <tr style="font-family:Tahoma;font-size:9pt;">
+                        @if (Model.Mode != "Delete")
+                        {
+                            <td style="vertical-align:inherit;">
+                                <button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@item.tempid" title="Edit"><i class="fa fa-edit"></i></button>
+                            </td>
+                            <td style="vertical-align:inherit;">
+                                <button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.tempid" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            </td>
+                        }
+                        else
+                        {
+                            <td style="vertical-align:inherit;"></td>
+                            <td style="vertical-align:inherit;"></td>
+                        }
+                        <td style="vertical-align:inherit;">@item.tempid</td>
+                        <td style="vertical-align:inherit;">@item.BranchName</td>
+                        <td style="vertical-align:inherit;">@item.LedgerType</td>
+                        <td style="vertical-align:inherit;">@item.LedgerSrl</td>
+                        <td style="vertical-align:inherit;">@item.BillNumber</td>
+                        <td style="vertical-align:inherit;">@item.StrBillDate</td>
+                        <td style="vertical-align:inherit;">@item.Amt.ToString("F2") </td>
+                        <td style="vertical-align:inherit;">@item.BillTDS.ToString("F2") </td>
+
+                        @if (item.ChgPickupList != null)
+                        {
+                            foreach (var a in item.ChgPickupList)
+                            {
+                                <td class="txtentercls">@a.ToString("F2") </td>
+                            }
+                        }
+                        <td style="vertical-align:inherit;">@item.Remark</td>
+
+                    </tr>
+
+                }
+
+            }
+
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="8"> Total:</td>
+
+                <td>@Model.TotalTaxable.ToString("F2") </td>
+                <td>@Model.TotalBillTds.ToString("F2") </td>
+                @if (Model.TotalChgPickupList != null)
+                {
+                    foreach (var a in Model.TotalChgPickupList)
+                    {
+                        <td class="txtentercls">@a.ToString("F2") </td>
+                    }
+                }
+                <td></td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="example-modal">
+    <div id="addcashbank" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog modal-lg">
+            <div id="AddCashBank">
+                @Html.Partial("AddAdvancePayPopup")
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        $('button[action|="DeleteLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["Mode"] = $("#hdnMode").val();
+
+
+            if ($('#addGSTNoItc').is(":checked")) {
+
+                ModelData["GSTFlag"] = $('#addGSTNoItc').is(":checked");
+                ModelData["GSTCode"] = $("#addGSTCode").val();
+                ModelData["CGSTAmt"] = $('#txttotcgst').val();
+                ModelData["SGSTAmt"] = $('#txttotsgst').val();
+                ModelData["IGSTAmt"] = $('#txttotigst').val();
+                ModelData["CGSTRate"] = $('#addCGSTRate').val();
+                ModelData["IGSTRate"] = $('#addIGSTRate').val();
+                ModelData["SGSTRate"] = $('#addSGSTRate').val();
+            }
+            if ($('#addTDSFlag').is(":checked")) {
+                ModelData["TDSFlag"] = $('#addTDSFlag').is(":checked");
+                ModelData["TDSCode"] = $("#addTDSCode").val();
+                ModelData["TDSRate"] = $("#addTDSRate").val();
+                ModelData["TDSAmt"] = $('#TDSAmt').val();
+            }
+
+
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteAdvanceLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#SelectedledgerTable').html(data.Html);
+                    $('#NetAmt').val(data.SumAmt);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="EditLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["AccAmt"] = $("#UpAccAmt").val();
+            ModelData["SessionFlag"] = "Edit";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetAdvanceLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#addcashbank').modal('show');
+                    $('#AddCashBank').html(data.Html);
+                    $("#pushrecord").hide();
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+</script>
+<style>
+    .fixTableHead {
+        overflow-y: auto;
+        height: 300px;
+    }
+
+        .fixTableHead thead th {
+            position: sticky;
+            top: 0;
+        }
+</style>

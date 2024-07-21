@@ -1,0 +1,160 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.OtherTransactModel
+@using Common
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">@Model.SessionFlag Record</h4>
+    </div>
+    <div class="modal-body" style="height:470px;padding-left:0px;">
+        <div class="form-horizontal" id="ledgerupdate" style="margin-left:30px;">
+            <div class="grid" id="SelectedLRTable" style="max-height:300px; width:100%; overflow-y: scroll;">
+                <table id="lrtabledata" class="zui-table" style="width:100%;word-wrap:break-word">
+                    <thead>
+                        <tr>
+                            <td style="width:32%">
+                                LR Number
+                            </td>
+                            <td style="width:22%">
+                                Amount
+                            </td>
+                        </tr>
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%;">
+                            <td style="width:32%">
+                                <input type="text" id="txtLRNumber" class="form-control" style="width:99%; margin-top:2px;height:25px;" />
+                            </td>
+                            <td style="width:22%">
+                                @Html.TextBoxFor(x => x.Amt, new { @class = "form-control", @id = "txtLRAmt", @Name = "txtLRAmt", @style = "text-align:right;" })
+                            </td>
+                            <td style="width:1%">
+                                <button type="button" class="btn btn-success" id="btnaddLRDetails">Add</button>
+                            </td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.LRDetailList != null)
+                        {
+                            foreach (var item in @Model.LRDetailList.ToList())
+                            {
+                                <tr style="font-family:Tahoma;font-size:9pt;">
+                                    <td style="vertical-align:inherit;">@item.tempId</td>
+
+                                    <td style="vertical-align:inherit;">@item.LRNumber</td>
+                                    <td style="vertical-align:inherit;">@item.Amt</td>
+                                    <td style="vertical-align:inherit;">
+                                        <button type="button" action="DeleteLRLedger" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button>
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                    </tbody>
+
+                </table>
+            </div>
+
+
+        </div>
+
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc">
+        @if (Model.SessionFlag == "Edit")
+        {
+            <button type="button" class="btn btn-success" id="btnAddCashBankList">Update</button>
+        }
+        else
+        {
+            <button type="button" class="btn btn-success" id="btnAddCashBankList">Save</button>
+        }
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        $('button[action|="DeleteLRLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["ChangeLog"] = $("#hdnChangeLog").val();
+            ModelData["SubType"] = $("#hdnSubType").val();
+            ModelData["ConstantMode"] = $("#hdnConstantMode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("Deleteledger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    $('#SelectedledgerTable').html(data.Html);
+                    if ($('#hdnMainType').val() == "RC") {
+                        $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                        $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                    }
+                    if ($('#hdnMainType').val() == "PM") {
+                        $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                        $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                    }
+                    if ($('#hdnMainType').val() == "JV") {
+                        $('#SumDebit').val(data.Sumdebit.toFixed(2));
+                        $('#SumCredit').val(data.Sumcredit.toFixed(2));
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnaddLRDetails").click(function (event) {
+            event.preventDefault();
+            var myBatchArray = [];
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempId: tds.eq(0).text(),
+                    LRNumber: tds.eq(1).text(),
+                    Amt: tds.eq(2).text(),
+                   }
+                 myBatchArray.push(myDets);
+            })
+            var ModelData = {};
+            ModelData["LRDetailList"] = myBatchArray;
+            ModelData["SessionFlag"] = "Add";
+            ModelData["LRNumber"] = $("#txtLRNumber").val();
+            ModelData["Amt"] = $("#txtLRAmt").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddLRDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#lrmodel').modal('show');
+                    $('#LRDetailsDialog').html(data.Html);
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+
+
+    });
+</script>
+

@@ -1,0 +1,154 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+@using Common;
+<div id="divLedgerTableM" class="tabcontent">
+    @Html.Partial("MoreInfo", Model)
+</div>
+
+<div id="divLedgerTable2" class="tabcontent" style="overflow:unset;">
+    <div id="ItemListTable" style="overflow:unset;">
+        @Html.Partial("ItemList", Model)
+    </div>
+</div>
+
+<div id="divLedgerTable3" class="tabcontent">
+    @Html.Partial("ValueChargeList", Model)
+</div>
+
+<div id="divLedgerTable4" class="tabcontent" style="overflow:unset;">
+    @Html.Partial("TermList", Model)
+</div>
+<div id="divRevision" class="tabcontent" style="overflow:unset;">
+    @*@if (Model.ChangeLog == "Edit" && (Model.SubType == "QP" || Model.SubType == "QS" || Model.SubType == "OP" || Model.SubType == "OS" || Model.SubType == "EP" || Model.SubType == "ES"))
+        {*@
+    <br />
+    <div class="form-horizontal">
+        <div class="form-group" style="margin-top:5px;margin-left:2px;">
+            <label class="col-sm-1 control-label">Revision ?:</label>
+            <div class="col-sm-1">
+                @Html.CheckBoxFor(x => x.RevBool, new { @id = "RevBool", @name = "RevBool" })
+            </div>
+            <label class="col-sm-1 control-label">Revision No:</label>
+            <div class="col-sm-2" style="width:150px;">
+                @Html.TextBoxFor(x => x.RevNo, new { @class = "form-control", @id = "RevNo", @Name = "RevNo", @Value = Model.RevNo, @disabled = "disabled" })
+            </div>
+            <label class="col-sm-1 control-label">Revision Date:</label>
+            <div class="col-sm-2" style="width:150px;">
+                @Html.TextBoxFor(x => x.RevDate, new { @class = "form-control", @id = "RevDate", @Name = "RevDate", @Value = Model.RevDate })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-1 control-label" style="padding-left:25px;">Narration:</label>
+            <div class="col-sm-6">
+                @Html.TextAreaFor(x => x.RevNarr, new { @class = "form-control", @id = "RevNarr", @Name = "RevNarr", @cols = 60, @rows = 10, @Value = Model.RevNarr })
+            </div>
+        </div>
+    </div>
+    <script>
+            $(document).ready(function () {
+                $('#RevDate').datepicker({
+                    format: 'dd-mm-yyyy',
+                    autoclose: true,
+                });
+                $("#RevBool").click(function (event, parameters) {
+                    var nonUI = false;
+                    try {
+                        nonUI = parameters.nonUI;
+                    } catch (e) {}
+                    var checked = nonUI ? !this.checked : this.checked;
+                    var ModelData = {};
+                    ModelData["SubType"] = $("#hdnSType").val();
+                    ModelData["ParentKey"] = $("#hdnParentKey").val();
+                    var DTO = { Model: ModelData };
+                    var url = '@Url.Action("GenerateRevNo")';
+                    $.ajax({
+                        type: "POST",
+                        dataType: "json",
+                        data: JSON.stringify(DTO),
+                        cache: false,
+                        url: url,
+                        contentType: "application/json;charset=utf-8",
+                        beforeSend: function () {
+                            $('.spinner').show();
+                        },
+                        success: function (data) {
+                            $('.spinner').hide();
+                            $('#RevNo').val(data.RevNo);
+                        },
+                        error: function () {
+                            alert("Error occured while processing your request.");
+                        }
+                    });
+                });
+
+            });
+    </script>
+
+    @*}*@
+</div>
+<div id="divMultiParty" class="tabcontent" style="overflow:unset;">
+
+    <div class="form-horizontal">
+        <div class="form-group" style="margin-top:5px;margin-left:2px;">
+            <label class="col-sm-1 control-label">Vendors:</label>
+            <div class="col-sm-5">
+                @Html.DropDownListFor(x => x.MultiVendor, DropdownHelper.EmptyList(), new { @Multiple = "multiple", @Id = "MultiVendorList", @style = "height:100%;width:100%" })
+            </div>
+
+        </div>
+        <input type="hidden" id="hdnmultivendorarray" />
+    </div>
+    <script>
+        $(document).ready(function () {
+            GetMultiVendorLists()
+
+            $('#MultiVendorList').select2({ closeOnSelect: false, placeholder: "Placeholder", allowHtml: true, allowClear: true, });
+        });
+        function GetMultiVendorLists() {
+
+            var ModelData = {};
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetMultiVendorLists")';
+            $.ajax({
+                type: 'POST',
+                url: url,
+                dataType: 'json',
+                data: JSON.stringify(DTO),
+                contentType: "application/json;charset=utf-8",
+                success: function (result) {
+                    $("#MultiVendorList").empty();
+                    $("#MultiVendorList").select2('data', null);
+                    $.each(result, function (i, item) {
+                        $("#MultiVendorList").append("<option value='" + item.Value + "'>" + "[" + item.Value + "] " + item.Text + "</option>");
+                    });
+                    $('.spinner').hide();
+                },
+                error: function (ex) {
+                    alert("Error! While Collecting Items List." + ex);
+                }
+            });
+            return false;
+        };
+    </script>
+
+
+</div>
+
+<div class="example-modal">
+    <div id="attachdoc" class="modal modal-primary">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="AttachDoc">
+                @Html.Partial("AttachmentDocument", Model)
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="addonmodel" class="modal modal-default" style="z-index:2500;">
+        <div class="modal-dialog modal-lg" style="width:1000px;">
+            <div id="Dialog">
+                @Html.Partial("AddOnGrid", Model)
+            </div>
+        </div>
+    </div>
+</div>

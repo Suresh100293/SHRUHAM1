@@ -1,0 +1,380 @@
+﻿
+@model TFATERPWebApplication.Areas.Logistics.Models.CountryMasterVM
+@using Common;
+@{
+    ViewBag.Title = "Country Master";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadCurrName()
+        LoadLanguage()
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#CountryMaster').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TfatCountry_Code: {required: true,},
+                TfatCountry_Name: { required: true, },
+
+               },
+            messages: {
+                TfatCountry_Code: {required: 'Code is Required',},
+                TfatCountry_Name: {required: 'Name is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#TfatCountry_Code").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatCountry_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatCountry_CountryCode").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatCountry_CurrName").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatCountry_CurrDec").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatCountry_Language").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#TfatCountry_CurrRate").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#CountryMaster").validate().form() == false)
+            //    return;
+
+            if ($("#TfatCountry_Code").val() == null || $("#TfatCountry_Code").val() == 0)
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Code is Required..');
+                return;
+            }
+            if ($("#TfatCountry_Name").val() == null || $("#TfatCountry_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+
+            if ( $("#TfatCountry_AttacheFile").val() != '')
+            {
+                debugger;
+                var file = document.getElementById("TfatCountry_AttacheFile").files[0];
+                if (file.size < 2048576) {
+
+                }
+                else {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('File Size Must Not Exceed 2 MB..');
+                    return;
+                }
+            }
+
+
+
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+
+            @*var url = '@Url.Action("SaveData")';
+
+            var ModelData = {};
+            ModelData["TfatCountry_Code"] = $("#TfatCountry_Code").val();
+            ModelData["TfatCountry_Name"] = $("#TfatCountry_Name").val();
+            ModelData["TfatCountry_CountryCode"] = $("#TfatCountry_CountryCode").val();
+            ModelData["TfatCountry_CurCode"] = $("#TfatCountry_CurCode").val();
+            ModelData["TfatCountry_CurrName"] = $("#TfatCountry_CurrName").val();
+            ModelData["TfatCountry_CurrDec"] = $("#TfatCountry_CurrDec").val();
+            ModelData["TfatCountry_CurDecName"] = $("#TfatCountry_CurDecName").val();
+            ModelData["TfatCountry_Language"] = $("#TfatCountry_Language").val();
+            ModelData["TfatCountry_DialCode"] = $("#TfatCountry_DialCode").val();
+            ModelData["TfatCountry_CurrRate"] = $("#TfatCountry_CurrRate").val();
+            ModelData["Mode"] = '@Model.Mode';
+
+             var DTO = { mModel: ModelData};
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });*@
+
+            var formData = new FormData();
+            formData.append("TfatCountry_Code", $("#TfatCountry_Code").val());
+            formData.append("TfatCountry_Name", $("#TfatCountry_Name").val());
+            formData.append("TfatCountry_CountryCode", $("#TfatCountry_CountryCode").val());
+            formData.append("TfatCountry_CurCode", $("#TfatCountry_CurCode").val());
+            formData.append("TfatCountry_CurrName", $("#TfatCountry_CurrName").val());
+            formData.append("TfatCountry_CurrDec", $("#TfatCountry_CurrDec").val());
+            formData.append("TfatCountry_CurDecName", $("#TfatCountry_CurDecName").val());
+            formData.append("TfatCountry_Language", $("#TfatCountry_Language").val());
+            formData.append("TfatCountry_DialCode", $("#TfatCountry_DialCode").val());
+            formData.append("TfatCountry_CurrRate", $("#TfatCountry_CurrRate").val());
+            formData.append("Mode", '@Model.Mode');
+            formData.append("AttacheFile", document.getElementById("TfatCountry_AttacheFile").files[0]);
+
+            $.ajax({
+                    type: "POST",
+                    url: '@Url.Action("SaveData")',
+                    data: formData,
+                    dataType: 'json',
+                    contentType: false,
+                    processData: false,
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                },
+                    error: function (error) {
+                    }
+                });
+
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadCurrName() {
+        var url = '@Url.Action("AutoCompleteCurrName")'
+        $('#TfatCountry_CurrName').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatCountry_CurrName', text: '@Model.CurrNameName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadLanguage() {
+        var url = '@Url.Action("AutoCompleteLanguage")'
+        $('#TfatCountry_Language').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.TfatCountry_Language', text: '@Model.LanguageName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="CountryMaster" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TfatCountry_Code, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatCountry_Code", @Value = Model.TfatCountry_Code, @Id = "TfatCountry_Code" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatCountry_Name, new { @maxlength = "35", @class = "form-control", @Name = "TfatCountry_Name", @Value = Model.TfatCountry_Name, @Id = "TfatCountry_Name" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Country Code:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TfatCountry_CountryCode, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatCountry_CountryCode", @Value = Model.TfatCountry_CountryCode, @Id = "TfatCountry_CountryCode" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Curr. Code:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatCountry_CurCode, new { @maxlength = "10", @class = "form-control", @Name = "TfatCountry_CurCode", @Value = Model.TfatCountry_CurCode, @Id = "TfatCountry_CurCode" })
+                </div>
+                <label class="col-sm-1 control-label">Curr. Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatCountry_CurrName, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatCountry_CurrName", @Value = Model.TfatCountry_CurrName, @Name = "TfatCountry_CurrName" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Curr. Dec:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TfatCountry_CurrDec, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatCountry_CurrDec", @Value = Model.TfatCountry_CurrDec, @Id = "TfatCountry_CurrDec" })
+                </div>
+                <div class="col-sm-2"></div>
+                <label class="col-sm-1 control-label">Curr. Dec. Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatCountry_CurDecName, new { @maxlength = "10", @class = "form-control", @Name = "TfatCountry_CurDecName", @Value = Model.TfatCountry_CurDecName, @Id = "TfatCountry_CurDecName" })
+                </div>
+            </div>
+            <br />
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Language:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatCountry_Language, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "TfatCountry_Language", @Value = Model.TfatCountry_Language, @Name = "TfatCountry_Language" })
+                </div>
+                <label class="col-sm-1 control-label">DialCode:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.TfatCountry_DialCode, new { @maxlength = "7", @class = "form-control", @Name = "TfatCountry_DialCode", @Value = Model.TfatCountry_DialCode, @Id = "TfatCountry_DialCode" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Curr. Rate:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.TfatCountry_CurrRate, "{0:n2}", new { @maxlength = "12", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatCountry_CurrRate", @Value = Model.TfatCountry_CurrRate, @Id = "TfatCountry_CurrRate" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Upload File :</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AttacheFile, "{0:n2}", new { @type = "file", @class = "form-control", @Name = "TfatCountry_AttacheFile", @Value = Model.AttacheFile, @Id = "TfatCountry_AttacheFile" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Tue 13-Aug-2019 11:03 AM
+    Engine: iX9Generator, ver: 3.7 Revision: 49
+    by Team Suchan, T.FAT *@

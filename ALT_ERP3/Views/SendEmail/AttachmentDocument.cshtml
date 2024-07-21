@@ -1,0 +1,134 @@
+﻿<script type="text/javascript">
+        $(document).ready(function () {
+
+            $("#btnAddDocument").click(function (event) {
+                event.preventDefault();
+                var size = 0;
+                var formData = new FormData();
+                var totalFiles = document.getElementById("FileUpload").files.length;
+                for (var i = 0; i < totalFiles; i++)
+                {
+                    var file = document.getElementById("FileUpload").files[i];
+                    size += file.size;
+                    if (file.size < 26214400)
+                    {
+                        debugger;
+                        formData.append("files", file);
+                    }
+                    else
+                    {
+                        alert('File Size Must Not Exceed 25 MB')
+                        return;
+                    }
+                }
+                if (size > 26214400)
+                {
+                    alert('File Size Must Not Exceed 25 MB')
+                    return;
+                }
+
+                $.ajax({
+                    type: "POST",
+                    url: '@Url.Action("AttachDocument")',
+                    data: formData,
+                    dataType: 'json',
+                    contentType: false,
+                    processData: false,
+                    success: function (data) {
+                        if (data.Status == "CancelError")
+                        {
+                            alert(data.Message);
+                        }
+                        else
+                        {
+                            $('.spinner').hide();
+                            var AttachDoc = $("#AttachDoc");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                        }
+                    },
+                    error: function (error) {
+                        alert("errror");
+                    }
+                });
+            });
+
+            $('button[action|="Delete"]').click(function (event) {
+                event.preventDefault();
+                var myImageArray = [];
+                var url = '@Url.Action("DeleteUploadFile")';
+                //$('#AttachTable tbody tr').each(function () {
+                //    var tds = $(this).find('td');
+                //    var myDets = {
+                //        FileName: tds.eq(0).text(),
+                //        tempId: tds.eq(3).text()
+                //    }
+                //    myImageArray.push(myDets);
+                //})
+                var ModelData = {};
+                ModelData["tEmpID"] = $(this).val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("DeleteUploadFile")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+
+                    success: function (data) {
+                        $('#AttachDoc').html(data.Html);
+                        $('.spinner').hide();
+                    },
+                    error: function () {
+                        $('.spinner').hide();
+                        alert("An error occurred while processing the request.");
+                    }
+                });
+            });
+        });
+</script>
+
+
+<div class="panel-body">
+    <div class="form-group">
+        <label class="col-sm-1 control-label">Attachments:</label>
+        <div class="col-sm-9">
+            <input type="file" id="FileUpload" multiple="multiple" />
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-1 control-label"></label>
+        <div class="col-sm-9">
+            <input type="submit" value="Upload" class="btn btn-warning" id="btnAddDocument" />
+        </div>
+    </div>
+    <div class="grid" id="docDetailTable" style="margin-left:114px;width:500px;">
+        <table id="AttachTable" class="zui-tableww" style="width:500px;">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (ViewBag.DocumentList != null)
+                {
+                    foreach (var item in (ViewBag.DocumentList as IEnumerable<ALT_ERP3.PurchaseVM>).ToList())
+                    {
+                        <tr role="row" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                            <td>@item.FileName</td>
+                            <td><button type="button" action="Delete" class="btn btn-danger btn-sm" value="@item.tempId" title="Delete"><i class="fa fa-trash-o"></i></button></td>
+                            <td hidden="hidden">@item.ImageStr</td>
+                            <td hidden="hidden">@item.tempId</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

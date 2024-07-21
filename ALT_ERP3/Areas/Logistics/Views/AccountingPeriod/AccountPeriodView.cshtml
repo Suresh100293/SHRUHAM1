@@ -1,0 +1,225 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.AccountPeriodVM
+@using Common;
+@{
+    ViewBag.Title = "Account Period";
+    Layout = null;
+}
+
+<link href="~/Content/bootstrap-multiselect.css" rel="stylesheet" />
+<script src="~/Content/bootstrap-multiselect.js"></script>
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        GetMyFavorites('@Model.ViewDataId');
+        if ('@Model.Mode' == "Delete" ||'@Model.Mode' == "View")
+        {
+            $('.form-group :input').prop("disabled", true);
+        }
+        debugger;
+        $("#User").val("");
+        var CommonValue = "";
+        if ('@Model.User' != "") {
+            $.each('@Model.User'.split(','), function (idx, val) {
+                $(".UserL option[value='" + val + "']").attr("selected", true);
+                CommonValue += "" + val + ",";
+            });
+            CommonValue = CommonValue.toString().substring(0, CommonValue.length - 1);
+            $('#User').val(CommonValue);
+        }
+
+        $(".UserL").change(function () {
+            $('#User').val('');
+            var selected = "";
+            debugger;
+            $(".UserL :selected").each(function () {
+                selected += ("" + $(this).val() + ",");
+            });
+            selected = selected.toString().substring(0, selected.length - 1);
+            $('#User').val(selected);
+            return false;
+        });
+
+        $('#LastDate,#StartDate').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+
+        $('.UserL').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '235',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select User To Lock',
+        });
+
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#AssignTasks").validate().form() == false)
+            //    return;
+
+            if ($("#StartDate").val() == null || $("#StartDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('StartDate is Required..');
+                return;
+            }
+            if ($("#LastDate").val() == null || $("#LastDate").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('LastDate is Required..');
+                return;
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+
+            ModelData["Document"] = $("#Document").val();
+            ModelData["CompCode"] = $("#CompCode").val();
+            ModelData["StartDate"] = $("#StartDate").val();
+            ModelData["LastDate"] = $("#LastDate").val();
+            ModelData["User"] = $("#User").val();
+            ModelData["Locked"] = $("#Locked").is(':checked');
+
+
+
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body" style="margin-top:2%;">
+        <div class="form-horizontal " id="AssignTasks" role="form" style="margin-top:0%;margin-bottom: 30px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Period Code:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.PerdCode, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @readonly = "readonly", @Value = Model.PerdCode })
+                </div>
+                <label class="col-sm-1 control-label">Comp. Code:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.CompCode, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @readonly = "readonly", @Value = Model.CompCode })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Start Date:</label>
+                <div class="col-sm-7">
+                    @if (Model.Mode == "Add")
+                    {
+                        @Html.TextBoxFor(x => x.StartDate, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Value = Model.StartDate })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.StartDate, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Value = Model.StartDate, @disabled = "disabled" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">End Date:</label>
+                <div class="col-sm-7">
+                    @if (Model.Mode == "Add")
+                    {
+                        @Html.TextBoxFor(x => x.LastDate, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Value = Model.LastDate })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.LastDate, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Value = Model.LastDate, @disabled = "disabled" })
+                    }
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Locked?:</label>
+                <div class="col-sm-2">
+                    @Html.CheckBoxFor(x => x.Locked, new { @value = Model.Locked, @id = "Locked", @name = "Locked", @style = "height:20px;width:20px;" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label" title="Selected User Lock In @Model.PerdCode Account Period.">Locked User:</label>
+                <div class="col-sm-2">
+                    @Html.ListBoxFor(x => x.UserL, Model.Users, new { @class = "UserL", @id = "UserL" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@*
+    Code Auto Generated on Tue 28-May-2019 05:14 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 42
+    by Team Suchan, T.FAT *@
+
+@Html.HiddenFor(x=>x.Document)
+@Html.HiddenFor(x=>x.User)

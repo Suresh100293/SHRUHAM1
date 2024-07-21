@@ -1,0 +1,574 @@
+﻿@model TFATERPWebApplication.Areas.Logistics.Models.ConsignerMasterVM
+@using Common;
+@{
+    ViewBag.Title = "Consigner Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script src="~/Scripts/jquery.jstree.js"></script>
+
+<script type="text/javascript">
+    var isTreeOpen = false;
+    $(document).ready(function () {
+        LoadCity();
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+        $('#Name').blur(function () {
+            CheckName();
+        });
+
+      
+        @*$('#City').select2({
+            //placeholder="City",
+            //theme="classic",
+            ajax: {
+                url: '@Url.Action("AutoCompleteCity")',
+                dataType: 'json',
+                //data: function (params) {
+                //    return {
+                //        searchTerm: params.term
+                //    };
+                //},
+                //processResults: function (data, params) {
+                //    return {
+                //        results: data
+                //    };
+                //}
+
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.City', text: '@Model.CityName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        });*@
+
+
+        //FillTreeView();
+        //$('#treeviewcontrol').click(function (event) {
+        //    event.preventDefault();
+        //    $("#ErrorMessage").hide();
+        //    var divId = [];
+        //    $("#treeviewcontrol").jstree("get_selected").each(function (key, value) {
+        //        divId.push(this.id);
+        //    });
+        //    if (divId == '') { return; }
+        //     $('#hdnID').val(divId);
+        //});
+
+        //$('#treeviewcontrol').dblclick(function (event) {
+
+        //    ExpandOrCollapse();
+        //});
+        
+
+        $("#Name").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        $("#Contact_Person").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        $("#Contact_Person1").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+       // $("#Contact_Person #Contact_Person1").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Address").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        //$("#City").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Pincode").constrain({ allow: { regex: "[0-9]" } });
+        $("#District").constrain({ allow: { regex: "[a-zA-Z" } });
+        $("#Contact_No #Contact_No1").constrain({ allow: { regex: "[0-9]" } });
+        $("#Fax").constrain({ allow: { regex: "[0-9+]" } });
+
+
+        $('#btnDelete').click(function (event) {
+            event.preventDefault();
+            //if ($("#StateMaster").validate().form() == false)
+            //    return;
+            var result = confirm("Are you sure you want to delete?");
+            if (result) {
+                //Logic to delete the item
+                 if ($("#Name").val() == null || $("#Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ( $("#Contact_No").val() != '' ) {
+                debugger;
+                if ($("#Contact_No").val().length!=10) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Contact_No Allow 10 Digit Only..');
+                    return;
+                }
+                }
+                if ($("#Contact_No1").val() != '') {
+                    debugger;
+                    if ($("#Contact_No1").val().length != 10) {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Contact_No Allow 10 Digit Only..');
+                        return;
+                    }
+                }
+
+
+
+            //if ($("#Contact_Person").val() == null || $("#Contact_Person").val() == '')
+            //{
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Contact_Person Name is Required..');
+            //    return;
+            //}
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+
+            ModelData["Name"] = $("#Name").val();
+            ModelData["Contact_Person"] = $("#Contact_Person").val();
+            ModelData["Contact_Person1"] = $("#Contact_Person1").val();
+            ModelData["Address"] = $("#Address").val();
+            ModelData["City"] = $("#City").val();
+            ModelData["Pincode"] = $("#Pincode").val();
+            ModelData["District"] = $("#District").val();
+            ModelData["Contact_No"] = $("#Contact_No").val();
+            ModelData["Contact_No1"] = $("#Contact_No1").val();
+            ModelData["Fax"] = $("#Fax").val();
+                ModelData["Email_Id"] = $("#Email_Id").val();
+                ModelData["Email_Id1"] = $("#Email_Id1").val();
+
+                if ($('input[type=checkbox]').prop('checked')) {
+                    debugger;
+                    ModelData["AcitveorNot"] = "True";
+
+                } else {
+                    debugger;
+                    ModelData["AcitveorNot"] = "False";
+
+                }
+
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+            } else {
+                $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+            }
+
+
+        });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#StateMaster").validate().form() == false)
+            //    return;
+
+            //if ($('#hdnID').val() == null || $("#hdnID").val() == '') {
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Please Select Area ..');
+            //    return;
+            //}
+            if ($("#Name").val() == null || $("#Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ( $("#Contact_No").val() != '' ) {
+                debugger;
+                if ($("#Contact_No").val().length!=10) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Contact_No Allow 10 Digit Only..');
+                    return;
+                }
+            }
+            if ($("#Contact_No1").val() != '') {
+                debugger;
+                if ($("#Contact_No1").val().length != 10) {
+                    $("#ErrorMessage").show();
+                    $("#ErrorMessage").text('Contact_No Allow 10 Digit Only..');
+                    return;
+                }
+            }
+
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+
+            ModelData["Name"] = $("#Name").val();
+            ModelData["Contact_Person"] = $("#Contact_Person").val();
+            ModelData["Contact_Person1"] = $("#Contact_Person1").val();
+            ModelData["Address"] = $("#Address").val();
+            ModelData["City"] = $("#City").val();
+            ModelData["Pincode"] = $("#Pincode").val();
+            ModelData["District"] = $("#District").val();
+            ModelData["Contact_No"] = $("#Contact_No").val();
+            ModelData["Contact_No1"] = $("#Contact_No1").val();
+            ModelData["Fax"] = $("#Fax").val();
+            ModelData["Email_Id"] = $("#Email_Id").val();
+            ModelData["Email_Id1"] = $("#Email_Id1").val();
+            if ($('input[type=checkbox]').prop('checked')) {
+                debugger;
+                ModelData["AcitveorNot"] = "True";
+
+            } else {
+                debugger;
+                ModelData["AcitveorNot"] = "False";
+
+            }
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Area"] = $("#hdnID").val();
+
+
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+
+        $('#expandall').click(function () {
+            debugger;
+
+            ExpandOrCollapse();
+
+        });
+
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function CheckName() {
+        debugger;
+            NameFlag = "False";
+        var currValue = $('#Name').val()
+        var url = '@Url.Action("CheckExist")'; 
+        if (currValue != null || currValue != "") {
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                //url: "/Base/CheckExist",
+                url: url,
+                data: { TableName: "Consigner", Colfield: "Name", Value: $('#Name').val(), SkipColumnName: "Code", PKValue: '@Model.Document' },
+                success: function (result) {
+                    if (result.Message == "F") {
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").text('Name is Exist Please Change The Name..');
+                        $('#Submit').prop('disabled', true);
+                        return;
+                    } else {
+                        $("#ErrorMessage").hide();
+                        $('#Submit').prop('disabled', false);
+                    }
+                }
+            });
+        }
+    }
+    function ExpandOrCollapse() {
+        debugger;
+        if (isTreeOpen == false) {
+            $("#treeviewcontrol").jstree("open_all", "#0");
+            isTreeOpen = true;
+
+
+        } else {
+            $("#treeviewcontrol").jstree("close_all", "#0");
+            isTreeOpen = false;
+        }
+    }
+
+    function FillTreeView() {
+        $("#treeviewcontrol").jstree({
+            json_data: {
+                "ajax": {
+                    "url": "/ConsignerOrConsignee/TreeView",
+                    "type": "POST",
+                    "dataType": "json",
+                    "contentType": "application/json charset=utf-8"
+                }
+            },
+            checkbox: {
+                real_checkboxes: false,
+                checked_parent_open: false
+            },
+            plugins: ["themes", "json_data", "ui", "checkbox"]
+           // plugins: ["wholerow", "checkbox","themes"]
+        });
+    };
+
+
+    function LoadCity() {
+        var url = '@Url.Action("AutoCompleteCity")'
+        $('#City').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.City', text: '@Model.CityName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    
+
+
+
+
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="ServiceMaster" role="form" style="margin-top:34px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="form-group" style="margin-top:-20px;">
+                @*<div class="col-sm-3">
+                    <div id="treeviewcontrol" style="font-family:Tahoma;font-size:12px;border-right:double; min-height:500px;overflow-y:auto;max-height:500px;padding-left:5px;padding-top:10px;padding-bottom:5px;"></div>
+                </div>*@
+                <div id="DataEntry" class="col-sm-9">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Code:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Code, new { @class = "input-large-query form-control", @readonly = "readonly", @style = "width:100%;margin-top:2px;", @Value = Model.Code })
+                        </div>
+
+                        <div class="col-sm-3">
+
+                        </div>
+                        <div class="col-sm-2"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Name:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Name, new { @class = "input-large-query form-control", @style = "width:100%;margin-top:2px;", @Value = Model.Name })
+                        </div>
+                        <label class="col-sm-2 control-label">Contact Person Name:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Contact_Person, new { @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.Contact_Person })
+                        </div>
+                        <div class="col-sm-2"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Email:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Email_Id, new { @class = "input-large-query form-control", @style = "width:100%;margin-top:2px;", @Value = Model.Email_Id })
+                        </div>
+                        <label class="col-sm-2 control-label">Contact No:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Contact_No, new { @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.Contact_No })
+                        </div>
+                        <div class="col-sm-2"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Address:</label>
+                        <div class="col-sm-3">
+                            @Html.TextAreaFor(x => x.Address, new { @class = "input-large-query form-control", @style = "width:100%;", @rows = 4, @Value = Model.Address })
+                        </div>
+                        <div class="col-sm-2"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">City :</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.City, new { @class = "input-large-query", @style = "width:100%;margin-top:0px;", @Value = Model.City })
+                        </div>
+                        <label class="col-sm-2 control-label">District:</label>
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.District, new { @class = "form-control", @style = "width:100%;", @Value = Model.District })
+                        </div>
+                        <div class="col-sm-2"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Pincode :</label>
+                        <div class="col-sm-1">
+                            @Html.TextBoxFor(x => x.Pincode, new { @maxlength = "6", @class = "input-large-query form-control", @style = "width:100px;text-align:right;", @Value = Model.Pincode })
+                        </div>
+                        <div class="col-sm-2"></div>
+                        <label class="col-sm-2 control-label">Fax:</label>
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.Fax, new { @maxlength = "3", @class = "form-control", @style = "width:100px;text-align:right;", @Value = Model.Fax })
+
+                        </div>
+                        <div class="col-sm-2"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Email:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Email_Id1, new { @class = "input-large-query form-control", @style = "width:100%;margin-top:2px;", @Value = Model.Email_Id1 })
+                        </div>
+                        <label class="col-sm-2 control-label">Contact Person Name:</label>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Contact_No1, new { @class = "form-control", @style = "width:100%;margin-top:2px;", @Value = Model.Contact_No1 })
+                        </div>
+                        <div class="col-sm-2"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Phone No:</label>
+                        <div class="col-sm-2">
+                            @Html.TextBoxFor(x => x.Contact_Person1, new { @maxlength = "10", @class = "form-control", @style = "width:100%;", @Value = Model.Contact_Person1 })
+                        </div>
+                        <label class="col-sm-offset-1   col-sm-2 control-label">Status:</label>
+                        <div class="col-sm-2">
+                            @Html.CheckBoxFor(x => x.Acitve, new { @class = "checkbox", @style = "width:20px;", @Value = Model.Acitve })
+                        </div>
+
+                    </div>
+                    @* iX9: -- Code for Header Ends -- *@
+
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+
+                @*<button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="addchild">Add Child</button>
+
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnZone">Add Zone</button>
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnBranch">Add Branch</button>
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnArea">Add Area</button>
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnSubBranch">Add Sub-Branch</button>*@
+
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="expandall">Expand All / Collapse All</button>
+
+            </div>
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+@*<input type="hidden" id="controllername" />*@
+@Html.HiddenFor(x => x.Document)
+<input type="hidden" id="hdnID" />

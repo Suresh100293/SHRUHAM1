@@ -1,0 +1,372 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.TripSheetModel
+@using Common
+
+
+
+<div class="grid" id="SelectedledgerTable" style="max-height:350px; width: auto; overflow: auto;">
+    <table id="tabledata" class="zui-table" style="border-color:gray;">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                <th style="width: 1%;vertical-align:inherit;">Sr.</th>
+                <th style="width: 25%;vertical-align:inherit;">Account </th>
+                <th style="width: 25%;vertical-align:inherit;">Debit</th>
+                <th style="width: 25%;vertical-align:inherit;">Credit</th>
+                <th style="width: 21%;vertical-align:inherit;">Remark</th>
+                <th style="width: 21%;vertical-align:inherit;">Details</th>
+                <th style="width: 3%;vertical-align:inherit;" colspan="2">
+
+                </th>
+            </tr>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                <th style="width: 1%;vertical-align:inherit;"> @Html.TextBoxFor(x => x.tempid, new { @id = "lbltempid", @name = "lbltempid", @class = "form-control", @style = "width:100%" })</th>
+                <th style="width: 25%;vertical-align:inherit;">@Html.TextBoxFor(x => x.Account, new { @id = "Account", @name = "Account", @class = "input-large-query", @style = "width:100%" }) </th>
+                <th style="width: 25%;vertical-align:inherit;">@Html.TextBoxFor(x => x.Debit, new { @id = "Debit", @name = "Debit", @class = "form-control", @type = "number", @style = "text-align:right;" })</th>
+                <th style="width: 25%;vertical-align:inherit;">@Html.TextBoxFor(x => x.Credit, new { @id = "Credit", @name = "Credit", @class = "form-control", @type = "number", @style = "text-align:right;" })</th>
+                <th style="width: 21%;vertical-align:inherit;">@Html.TextBoxFor(x => x.Remark, new { @id = "Remark", @name = "Remark", @class = "form-control" })</th>
+                <th>
+                    @if (Model.SessionFlag == "Edit")
+                    {
+                        <button type="button" id="btnEditRelateDetails" class="btn btn-primary btn-sm" style="font-size:13pt;margin-left:0px;width:100%;height:30px;border:0px solid black"><i class="fa fa-list" style="color:black;"></i></button>
+                    }
+                    else
+                    {
+                        <button type="button" id="btnRelateDetails" class="btn btn-primary btn-sm" style="font-size:13pt;margin-left:0px;width:100%;height:30px;border:0px solid black"><i class="fa fa-list" style="color:black;"></i></button>
+                    }
+
+                </th>
+                <th style="vertical-align:inherit;">
+                    @if (Model.SessionFlag == "Edit")
+                    {
+                        <button type="button" id="btnsavedata" class="btn btn-primary btn-sm" title="Add" style="font-size:13pt;margin-left:0px;width:100%;height:30px;border:0px solid black"><i class="fa fa-save" style="color:black;"></i></button>
+                    }    
+                </th>
+                <th style="vertical-align:inherit;">
+                    <button type="button" id="btnadddata" class="btn btn-primary btn-sm" title="Add" style="font-size:13pt;margin-left:0px;width:100%;height:30px;border:0px solid black"><i class="fa fa-plus" style="color:black;"></i></button>
+                </th>
+
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.SelectedLedger != null)
+            {
+                foreach (var item in @Model.SelectedLedger.ToList())
+                {
+                    var btnDelete = @item.tempid;
+                    <tr style="font-family:Tahoma;font-size:9pt;">
+                        <td style="vertical-align:inherit;">@item.tempid</td>
+
+                        <td style="vertical-align:inherit;">@item.AccountName</td>
+                        <td style="vertical-align:inherit;">@item.Debit</td>
+                        <td style="vertical-align:inherit;">@item.Credit</td>
+                        <td style="vertical-align:inherit;">@item.Remark</td>
+
+
+                        @if (Model.Mode != "Delete")
+                        {
+                            <td style="vertical-align:inherit;">
+                                <button type="button" action="EditLedger" class="btn btn-warning btn-sm" value="@item.tempid" title="Edit"><i class="fa fa-edit"></i></button>
+                            </td>
+                            <td style="vertical-align:inherit;">
+                                <button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.tempid" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+
+    </table>
+</div>
+
+<div class="example-modal">
+    <div id="addtripdiv" class="modal modal-default">
+        <div class="modal-dialog modal-lg" style="z-index:2500;width:1040px;overflow:unset;">
+            <div id="AddTripDiv">
+                @Html.Partial("TripPopUpAddEdit")
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+
+    $(document).ready(function () {
+        loadaccount()
+
+
+        $("#btnRelateDetails").click(function (event) {
+            event.preventDefault();
+            if ($('#hdnTripDetsSaved').val() == "Y") {
+                $('#addtripdiv').modal('show');
+            }
+            else {
+            var ModelData = {};
+            ModelData["SessionFlag"] = "Add";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetTripSheetDetail")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+
+                    $('#addtripdiv').modal('show');
+                    $('#AddTripDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+            }
+
+
+        });
+
+          $("#btnEditRelateDetails").click(function (event) {
+            event.preventDefault();
+            if ($('#hdnTripDetsSaved').val() == "Y") {
+                $('#addtripdiv').modal('show');
+            }
+            else {
+            var ModelData = {};
+                ModelData["SessionFlag"] = "Edit";
+                ModelData["tempid"] = $('#lbltempid').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetTripSheetDetail")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+
+                    $('#addtripdiv').modal('show');
+                    $('#AddTripDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+            }
+
+
+        });
+
+        $("#btnadddata").click(function (event) {
+            event.preventDefault();
+            var mylcTableArray = [];
+            $('#tbllcdetails tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = { tempid: tds.eq(0).text(), LCDate: tds.eq(1).text(), LCNo: tds.eq(2).text(), FromLocation: tds.eq(3).text(), ToLocation: tds.eq(4).text(), FromName: tds.eq(5).text(), ToName: tds.eq(6).text(), ChargesAcc: tds.eq(7).text(), ChargesAccName: tds.eq(8).text(), Amt: tds.eq(9).text(), Descr: tds.eq(10).text() }
+                mylcTableArray.push(myDets2);
+            })
+
+
+            var mylessTableArray2 = [];
+            $('#tbllessnarrlist tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = { tempid: tds.eq(0).text(), LessNarr: tds.eq(1).text(), LessAmt: tds.eq(2).text() }
+                mylessTableArray2.push(myDets2);
+            })
+
+            var myadTableArray1 = [];
+            $('#tbladdnarrlist tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = { tempid: tds.eq(0).text(), AddNarr: tds.eq(1).text(), AddAmt: tds.eq(2).text() }
+                myadTableArray1.push(myDets2);
+            })
+            var ModelData = {};
+            ModelData["SessionFlag"] = "Add";
+            ModelData["RelateTo"] = $('#RelateTo').val();
+            ModelData["ChargeTrip"] = $('#ChargeTrip').val();
+            ModelData["Rate"] = $('#Rate').val();
+            ModelData["ChargeKM"] = $('#ChargeKM').val();
+            ModelData["StartDateStr"] = $('#StartDateStr').val();
+            ModelData["StartKM"] = $('#StartKM').val();
+            ModelData["EndDateStr"] = $('#EndDateStr').val();
+            ModelData["EndKM"] = $('#EndKM').val();
+            ModelData["LCDetailList"] = mylcTableArray;
+            ModelData["AddNarrList"] = myadTableArray1;
+            ModelData["LessNarrList"] = mylessTableArray2;
+            ModelData["Account"] = $('#Account').val();
+            ModelData["Debit"] = $('#Debit').val();
+            ModelData["Credit"] = $('#Credit').val();
+            ModelData["Remark"] = $('#Remark').val();
+            ModelData["TripFinalAmt"] = $('#TripFinalAmt').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddEditLedgerDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable').html(data.Html)
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+
+        });
+
+
+        $('button[action|="EditLedger"]').click(function (event) {
+            event.preventDefault();
+             var ModelData = {};
+            ModelData["tempid"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetLedgerDetailsInEdit")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $("#btnsavedata").click(function (event) {
+            event.preventDefault();
+              var mylcTableArray = [];
+            $('#tbllcdetails tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = { tempid: tds.eq(0).text(), LCDate: tds.eq(1).text(), LCNo: tds.eq(2).text(), FromLocation: tds.eq(3).text(), ToLocation: tds.eq(4).text(), FromName: tds.eq(5).text(), ToName: tds.eq(6).text(), ChargesAcc: tds.eq(7).text(), ChargesAccName: tds.eq(8).text(), Amt: tds.eq(9).text(), Descr: tds.eq(10).text() }
+                mylcTableArray.push(myDets2);
+            })
+
+
+            var mylessTableArray2 = [];
+            $('#tbllessnarrlist tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = { tempid: tds.eq(0).text(), LessNarr: tds.eq(1).text(), LessAmt: tds.eq(2).text() }
+                mylessTableArray2.push(myDets2);
+            })
+
+            var myadTableArray1 = [];
+            $('#tbladdnarrlist tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets2 = { tempid: tds.eq(0).text(), AddNarr: tds.eq(1).text(), AddAmt: tds.eq(2).text() }
+                myadTableArray1.push(myDets2);
+            })
+            var ModelData = {};
+            ModelData["SessionFlag"] = "Edit";
+            ModelData["RelateTo"] = $('#RelateTo').val();
+            ModelData["ChargeTrip"] = $('#ChargeTrip').val();
+            ModelData["Rate"] = $('#Rate').val();
+            ModelData["ChargeKM"] = $('#ChargeKM').val();
+            ModelData["StartDateStr"] = $('#StartDateStr').val();
+            ModelData["StartKM"] = $('#StartKM').val();
+            ModelData["EndDateStr"] = $('#EndDateStr').val();
+            ModelData["EndKM"] = $('#EndKM').val();
+            ModelData["LCDetailList"] = mylcTableArray;
+            ModelData["AddNarrList"] = myadTableArray1;
+            ModelData["LessNarrList"] = mylessTableArray2;
+            ModelData["Account"] = $('#Account').val();
+            ModelData["Debit"] = $('#Debit').val();
+            ModelData["Credit"] = $('#Credit').val();
+            ModelData["Remark"] = $('#Remark').val();
+            ModelData["TripFinalAmt"] = $('#TripFinalAmt').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddEditLedgerDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable').html(data.Html)
+
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    })
+      function loadaccount() {
+        $('#ErrorMessage1').hide();
+        var url = '@Url.Action("GetAccountList")';
+          $('#Account').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+               initSelection: function (element, callback) {
+                var data = { id: '@Model.Account', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>

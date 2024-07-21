@@ -1,0 +1,457 @@
+﻿@model GridOption
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+
+        debugger;
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        $("#viewcode").val('@Model.ViewDataId');
+        $("#hdnformatname").val('@Model.ViewDataId');
+        LoadAccount();
+
+
+
+        //$('select').select2();
+
+        @*$('#btnExcel').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val() + '&Code=' + $('#Code').val(), '_blank');
+        });
+
+        $('#btnPrint').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPrint")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val() + '&Code=' + $('#Code').val(), '_blank');
+        });
+
+        $('#btnPDF').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val() + '&Code=' + $('#Code').val()+'&mWhat='+'PDF', '_blank');
+        });
+
+        $('#btnPDL').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val() + '&Code=' + $('#Code').val()+'&mWhat='+'PDL', '_blank');
+        });*@
+
+        clickRefresh();
+    });
+
+    function clickRefresh() {
+         $("#viewcode").val('@Model.ViewDataId');
+        $('#acdisplay').jqGrid('clearGridData');
+        $("#acdisplay").jqGrid("GridUnload");
+        $('#acdisplay').trigger('reloadGrid');
+        GridReload();
+    }
+
+    // reportprintoptions
+    function clickPrint() {
+        $("#hiddenvalues").val($('#Code').val());
+        $("#hdnparastring").val("&mParaString=Code^" + $('#Code').val() + "&Code=" + $('#Code').val());
+        $('#dialogprint').modal('show');
+    };
+
+    // reportprintoptions
+    function GetEmail() {
+          $.ajax({
+            url: "/Base/GetEmail",
+            data: {
+              mcode: $('#Code').val()
+            },
+            success: function( result ) {
+            $('#emailid').val(result.data);
+            }
+          });
+    }
+
+    function LoadAccount() {
+        var url = '@Url.Action("GetAccountList")';
+        $('#Code').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Text, id: item.Value }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                //var elementText = $(element).attr('data-init-text');
+                //xcallback({ "term": elementText });
+                var data = { id: '@Model.Document', text: '@Model.AccountName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function GridReload() {
+        event.preventDefault();
+        $('.spinner').show();
+        // reportprintoptions
+        GetEmail();
+        $("#hiddenvalues").val($('#Code').val());
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=@Model.ViewDataId'  + '&Code=' + $('#Code').val();
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=@Model.ViewDataId'  + '&Code=' + $('#Code').val() + '&Branch=@Model.Branch';
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                debugger;
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridData() {
+            $('#acdisplay').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                //sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: 5000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],//, 15, 20, 50, 100],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 225,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                footerrow: true,
+                userDataOnFooter: true,
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#acdisplay');
+                    var flagVal = myGrid.jqGrid('getCell', id, 'Flag');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Code');
+                    if (flagVal == "L") {
+                        //'location.href = "Ledgers/Index?Document=" + cellVal + "&ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                        //GetURL(cellVal);
+                        window.open("/Accounts/RLedgers/Index?Document=" + cellVal + "&ViewDataId=AcLedgerScreen&Module=Reports&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=RLedgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val(), '_blank')
+                    } else {
+                        location.href = "AcDisplay/Index?Document=" + cellVal + "&ViewDataId=AcDisplay&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Schedules&Controller2=AcDisplay&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    }
+                },
+                onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#subgrid').jqGrid('clearGridData');
+                    $('#subgrid').jqGrid("GridUnload");
+                    $('#subgrid').trigger('reloadGrid');
+                    GridReloadSub($('#acdisplay').jqGrid('getCell', id, 'Code'));
+                    $('#accountname').html($('#acdisplay').jqGrid('getCell', id, 'Name'));
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $("tr.jqgrow:odd").css("background", "#EAEAEA");
+                    var mcolindex = -1;
+                    var mwidth = 0;
+                    var cm = $('#acdisplay').jqGrid('getGridParam', 'colModel');
+                    for (var i = 0, l = cm.length; i < l; i++) {
+                        if (cm[i].name === 'Balances') {
+                            mcolindex = i;
+                            mwidth = parseInt(cm[i].width, 10);
+                        }
+                    }
+                    // if OS% column is found then only generate sparkline graph
+                    if (mcolindex != -1) {
+                        $('tr.jqgrow td:nth-child(' + (mcolindex + 1) + ')').each(function (index, value) {
+                            //var ar;
+                            try {
+                                //ar = $.parseJSON('['+$(this).text()+']');
+                                //if (ar && ar.length > 0) {
+                                //$(this).sparkline($.parseJSON('[' + $(this).text() + ']'));
+                                if (mwidth == 0) mwidth = 100;
+                                $(this).sparkline($.parseJSON('[' + $(this).text() + ']'), { type: 'line', minSpotColor: 'red', maxSpotColor: 'green', spotColor: false, width: mwidth });
+                                //$(this).sparkline($.parseJSON('[' + $(this).text() + ']'), { type: 'bar', barWidth: mwidth/13, width: mwidth }); // /12 months and some margin so /13
+
+                                //#F47922-orange, #7C167F-purple (two values x and 100-x)
+                                //$(this).sparkline($.parseJSON('[' + Number($(this).text()) + ',' + (100 - Number($(this).text())) + ']'), { type: 'pie', sliceColors: ['#F47922', '#7C167F'], borderWidth: 0.4 });
+                                // box plot
+                                //$(this).sparkline($.parseJSON('[' + Number($(this).text()) + ',' + (100 - Number($(this).text())) + ']'), { type: 'pie', sliceColors: ['#F47922', '#7C167F'], borderWidth: 0.4 });
+                            } catch (e) {
+                                alert(e);
+                            }
+                        });
+                    }
+                    $('.spinner').hide();
+                }
+            });
+            jQuery("#acdisplay").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#acdisplay").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    // grid functions for slaesgrid
+    function GridReloadSub(mCode) {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureSub")?Date=' + mDate + '&Document=' + mCode + '&ViewDataId=' + $("#viewcode").val();
+        var sUrlpath = '@Url.Action("GetGridDataSub")?Date=' + mDate + '&Document=' + mCode + '&Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&Type=' + '@Model.Type' + '&ViewDataId=' + $("#viewcode").val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                $('.spinner').hide();
+                //alert(data.status);
+                //if (data.status = "Error") {
+                //    alert(data.Message);
+                //} else {
+                $('.spinner').show();
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                var mvalues = obj[4].split(",");
+                var mwidth = (($(window).innerWidth() / 4) - 20).toString(); // '250px'
+                $('.sparkbalances').sparkline(mvalues, { type: 'line', lineColor: 'darkorange', barWidth: '30px', height: '40px', width: mwidth });
+                CreateGridDataSub();
+                $('.spinner').hide();
+                //}
+            },
+            Error: function () {
+                alert("Error with AJAX callback");
+            }
+        });
+
+        function CreateGridDataSub() {
+            $('#subgrid').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager3'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500,1000,3000,5000,10000,50000],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height()-250-60,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    $('.spinner').hide();
+                },
+            });
+            jQuery("#subgrid").jqGrid('navGrid', "#pager3",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#subgrid").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+
+    function ClickPara() {
+        $('#ParaDialog').modal('show');
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-md-3" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+        <div class="col-md-2 pull-right" style="padding-right:0px; padding-top:-3px;float:right;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="clickRefresh()" class="fa fa-refresh" style="font-size:20px;cursor:pointer" title="Refresh the Report"></a>
+            </div>
+            @* reportprintoptions*@
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;padding-right:0px;font-size:9pt; width:unset;text-align:right">
+                <a onclick="ClickPara()" class="fa fa-cogs" style="font-size:20px;cursor:pointer" title="Parameters"></a>
+            </div>
+            <div class="col-sm-1"></div>
+            <button class="btn btn-success" onclick="clickPrint()" style="font-size:14px;padding:4px 12px;" id="btnPrint">Print / Export</button>
+        </div>
+
+        <div class="col-md-3 pull-right" style="padding-right:unset;">
+            <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                Period:
+            </div>
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;">
+                <span class="input-group-addon" style="color:black;">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;">
+            </div>
+        </div>
+        <div class="col-md-3 pull-right" style="height:28px;">
+            @Html.TextBoxFor(x => x.Code, new { @class = "input-large search-query", @id = "Code", @name = "Code", @style = "font-weight:bolder;width:100%;" })
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:10pt;color:black;width:unset;">
+            Group:
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="col-sm-9" style="padding-left:0px;padding-right:0px;">
+        <div class="panel-body" style="margin-top:3%;height:auto;padding-left:0px;padding-right:0px;">
+            <div id="page-contentgrid">
+                <div class="jqGrid">
+                    <table id="acdisplay" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                    <div id="pager" style="height:32px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @*<div class="col-sm-3" style="padding-left:0px;overflow:scroll;">
+            <div class="panel-body" style="margin-top:30px;height:auto;padding-left:0px;padding-right:0px;">
+                <div class="col-sm-12" style="padding-left:0px;">
+                    <div id="page-contentgridright">
+                        <div class="jqGrid">
+                            <table id="subgrid" class="scroll" cellpadding="0" cellspacing="0" ;border-collapse:unset;"></table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>*@
+    <div class="col-sm-3" style="padding-left:0px;overflow:scroll;">
+        <div class="panel-body" style="margin-top:3%;height:auto;padding-left:0px;padding-right:0px;">
+            <div class="col-sm-12" style="padding-left:0px;">
+                <div class="form-group">
+                    <label id="accountname" class="col-sm-12 control-label" style="text-wrap:none;word-wrap:unset;margin:0;margin-top:5px;border:none;font-size:13pt;font-weight:bold;"></label>
+                </div>
+                <span style="text-align:left;height:40px;width:250px;" class="sparkbalances"></span>
+                <div id="page-contentgridright">
+                    <div class="jqGrid">
+                        <table id="subgrid" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                        @*<div id="pager2" style="height:34px;"></div>*@
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+        ALT AIR-3.0, Shruham Software
+    </div>
+    <div class="col-sm-4"></div>
+</footer>
+
+<div class="example-modal">
+    <div id="ParaDialog" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:900px;height:400px">
+            <div id="Dialog">
+                @Html.Partial("GeneralParameters")
+            </div>
+        </div>
+    </div>
+</div>
+@* reportprintoptions*@
+<div class="example-modal">
+    <div id="dialogprint" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:600px;">
+            <div id="dialogtoprint">
+                @Html.Partial("ReportPrintOptions")
+            </div>
+        </div>
+    </div>
+</div>
+
+@* reportprintoptions - all following three*@
+@Html.HiddenFor(x => x.ViewCode, new { @Id = "viewcode" })
+@*<input type="hidden" id="hdnformatname" />*@
+<input type="hidden" id="hdnparastring" />
+<input type="hidden" id="hiddenvalues" /> 

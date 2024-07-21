@@ -1,0 +1,169 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.HSNCategoryMasterVM
+@using Common
+@{
+    ViewBag.Title = "Index";
+    //Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<link href="~/Content/ToogleCreate/CreateTgl.css" rel="stylesheet" />
+<script src="~/Content/ToogleCreate/CreateTgl.js"></script>
+
+@*<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>*@
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script>
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        $('#DeleteData').click(function (event) {
+            event.preventDefault();
+            var confrm = confirm('Are You Sure Do You Want To Delete');
+            if (confrm == false) {
+                $('.spinner').hide();
+                return;
+            }
+            else {
+
+                var url = '@Url.Action("DeleteData")';
+                var ModelData = {};
+                ModelData["Header"] = '@Model.Header';
+                ModelData["Mode"] = '@Model.Mode';
+                ModelData["HSNCategory_Code"] = $("#HSNCategory_Code").val();
+                ModelData["HSNCategory_Name"] = $('#HSNCategory_Name').val();
+                var DTO = { Model: ModelData };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        alert(data.Message);
+                        if (data.Status == 'Success') {
+                            window.location.href = "/Accounts/MasterGrid?Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2&Date=" + $('#hdnDate').val();
+                        }
+                        else if (data.Status == 'Error') {
+                            alert(data.Message);
+                            $('.spinner').hide();
+                        }
+                        else {
+                            $('.spinner').hide();
+                            $("#ErrorMessage").show();
+                            $("#ErrorMessage").html(data.html);
+                        }
+                    },
+                });
+            }
+        });
+        $('#SaveData').click(function (event) {
+            event.preventDefault();
+            if ($("#HSNCategory_Name").val() == '') {
+                alert('Please Enter Name...!');
+                return;
+            }
+            $("#ErrorMessage").hide();
+            var ModelData = {};
+            ModelData["HSNCategory_Code"] = $("#HSNCategory_Code").val();
+            ModelData["HSNCategory_Name"] = $("#HSNCategory_Name").val();
+               
+            ModelData["Controller2"] = '@Model.Controller2';
+            ModelData["Module"] = '@Model.Module';
+            ModelData["ViewDataId"] = '@Model.ViewDataId';
+            ModelData["TableName"] = '@Model.TableName';
+            ModelData["Header"] = '@Model.Header';
+            ModelData["OptionType"] = '@Model.OptionType';
+            ModelData["OptionCode"] = '@Model.OptionCode';
+            ModelData["Mode"] = '@Model.Mode';
+                
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("SaveData")';
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                data: JSON.stringify(DTO),
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == "ErrorValid") {
+                        alert(data.Message)
+                        $('.spinner').hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid?ViewDataId=@Model.ViewDataId&MainType=@Model.MainType&Module=@Model.Module&TableName=@Model.TableName&optiontype=@Model.OptionType&optioncode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2"
+                    }
+                },
+            });
+        });
+    });
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-md-3" style="padding-left:6px;padding-top:3px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+
+            <a href="~/Accounts/MasterGrid?Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+
+        </div>
+        <div class="col-md-1 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:14pt;font-weight:bold;width:unset;">
+            <label id="headercaption">@Model.Mode</label>
+        </div>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body">
+        <div class="form-horizontal " id="frmaddnewbank" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none; padding:3px;margin-bottom: 0px;"></div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label" style="padding-right:0px;padding-left:0px;">Code :</label>
+                <div class="col-sm-1" style="padding-left:0px;">
+                    @Html.TextBoxFor(x => x.HSNCategory_Code, new { @class = "form-control", @id = "HSNCategory_Code", @Name = "HSNCategory_Code", @style = "width:100%;height:28px;font-size:13pt;font-weight:bolder;text-align:center;", @disabled = "disabled", @Value = Model.HSNCategory_Code })
+                </div>
+                <label class="col-sm-1 control-label" style="padding-right:0px;">Name :</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNCategory_Name, new { @type = "text", @class = "form-control", @id = "HSNCategory_Name", @Name = "HSNCategory_Name", @style = "width:100%;text-align:center;height:28px;font:size:14pt;font-weight:bolder;", @Value = Model.HSNCategory_Name })
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer id="fixedbottom" class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:Verdana;font-size:11px;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode == "Edit" || Model.Mode == "Add")
+                {
+                    <button class="btn btn-success" style="color:black;font-size:13px;padding:3px 12px;" id="SaveData">Save</button>
+                }
+
+                @if (Model.Mode == "Delete")
+                {
+                    <button class="btn btn-success" style="color:black;font-size:13px;padding:3px 12px;" id="DeleteData">Delete</button>
+                }
+                <a href="~/Accounts/MasterGrid?Module=@Model.Module&ViewDataId=@Model.ViewDataId&TableName=@Model.TableName&Header=@Model.Header&optiontype=@Model.OptionType&OptionCode=@Model.OptionCode&MainType=@Model.MainType&SubType=@Model.SubType&Controller2=@Model.Controller2" class="btn btn-danger" style="color:black;margin-right:10px;font-size:13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+

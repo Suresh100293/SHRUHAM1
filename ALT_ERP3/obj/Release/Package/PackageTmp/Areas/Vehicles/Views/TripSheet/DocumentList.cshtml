@@ -1,0 +1,379 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common
+
+<style>
+    .fixTableHead {
+        overflow-y: auto;
+        height: 300px;
+    }
+
+        .fixTableHead thead th {
+            position: sticky;
+            top: 0;
+        }
+</style>
+<script>
+    $(document).ready(function () {
+
+        if ($("#ChangeCharge").val() == "False")
+        {
+            $("button[action|='EditLedger']").prop("disabled", true);
+        }
+
+        //$("#Narr").html('Model.Narr');
+
+        $('button[action|="DeleteLedger"]').click(function (event) {
+            event.preventDefault(event);
+            $(this).closest('tr').remove();
+            var DTO = { FMNO: $(this).val() };
+            var url = '@Url.Action("DeleteSelecedFM")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    CalculateNetAmount();
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    var TripChrg = 0, LocalChrg = 0, ViaChrg = 0,Total=0,TripBal=0;
+                    $("#tabledata > tbody  > tr").each(function () {
+                        debugger;
+                        var Row = $(this).closest('tr');
+                        if (Row.attr("id") != "TotalRow") {
+                            TripChrg += parseFloat(Row.find(".ttxtTripCharge").val());
+                            LocalChrg += parseFloat(Row.find(".ttxtLocalCharges").val());
+                            ViaChrg += parseFloat(Row.find(".ttxtViaCharges").val());
+                            Total += parseFloat(Row.find(".ttxtPayment").val());
+                            //TripBal += parseFloat(Row.find(".ttxtTripBal").val());
+                        }
+
+                    });
+                    $("#TotalTripChrg").val(TripChrg);
+                    $("#TotalLocalChrg").val(LocalChrg);
+                    $("#TotalViaChrg").val(ViaChrg);
+                    $("#TotalChrg").val(ViaChrg + LocalChrg + TripChrg);
+                    $("#TotalPayment").val(Total);
+                    $("#TotalTripBal").val((ViaChrg + LocalChrg + TripChrg) - Total);
+                    CalculateNetAmount();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="EditLedger"]').click(function (event)
+        {
+
+
+            $(".ttxtTripCharge").prop("disabled", true);
+            $(".ttxtLocalCharges").prop("disabled", true);
+            $(".ttxtViaCharges").prop("disabled", true);
+            event.preventDefault(event);
+
+            var Row = $(this).closest('tr');
+            Row.find(".ttxtTripCharge").prop("disabled", false);
+            Row.find(".ttxtLocalCharges").prop("disabled", false);
+            Row.find(".ttxtViaCharges").prop("disabled", false);
+            Row.find("button[action|='EditLedger']").addClass("hidden");
+            Row.find("button[action|='SaveLedger']").removeClass("hidden");
+
+        });
+        $('button[action|="SaveLedger"]').click(function (event)
+        {
+            var Row = $(this).closest('tr');
+
+            $(".ttxtTripCharge").prop("disabled", true);
+            $(".ttxtLocalCharges").prop("disabled", true);
+            $(".ttxtViaCharges").prop("disabled", true);
+            event.preventDefault(event);
+            Row.find("button[action|='EditLedger']").removeClass("hidden");
+            Row.find("button[action|='SaveLedger']").addClass("hidden");
+
+        });
+
+
+        $(".ttxtTripCharge,.ttxtLocalCharges,.ttxtViaCharges").blur(function () {
+            var Row = $(this).closest('tr');
+            var txtTripCharge = parseFloat(Row.find(".ttxtTripCharge").val());
+            var txtLocalCharges = parseFloat(Row.find(".ttxtLocalCharges").val());
+            var txtViaCharges = parseFloat(Row.find(".ttxtViaCharges").val());
+            var Sum = txtTripCharge + txtLocalCharges + txtViaCharges;
+            Row.find(".ttxtTotal").val(Sum);
+            var TripChrg = 0, LocalChrg = 0, ViaChrg = 0,Total = 0, TripBal = 0;
+            $("#tabledata > tbody  > tr").each(function ()
+            {
+                debugger;
+                var Row = $(this).closest('tr');
+                if (Row.attr("id") !="TotalRow")
+                {
+                    TripChrg += parseFloat(Row.find(".ttxtTripCharge").val());
+                    LocalChrg += parseFloat(Row.find(".ttxtLocalCharges").val());
+                    ViaChrg += parseFloat(Row.find(".ttxtViaCharges").val());
+                    Total += parseFloat(Row.find(".ttxtPayment").val());
+                    //TripBal += parseFloat(Row.find(".ttxtTripBal").val());
+                }
+
+            });
+            $("#TotalTripChrg").val(TripChrg);
+            $("#TotalLocalChrg").val(LocalChrg);
+            $("#TotalViaChrg").val(ViaChrg);
+            $("#TotalChrg").val(ViaChrg + LocalChrg + TripChrg);
+            $("#TotalPayment").val(Total);
+            $("#TotalTripBal").val((ViaChrg + LocalChrg + TripChrg) - Total);
+            CalculateNetAmount();
+
+        });
+        $(".ttxtViaCharges").blur(function (event)
+        {
+            $(".ttxtTripCharge").prop("disabled", true);
+            $(".ttxtLocalCharges").prop("disabled", true);
+            $(".ttxtViaCharges").prop("disabled", true);
+            $('button[action|="EditLedger"]').removeClass("hidden");
+            $('button[action|="SaveLedger"]').addClass("hidden");
+            CalculateNetAmount();
+        });
+
+
+        $('button[action|="ShowNarr"]').click(function (event) {
+            event.preventDefault(event);
+            var DTO = { FMNO: $(this).val(), FMORNOT: $("#FMOrNOt").val() };
+            var url = '@Url.Action("ShowNarrDocument")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage').hide();
+                    var BillListDiv = $("#AddNarrBank");
+                    BillListDiv.html('');
+                    BillListDiv.html(data.Html);
+                    $("#addNarrbank").modal("show");
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('button[action|="ShowSchedule"]').click(function (event) {
+            event.preventDefault(event);
+            var DTO = { FMNO: $(this).val()};
+            var url = '@Url.Action("ShowScheduleDocument")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $("#ErrorMessage").hide();
+                    $('.spinner').hide();
+                    $('#updSchedule').modal('show');
+                    $('#updScheduleDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+
+    });
+</script>
+<div class="fixTableHead" id="SelectedledgerTable" style="max-height:330px;min-height:330px; width: auto; overflow: auto;">
+    <table id="tabledata" class="zui-table" style="border-color:gray;width:150%;">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+
+                <th colspan="2" style="width: 3%;vertical-align:inherit;">@*<button type="button" id="PickData" class="btn btn-primary btn-sm" title="Add" style="border:1px solid black"><i class="fa fa-plus" style="color:black;"></i></button>*@</th>
+                <th style="width: 2%;">Narr</th>
+                <th style="width: 2%;">Sr.</th>
+                <th style="width: 4%;">Doc No</th>
+                <th style="width: 5%;">Date</th>
+                <th style="width: 7%;">VehicleNo</th>
+                <th style="width: 7%;">Driver</th>
+                <th style="width: 8%;">From</th>
+                <th style="width: 8%;">To</th>
+                @if (Model.FMOrNOt)
+                {
+                    <th style="width: 8%;">Via Route</th>
+                }
+                else
+                {
+                    <th style="width: 8%;">Bill Party</th>
+                }
+                <th style="width: 5%;">Trip Chrg.</th>
+                <th style="width: 5%;">Local Chrg.</th>
+                <th style="width: 5%;">Via Chrg.</th>
+                <th style="width: 5%;">Total Exp.</th>
+                @if (Model.FMOrNOt)
+                {
+                    <th style="width: 5%;">Diesel Ltr</th>
+                    <th style="width: 5%;">Advance</th>
+                }
+                else
+                {
+                    <th style="width: 5%;">Diesel Ltr</th>
+                }
+
+                @if (Model.FMOrNOt)
+                {
+                    <th style="width: 5%;">Start KM</th>
+                    <th style="width: 5%;">End KM</th>
+                    <th style="width: 5%;">Running KM</th>
+                    <th style="width: 5%;">Schedule</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @{
+                int i = 1;
+                if (Model.fMMasters != null)
+                {
+                    foreach (var item in @Model.fMMasters.ToList())
+                    {
+                        <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                            <td style="">
+                                <center><button type="button" action="EditLedger" class="btn btn-warning btn-sm EditRefTablekey" value="@item.RefTablekey" title="Edit" style="margin-right: 10%;"><i class="fa fa-edit"></i></button></center>
+                                <center><button type="button" action="SaveLedger" class="btn btn-primary btn-sm hidden" value="@item.RefTablekey" title="Save" style="margin-right: 10%;padding:0px 5px;"><i class="fa fa-save"></i></button></center>
+                            </td>
+                            <td>
+                                <center><button type="button" action="DeleteLedger" class="btn btn-danger btn-sm" value="@item.RefTablekey" title="Delete"><i class="fa fa-trash-o"></i></button></center>
+                            </td>
+                            @if (item.NarrReq)
+                            {
+                                <td><center><button type="button" action="ShowNarr" class="btn btn-primary btn-sm" value="@item.RefTablekey" title="Narration" style="margin-right: 10%;padding:0px 5px;"><i class="fa fa-eye"></i></button></center></td>
+                            }
+                            else
+                            {
+                                <td><center><button type="button" action="ShowNarr" class="btn btn-primary btn-sm" value="@item.RefTablekey" title="Narration" style="margin-right: 10%;padding:0px 5px;"><i class="fa fa-eye"></i></button></center></td>
+                            }
+
+
+
+                            <td style="">@i</td>
+                            <td style="">@item.FMNo</td>
+                            <td style="">@item.Date.ToShortDateString()</td>
+                            <td style="">@item.VehicleNo</td>
+                            <td id="@item.DriverC">@item.Driver</td>
+                            <td id="@item.FromC">@item.From</td>
+                            <td id="@item.ToC">@item.To</td>
+                            <td id="@item.RouteViaC">@item.RouteVia</td>
+                            <td style=""><input type="text" class="form-control ttxtTripCharge" value="@item.Tripchages.ToString("F2")" disabled /></td>
+                            <td style=""><input type="text" class="form-control ttxtLocalCharges" value="@item.LocalCharges.ToString("F2")" disabled /></td>
+                            <td style=""><input type="text" class="form-control ttxtViaCharges" value="@item.ViaCharges.ToString("F2")" disabled /></td>
+                            <td style=""><input type="text" class="form-control ttxtTotal" value="@item.Total.ToString("F2")" disabled /></td>
+                            @if (Model.FMOrNOt)
+                            {
+                                <td style=""><input type="text" class="form-control ttxtDiesel" value="@item.DieselLtr" disabled /></td>
+                                <td style=""><input type="text" class="form-control " value="@item.PaymentAmt.ToString("F2")" disabled /></td>
+                            }
+                            else
+                            {
+                                <td style=""><input type="text" class="form-control ttxtDiesel" value="@item.DieselLtr" disabled /></td>
+                            }
+
+                            @if (Model.FMOrNOt)
+                            {
+                                <td style=""><input type="text" class="form-control " value="@item.StartKM.ToString("F2")" disabled /></td>
+                                <td style=""><input type="text" class="form-control " value="@item.EndKM.ToString("F2")" disabled /></td>
+                                <td style=""><input type="text" class="form-control ttxtTotalRunning" value="@item.RunningKM.ToString("F2")" disabled /></td>
+                                if (item.ShowSchedule)
+                                {
+                                    <td><center><button type="button" action="ShowSchedule" class="btn btn-primary btn-sm" value="@item.RefTablekey" title="Schedule" style="margin-right: 10%;padding:0px 5px;"><i class="fa fa-eye"></i></button></center></td>
+                                }
+                                else
+                                {
+                                    <td><center><button type="button" action="ShowSchedule" class="btn btn-primary btn-sm" value="@item.RefTablekey" title="Schedule" disabled style="margin-right: 10%;padding:0px 5px;"><i class="fa fa-eye"></i></button></center></td>
+                                }
+                            }
+                        </tr>
+                        ++i;
+                    }
+                    decimal TripChrg = 0, LocalChrg = 0, ViaChrg = 0, Payment = 0, StartKM = 0, EndKM = 0, RunningKM = 0, Diesel = 0;
+                    foreach (var item in @Model.fMMasters.ToList())
+                    {
+                        StartKM += item.StartKM;
+                        EndKM += item.EndKM;
+                        RunningKM += item.RunningKM;
+                        TripChrg += item.Tripchages;
+                        LocalChrg += item.LocalCharges;
+                        ViaChrg += item.ViaCharges;
+                        Payment += item.PaymentAmt;
+                        Diesel += Convert.ToDecimal(String.IsNullOrEmpty(item.DieselLtr) == true ? "0" : item.DieselLtr);
+                    }
+                    decimal Total = (TripChrg + LocalChrg + ViaChrg);
+                    decimal TripTotal = (TripChrg + LocalChrg + ViaChrg) - (Payment);
+                    <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;" id="TotalRow">
+                        <td colspan="3"></td>
+                        <td colspan="8">Total :-</td>
+                        <td style=""><input type="text" class="form-control" id="TotalTripChrg" value="@TripChrg.ToString("F2")" disabled /></td>
+                        <td style=""><input type="text" class="form-control" id="TotalLocalChrg" value="@LocalChrg.ToString("F2")" disabled /></td>
+                        <td style=""><input type="text" class="form-control" id="TotalViaChrg" value="@ViaChrg.ToString("F2")" disabled /></td>
+                        <td style=""><input type="text" class="form-control" id="TotalChrg" value="@Total.ToString("F2")" disabled /></td>
+                        <td style=""><input type="text" class="form-control" id="TotalDeisel" value="@Diesel.ToString("F2")" disabled /></td>
+
+                        @if (Model.FMOrNOt)
+                        {
+                            <td style=""><input type="text" class="form-control" id="TotalPayment" value="@Payment.ToString("F2")" disabled /></td>
+                            <td style=""><input type="text" class="form-control" id="" value="@StartKM.ToString("F2")" disabled /></td>
+                            <td style=""><input type="text" class="form-control" id="" value="@EndKM.ToString("F2")" disabled /></td>
+                            <td style=""><input type="text" class="form-control" id="" value="@RunningKM.ToString("F2")" disabled /></td>
+                            <td></td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+
+    </table>
+</div>
+
+<div class="example-modal">
+    <div id="addcashbank" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog modal-lg">
+            <div id="AddCashBank">
+                @*@Html.Partial("AddAdvancePayPopup")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="addNarrbank" class="modal modal-primary" style="z-index:2500;">
+        <div class="modal-dialog modal-lg">
+            <div id="AddNarrBank">
+                @*@Html.Partial("AddAdvancePayPopup")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="example-modal">
+    <div id="updSchedule" class="modal modal-default" style="margin-top:4%;">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="updScheduleDiv">
+                @*@Html.Partial("TfatSearchUpdate")*@
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,330 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.MasterVM
+@using Common;
+
+<script src="~/Content/js/iCheck/jquery.icheck.js"></script>
+<script src="~/Content/js/icheck-init.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        //$('#AcType').val('@Model.MainType').attr("selected", "selected");
+        loadaccgroup()
+        loadCategory()
+        loadPayTerms()
+        loadRank()
+        LoadAcType()
+
+        if ('@Model.Mode' == "Add") {
+            $('#Name').change(function () {
+                var acc = $('#Name').val();
+                $('#AName').val(acc);
+            });
+        }
+
+        if ('@Model.Collection' == 'D') {
+            $("#CDirect").prop("checked", true);
+        } else {
+            $("#CGodown").prop("checked", true);
+        }
+
+        if ('@Model.Delivery' == 'D') {
+            $("#DDoor").prop("checked", true);
+        } else {
+            $("#DGodown").prop("checked", true);
+        }
+    
+        
+    
+
+
+        var values = $('#hdnAppBranch').val();
+        $("#hdnBranchCodeArray").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $(".listbox option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+        $(".listbox").change(function () {
+            $('#hdnBranchCodeArray').val('');
+            var selected = [];
+            $(".listbox :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnBranchCodeArray').val(selected)
+            return false;
+        });
+
+
+        $('.listbox').multiselect({ includeSelectAllOption: true })
+    });
+
+    function loadaccgroup() {
+        var url = '@Url.Action("GetAccountGrps")';
+        $('#Grp').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Grp', text: '@Model.GrpName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+
+    function loadCategory() {
+        event.preventDefault();
+        var url = '@Url.Action("GetPartyCategory")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Country: $('#Grp').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Category").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Category').val('@Model.Category').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+
+    };
+    function loadPayTerms() {
+        event.preventDefault();
+        var url = '@Url.Action("GetPayTerms")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Country: $('#Grp').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#PaymentTerms").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#PaymentTerms').val('@Model.PaymentTerms').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+
+    };
+
+    function loadRank() {
+        event.preventDefault();
+        var url = '@Url.Action("GetCreditRank")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Rank").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Rank').val('@Model.Rank').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    function LoadAcType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetAcType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#AcType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#AcType').val('@Model.AcType').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+</script>
+
+<div class="form-horizontal" id="Rmaster" role="form" style="margin-top:15px; overflow-x:hidden; ">
+    <div class="form-group">
+        <label class="col-sm-2 control-label">System Code:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(x => x.Code, new { @class = "form-control", @Name = "Code", @Id = "Code", @Value = Model.Code, @readonly = "readonly", @maxlength = "9", @style = "font-size:12pt;font-weight:bolder;" })
+        </div>
+        <div class="col-sm-1"></div>
+        <label class="col-sm-2 control-label">Account Name:<span class="red">*</span></label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @Name = "Name", @Id = "Name", @Value = Model.Name, @MaxLength = "70" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Short Name (Alias):</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.ShortName, new { @class = "form-control", @Name = "ShortName", @Id = "ShortName", @Value = Model.ShortName, @MaxLength = "25" })
+        </div>
+        <label class="col-sm-2 control-label">Account Group:<span class="red">*</span></label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.Grp, new { @class = "input-large search-query", @Name = "Grp", @Id = "Grp", @Style = "width:100%;height:26px;", @disabled = "disabled" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Account Type:<span class="red">*</span></label>
+        <div class="col-sm-4">
+            @Html.DropDownListFor(m => m.AcType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "AcType", @Id = "AcType",@disabled="disabled" })
+        </div>
+        <label class="col-sm-2 control-label">Member Of Group:</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.AcHeadCode, new { @class = "form-control", @Name = "AcHeadCode", @Id = "AcHeadCode", @Value = Model.AcHeadCode })
+        </div>
+    </div>
+    <div class="form-group" id="Group">
+        <label class="col-sm-2 control-label">Interest Rate%:</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.IntRate, new { @class = "form-control", @Name = "IntRate", @Id = "IntRate", @Value = Model.IntRate })
+        </div>
+        <label class="col-sm-2 control-label">Party Category:</label>
+        <div class="col-sm-4">
+            @Html.DropDownListFor(m => m.Category, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "Category", @Id = "Category" })
+        </div>
+    </div>
+    <div class="form-group" id="Payment">
+        <label class="col-sm-2 control-label">Payment Terms:</label>
+        <div class="col-sm-4">
+            @Html.DropDownListFor(m => m.PaymentTerms, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "PaymentTerms", @Id = "PaymentTerms" })
+        </div>
+        <label class="col-sm-2 control-label">Credit Rank:</label>
+        <div class="col-sm-4">
+            @Html.DropDownListFor(m => m.Rank, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "Rank", @Id = "Rank" })
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Applicable Branches:</label>
+        <div class="col-sm-2">
+            @Html.ListBoxFor(x => x.AppBranchL, Model.Branches, new { @class = "listbox", @id = "AppBranch" })
+        </div>
+        
+    </div>
+    <div class="form-group">
+        <label class=" bold   col-sm-1 control-label">Collection :</label>
+        <div class="col-sm-3" style="display: flex;margin-left: 25px;">
+            <input type="radio" class="form-control" name="Coln" id="CGodown" value="CGodown" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Godown</label>
+            <input type="radio" class="form-control" name="Coln" id="CDirect" value="CDirect" style="height:20px;width:35px;" /><label class=" bold control-label"> Direct</label>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class=" bold   col-sm-1 control-label">Delivery :</label>
+        <div class="col-sm-3" style="display: flex;margin-left: 25px;">
+            <input type="radio" class="form-control" name="Delv" id="DGodown" value="DGodown" style="height:20px;width:35px;"  /><label class=" bold control-label"> Godown</label>
+            <input type="radio" class="form-control" name="Delv" id="DDoor" value="DDoor" style="height:20px;width:35px;" checked/><label class=" bold control-label"> Door</label>
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Hide in the List?</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.Hide, new { @id = "Hide", @name = "Hide", @value = Model.Hide, @style = "height:16px;width:16px;" })
+        </div>
+        <label class="col-sm-2 control-label">PO-Number</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.PONumber, new { @value = Model.PONumber, @style = "height:16px;width:16px;" })
+        </div>
+
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Non Accounting Master?</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.NonActive, new { @id = "NonActive", @name = "NonActive", @value = Model.NonActive, @style = "height:16px;width:16px;" })
+        </div>
+        <label class="col-sm-2 control-label">BE-Number</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.BENumber, new {  @value = Model.BENumber, @style = "height:16px;width:16px;" })
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Maintain AR/AP Records?</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.ARAP, new { @id = "ARAP", @name = "ARAP", @value = Model.ARAP, @style = "height:16px;width:16px;" })
+        </div>
+        <label class="col-sm-2 control-label">Party Invoice</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.PartyInvoice, new {  @value = Model.PartyInvoice, @style = "height:16px;width:16px;" })
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Cost-Centre Budget Check:</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.CCBudget, new { @id = "CCBudget", @name = "CCBudget", @value = Model.CCBudget, @style = "height:16px;width:16px;" })
+        </div>
+        <label class="col-sm-2 control-label">Party Challan</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.PartyChallan, new { @value = Model.PartyChallan, @style = "height:16px;width:16px;" })
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Cost-Centre Compulsory:</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.CCReqd, new { @id = "CCReqd", @name = "CCReqd", @value = Model.CCReqd, @style = "height:16px;width:16px;" })
+        </div>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.AppBranch, new { @id = "hdnAppBranch" })
+<input type="hidden" id="hdnBranchCodeArray" />

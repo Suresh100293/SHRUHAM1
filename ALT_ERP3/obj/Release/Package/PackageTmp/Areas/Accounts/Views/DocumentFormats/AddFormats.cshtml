@@ -1,0 +1,176 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.DocFormatVM
+@using Common;
+
+<script>
+    $(document).ready(function () {
+        $("#btnadddata").click(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            ModelData["FormatCode"] = $('#FormatCode').val();
+            ModelData["StoredProc"] = $('#StoredProc').val();
+            ModelData["SendEmail"] = $('#SendEmail').is(':checked');
+            ModelData["OutputDevice"] = $('#OutputDevice').val();
+            ModelData["ItemAttach"] = $('#ItemAttach').is(':checked');
+            ModelData["DocHandle"] = $('#DocHandle').val();
+            ModelData["EmailTemplate"] = $('#EmailTemplate').val();
+            ModelData["AttachDocs"] = $('#AttachDocs').is(':checked');
+            ModelData["Type"] = $('#Type').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddToTable")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#errormessage').hide();
+                    $('#AddonDiv').html(data.Html);
+                    $('#txtCode').val(data.Code);
+                 },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+
+
+        $('button[action|="EditFormat"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tEmpID"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetFormatforUpdate")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#editpackmodal').modal('show');
+                    $('#EditPackModal').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="DeleteFormat"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["tEmpID"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteTableRow")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#AddonDiv').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+
+</script>
+<table id="FormatGrid" class="zui-table">
+    <thead>
+        <tr>
+            <th>Format Code </th>
+            <th>Stored Proc</th>
+            <th>Send Email</th>
+            <th>Output Device</th>
+            <th>Item Attach </th>
+            <th>Doc. Handle</th>
+            <th>Attach Docs</th>
+            <th>Email Template</th>
+            <th colspan="2"></th>
+        </tr>
+        <tr style="background-color:gainsboro">
+
+            <td>
+                @Html.TextBoxFor(x => x.FormatCode, new { @class = "form-control", @Name = "FormatCode", @Id = "FormatCode" })
+            </td>
+            <td>
+                @Html.TextBoxFor(x => x.StoredProc, new { @class = "form-control", @Name = "StoredProc", @Id = "StoredProc" })
+            </td>
+            <td>
+                @Html.CheckBoxFor(x => x.SendEmail, new { @id = "SendEmail", @Name = "SendEmail" })
+            </td>
+            <td>
+                @Html.TextBoxFor(x => x.OutputDevice, new { @class = "form-control", @id = "OutputDevice", @Name = "OutputDevice", @maxlength = 10 })
+            </td>
+            <td>
+                @Html.CheckBoxFor(x => x.ItemAttach, new { @id = "ItemAttach", @Name = "ItemAttach" })
+            </td>
+            <td>
+                @Html.TextBoxFor(x => x.DocHandle, new { @id = "DocHandle", @class = "form-control", @Name = "DocHandle", @maxlength = 1 })
+            </td>
+            <td>
+                @Html.CheckBoxFor(x => x.AttachDocs, new { @id = "AttachDocs", @Name = "AttachDocs" })
+            </td>
+            <td>
+                @Html.TextAreaFor(x => x.EmailTemplate, new { @class = "form-control", @Name = "EmailTemplate", @Id = "EmailTemplate", @col = 30, @row = 5 })
+            </td>
+            <td colspan="2"><button type="button" id="btnadddata" class="btn btn-primary btn-sm" title="Add" style="margin-left:10px;width:60%;height:25px;border:1px solid black"><i class="fa fa-plus" style="color:black;"></i></button></td>
+        </tr>
+
+    </thead>
+    <tbody>
+        @if (Model.DocFormatList != null)
+        {
+            foreach (var item in Model.DocFormatList.Where(x => x.tempIsDeleted == false).ToList())
+            {
+                <tr id="datacharge" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                    <td>@item.FormatCode</td>
+                    <td>@item.StoredProc</td>
+                    <td>@item.SendEmail</td>
+                    <td>@item.OutputDevice</td>
+                    <td>@item.ItemAttach</td>
+                    <td>@item.DocHandle</td>
+                    <td>@item.AttachDocs</td>
+                    <td>@item.EmailTemplate</td>
+                    <td>
+                        <button type="button" action="EditFormat" class="btn btn-warning btn-sm" value="@item.tEmpID" title="Edit"><i class="fa fa-edit"></i></button>
+                    </td>
+                    <td>
+                        <button type="button" action="DeleteFormat" class="btn btn-danger btn-sm" value="@item.tEmpID" title="Delete"><i class="fa fa-trash-o"></i></button>
+                    </td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+
+<div class="example-modal">
+    <div id="editpackmodal" class="modal modal-default">
+        <div class="modal-dialog modal-lg" style="width:800px;">
+            <div id="EditPackModal">
+                @Html.Partial("UpdateFormat")
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,467 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.ConsignerMasterVM
+@using Common;
+
+<style>
+    input[name=EditMail]:active {
+        color: green;
+    }
+
+    input:invalid {
+        border: red solid 3px;
+    }
+</style>
+<style>
+    .form-group {
+        margin-bottom: 8px;
+    }
+
+    .form-horizontal .control-label {
+        padding-top: 5px;
+        color: black;
+    }
+
+    .red {
+        color: red;
+    }
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        $("#ContactPersonName").constrain({ allow: { regex: "[a-zA-Z0-9 ]" } });
+        $("#Address1,Address2").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Pin").constrain({ allow: { regex: "[0-9]" } });
+        $("#MobileNo").constrain({ allow: { regex: "[0-9]" } });
+        $("#PanNo,#GSTNo").constrain({ allow: { regex: "[a-zA-Z0-9]" } });
+        //$("#Email").constrain({ allow: { regex: "[a-zA-Z0-9.]" } });
+        LoadCountry();
+        LoadState();
+        LoadCity();
+        $('#Country').change(function () {
+            $('#State').val("");
+            LoadState()
+        });
+        $('#State').change(function () {
+            $('#City').val("");
+            LoadCity()
+        });
+
+
+        $('#Savemailsinformation').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("SaveAddInfo")';
+            var ModelData = {};
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#maildetail").html(data.Html);
+                    //alert("Result save successfully.");
+                },
+
+            });
+        });
+
+        $('#EditMail').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("EditAddData")';
+            if ($("#Address1").val() == null || $("#Address1").val() == "") {
+                alert("Please Enter Address...!");
+                return;
+            }
+            if ($("#Country").val() == null || $("#Country").val() == "") {
+                alert("Please Select Country...!");
+                return;
+            }
+            if ($("#State").val() == null || $("#State").val() == "") {
+                alert("Please Select State...!");
+                return;
+            }
+            if ($("#City").val() == null || $("#City").val() == "") {
+                alert("Please Select City...!");
+                return;
+            }
+
+            var ModelData = {};
+
+            ModelData["SrNo"] = $("#hdnSrNo1").val();
+            ModelData["ContactPersonName"] = $("#ContactPersonName").val();
+            ModelData["Address1"] = $("#Address1").val();
+            ModelData["Address2"] = $("#Address2").val();
+            ModelData["Country"] = $("#Country").val();
+            ModelData["State"] = $("#State").val();
+            ModelData["City"] = $("#City").val();
+            ModelData["Pin"] = $("#Pin").val();
+            ModelData["Email"] = $("#Email").val();
+            ModelData["MobileNo"] = $("#MobileNo").val();
+            ModelData["Tel1"] = $("#Tel1").val();
+            ModelData["Tel2"] = $("#Tel2").val();
+            ModelData["Tel3"] = $("#Tel3").val();
+            ModelData["PanNo"] = $("#PanNo").val();
+            ModelData["GSTNo"] = $("#GSTNo").val();
+            ModelData["AllSendEmail"] = $("#AllSendEmail").is(":checked");
+            ModelData["AllSendSMS"] = $("#AllSendSMS").is(":checked");
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#maildetail").html(data.Html);
+                    ClickDefaultFirstAddress();
+                },
+            });
+        });
+        $('#DeleteMail').click(function (event) {
+            event.preventDefault();
+            var url = '@Url.Action("DeleteAddData")';
+            
+            var ModelData = {};
+
+            ModelData["SrNo"] = $("#hdnSrNo1").val();
+
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#maildetail").html(data.Html);
+                    ClickDefaultFirstAddress();
+                },
+            });
+        });
+
+        $('button[action|="GetSavedMail"]').click(function (event) {
+            event.preventDefault(event);
+            var ModelData = {};
+            ModelData["SrNo"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetAddInfo")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#maildetail").html(data.Html);
+                    xyz = $('#hdnSrNo1').val()
+                    console.log(xyz);
+                    if ($('#hdnSrNo1').val() != '') {
+                        $('#' + xyz).css('background-color', '#FF8E2B');
+                    } else {
+                        $('#' + xyz).css('background-color', '#27AE60');
+                    }
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+
+
+
+    function LoadCountry() {
+        var url = '@Url.Action("AutoCompleteCountry")'
+        $('#Country').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Country', text: '@Model.CountryName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadState() {
+        var url = '@Url.Action("AutoCompleteState")'
+        $('#State').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term + "^" + $('#Country').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.State', text: '@Model.StateName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCity() {
+        var url = '@Url.Action("AutoCompleteCity")'
+        $('#City').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term + "^" + $('#State').val()
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.City', text: '@Model.CityName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+</script>
+
+<div id="maildetail">
+    <div class="form-horizontal" method="get" id="frmmailinginfo" role="form">
+        <div class="form-group">
+            <div class="col-sm-5" style="overflow: auto;">
+                <table class="table table-striped table-bordered" style="width:5%;margin-bottom:0px;">
+                    <thead>
+                        <tr>
+                            <th style="width:34%;"><button class="btn btn-info btn-xs" id="Savemailsinformation" name="Savemailsinformation">Add Contacts</button></th>
+                            @if (Model.AddressList != null)
+                            {
+                                foreach (var item in Model.AddressList)
+                                {
+                                    if (item.SrNo == Model.SrNo)
+                                    {
+                                        <th style="width:10%;"><button type="button" class="btn btn-info" action="GetSavedMail" id="@item.SrNo" value="@item.SrNo" style="padding:1px 6px;background-color:#FF8E2B;">@item.SrNo</button></th>
+                                    }
+                                    else
+                                    {
+                                        <th style="width:10%;"><button type="button" class="btn btn-info" action="GetSavedMail" id="@item.SrNo" value="@item.SrNo" style="padding:1px 6px;">@item.SrNo</button></th>
+                                    }
+                                }
+
+                            }
+                        </tr>
+                    </thead>
+                </table>
+            </div>
+            @if (Model.SrNo != null)
+            {
+                <div class="col-sm-3" style="padding: 7px 0px;">
+                    <div class="pull-left" style="padding-left: 1%;padding-right: 1%;">
+                        <button class="btn btn-warning" id="EditMail">Save Contacts @Model.SrNo</button>
+                    </div>
+                    <div class="pull-left">
+                        <button class="btn btn-danger" id="DeleteMail">Delete Contacts @Model.SrNo</button>
+                    </div>
+                </div>
+            }
+        </div>
+        <div class="form-group" style="margin-left:-10px;">
+            <label class="col-sm-1 control-label">Contact Person Name:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.ContactPersonName, new { @class = "form-control", @Name = "ContactPersonName", @Id = "ContactPersonName", @Value = Model.ContactPersonName, @MaxLength = "150" })
+            </div>
+            <label class="col-sm-1 control-label">Address:<span class="red">*</span></label>
+            <div class="col-sm-3">
+                @Html.TextAreaFor(x => x.Address1, new { @class = "form-control", @style = "resize: none;", @Name = "Address1", @Id = "Address1", @Value = Model.Address1, @MaxLength = "120", @rows = "3" })
+            </div>
+            <label class="col-sm-1 control-label"></label>
+            <div class="col-sm-3">
+                @Html.TextAreaFor(x => x.Address2, new { @class = "form-control", @style = "resize: none;", @Name = "Address2", @Id = "Address2", @Value = Model.Address2, @MaxLength = "120", @rows = "3" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-1 control-label">Country:<span class="red">*</span></label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.Country, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "Country", @Value = Model.Country, @Name = "Country" })
+            </div>
+            <label class="col-sm-1 control-label">State:<span class="red">*</span></label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.State, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "State", @Value = Model.State, @Name = "State" })
+            </div>
+            <label class="col-sm-1 control-label">City:<span class="red">*</span></label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.City, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "City", @Value = Model.City, @Name = "City" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-1 control-label">Pin Code:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.Pin, new { @class = "form-control", @id = "Pin", @Value = Model.Pin, @Name = "Pin", @MaxLength = "6" })
+            </div>
+            <label class="col-sm-1 control-label">Email:</label>
+            <div class="col-sm-3" style="display:flex;">
+                @Html.CheckBoxFor(x => x.AllSendEmail, new { @title = "Allow To Send Email On This Email ID.", @class = "checkbox", @style = "width:25px;margin-right: 5px;", @Value = Model.AllSendEmail })
+                @Html.TextBoxFor(x => x.Email, new { @placeholder = "Enter Email ID", @class = "form-control", @id = "Email", @Value = Model.Email, @Name = "Email", @MaxLength = "100" })@*@type = "email",*@
+            </div>
+            <label class="col-sm-1 control-label">MobileNo:</label>
+            <div class="col-sm-3" style="display:flex;">
+                @Html.CheckBoxFor(x => x.AllSendSMS, new { @title = "Allow To Send SMS On This Mobile NO.", @class = "checkbox", @style = "width:25px;margin-right: 5px;", @Value = Model.AllSendSMS })
+                @Html.TextBoxFor(x => x.MobileNo, new { @class = "form-control", @placeholder = "Enter 10 Digit Mobile No", @id = "MobileNo", @Value = Model.MobileNo, @Name = "MobileNo", @MaxLength = "10" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-1 control-label">Telephone No:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.Tel1, new { @class = "form-control", @id = "Tel1", @Value = Model.Tel1, @Name = "Tel1", @MaxLength = "15" })
+            </div>
+            <label class="col-sm-1 control-label">Tel2:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.Tel2, new { @class = "form-control", @id = "Tel2", @Value = Model.Tel2, @Name = "Tel2", @MaxLength = "15" })
+            </div>
+            <label class="col-sm-1 control-label">Tel3:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.Tel3, new { @class = "form-control", @id = "Tel3", @Value = Model.Tel3, @Name = "Tel3", @MaxLength = "15" })
+            </div>
+        </div>
+        <div class="form-group">
+            <label class="col-sm-1 control-label">PAN Number:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.PanNo, new { @class = "form-control", @id = "PanNo", @Value = Model.PanNo, @Name = "PanNo", @MaxLength = "20" })
+            </div>
+            <label class="col-sm-1 control-label">GST Number:</label>
+            <div class="col-sm-3">
+                @Html.TextBoxFor(x => x.GSTNo, new { @class = "form-control", @id = "GSTNo", @Value = Model.GSTNo, @Name = "GSTNo", @MaxLength = "15" })
+            </div>
+            @if (Model.Mode == "Add")
+            {
+                <div class="col-sm-1">
+                    <button class="btn btn-warning" onclick="GetGSTDetails();" style="padding:3px 10px;border-radius:50%;" data-toggle="tooltip" data-placement="top" title="Check Info"><i class="glyphicon glyphicon-question-sign"></i></button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@Html.HiddenFor(x => x.SrNo, new { @id = "hdnSrNo1", @name = "hdnSrNo1" })
+
+

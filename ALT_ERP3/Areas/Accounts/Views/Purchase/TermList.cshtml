@@ -1,0 +1,225 @@
+﻿@model ALT_ERP3.PurchaseVM
+@using Common;
+<script>
+    $(document).ready(function () {
+        loadTerm()
+        loadTermTemplate()
+        $('#txtTermId').change(function () {
+            loadTermDetails();
+        });
+
+        $('#btnadddTerms').click(function (event) {
+            event.preventDefault();
+            var myTermArray = []
+            $('#TermTbl tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempId: tds.eq(0).text(),
+                    TermId: tds.eq(1).text(),
+                    TermName: tds.eq(2).text(),
+
+                }
+                myTermArray.push(myDets);
+            })
+
+            var ModelData = {};
+            ModelData["TermId"] = $("#txtTermId").val();
+            ModelData["TermName"] = $('#txtTermName').val();
+            ModelData["TermList"] = myTermArray;
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddTermlist")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable4').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('#AddTermTemplate').click(function (event) {
+            event.preventDefault();
+
+            var ModelData = {};
+            ModelData["TermTemplateId"] = $("#txtTermTemplate").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddTermlistByTemplate")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable4').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+
+        $('button[action|="DeleteTermlst"]').click(function (event) {
+            event.preventDefault();
+            var myTermArray = []
+            $('#TermTbl tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempId: tds.eq(0).text(),
+                    TermId: tds.eq(1).text(),
+                    TermName: tds.eq(2).text(),
+
+                }
+                myTermArray.push(myDets);
+            })
+
+            var ModelData = {};
+            ModelData["tempId"] = $(this).val();
+            ModelData["TermList"] = myTermArray;
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteTermlist")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#divLedgerTable4').html(data.Html);
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+    });
+    function loadTerm() {
+        var url = '@Url.Action("GetTermCode")'
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#txtTermId").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("2-An error occurred while processing the request.");
+            }
+        });
+    };
+
+    function loadTermTemplate() {
+        var url = '@Url.Action("GetTermTemplate")'
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#txtTermTemplate").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("2-An error occurred while processing the request.");
+            }
+        });
+    };
+    function loadTermDetails() {
+        var url = '@Url.Action("GetTermsByCode")?TermId=' + $('#txtTermId').val();
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $('#txtTermName').val(result.TermName);
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("1-An error occurred while processing the request.");
+            }
+        });
+    }
+</script>
+<div id="Term" class="grid" style="max-height:350px;min-height:350px;margin-top:5px;width:100%; overflow: scroll;">
+    <div class="row">
+        <div class="form-group">
+            <div class="col-sm-5" style="padding-left:25px;">
+                @Html.DropDownListFor(x => x.TermTemplate, DropdownHelper.EmptyList(), new { @type = "text", @id = "txtTermTemplate", @style = "width:100%;font-weight:bolder;font-size:10pt;color:black;" })
+            </div>
+            <button type="button" id="AddTermTemplate" class="btn btn-success btn-sm" title="Item Batch" style="border:1px solid black;width:30px;height:20px;"><i class="fa fa-plus" style="color:black"></i></button>
+        </div>
+    </div>
+    <table id="TermTbl" class="zui-table" style="width:100%">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                <th style="width:5%">Sr.</th>
+                <th style="width:30%">Title</th>
+                <th style="width:60%">Terms & Conditions</th>
+                <th style="width:5%"></th>
+            </tr>
+            <tr>
+                <td style="width:5%;"></td>
+                <td style="width:30%;">@Html.DropDownListFor(x => x.TermId, DropdownHelper.EmptyList(), new { @type = "text", @id = "txtTermId", @style = "width:99%;margin-top:0px;font-size:10pt;font-weight:bolder;" })</td>
+                <td style="width:60%;">@Html.TextAreaFor(x => x.TermName, new { @type = "text", @id = "txtTermName", @style = "width:99%;margin-top:2px;height:150px;color:black;" })</td>
+                <td style="width:5%;"><a id="btnadddTerms" href="#" class="btn btn-primary btn-sm" title="Add" style="font-size:14pt;width:30px;height:30px;"><i class="fa fa-plus"></i></a></td>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.TermList != null)
+            {
+                for (int i = 0; i < Model.TermList.Count; i++)
+                {
+                    <tr>
+                        <td style="width:5%;height:60px;">@Html.DisplayFor(m => Model.TermList[i].tempId)</td>
+                        <td style="width:30%;height:60px;" contenteditable="true">@Html.DisplayFor(m => Model.TermList[i].TermId)</td>
+                        <td contenteditable="true" style="width:60%;height:60px;text-align:left">@Html.DisplayFor(m => Model.TermList[i].TermName)</td>
+                        <td><button type="button" action="DeleteTermlst" class="btn btn-danger btn-sm" value="@Html.DisplayFor(m => Model.TermList[i].tempId)" title="Delete"><i class="fa fa-trash-o"></i></button></td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>

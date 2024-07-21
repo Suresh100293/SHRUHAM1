@@ -1,0 +1,426 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.MyMenuVM
+@using Common;
+@{
+    ViewBag.Title = "My Menu";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: make all the fields hidden with visible property=false *@
+        $("#TfatMenu_Hide").hide();
+        $("#TfatMenu_SystemDefault").hide();
+
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatMenu_ModuleName').val('@Model.TfatMenu_ModuleName').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatMenu_OptionType').val('@Model.TfatMenu_OptionType').attr("selected", "selected");
+        @* iX9: set the selected value to fixed combos *@
+        $('#TfatMenu_ParentMenu').val('@Model.TfatMenu_ParentMenu').attr("selected", "selected");
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#MyMenu').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                TfatMenu_ModuleName: {required: true,},
+                TfatMenu_OptionType: {required: true,},
+                TfatMenu_OptionCode: {required: true,},
+                TfatMenu_Menu: {required: true,},
+                TfatMenu_DisplayOrder: {required: true,},
+                TfatMenu_Level: {required: true,},
+               },
+            messages: {
+                TfatMenu_ModuleName: {required: 'ModuleName is Required',},
+                TfatMenu_OptionType: {required: 'OptionType is Required',},
+                TfatMenu_OptionCode: {required: 'OptionCode is Required',},
+                TfatMenu_Menu: {required: 'Menu is Required',},
+                TfatMenu_DisplayOrder: {required: 'DisplayOrder is Required',},
+                TfatMenu_Level: {required: 'Level is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#TfatMenu_ModuleName").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatMenu_OptionType").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatMenu_OptionCode").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatMenu_Menu").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#TfatMenu_DisplayOrder").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#MyMenu").validate().form() == false)
+            //    return;
+
+            if ($("#TfatMenu_ModuleName").val() == null || $("#TfatMenu_ModuleName").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('ModuleName is Required..');
+                return;
+            }
+            if ($("#TfatMenu_OptionType").val() == null || $("#TfatMenu_OptionType").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('OptionType is Required..');
+                return;
+            }
+            if ($("#TfatMenu_OptionCode").val() == null || $("#TfatMenu_OptionCode").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('OptionCode is Required..');
+                return;
+            }
+            if ($("#TfatMenu_Menu").val() == null || $("#TfatMenu_Menu").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Menu is Required..');
+                return;
+            }
+            if ($("#TfatMenu_DisplayOrder").val() == null || $("#TfatMenu_DisplayOrder").val() == 0)
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('DisplayOrder is Required..');
+                return;
+            }
+            if ($("#TfatMenu_Level").val() == null || $("#TfatMenu_Level").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Level is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["TfatMenu_ID"] = $("#TfatMenu_ID").val();
+            ModelData["TfatMenu_ModuleName"] = $("#TfatMenu_ModuleName").val();
+            ModelData["TfatMenu_OptionType"] = $("#TfatMenu_OptionType").val();
+            ModelData["TfatMenu_OptionCode"] = $("#TfatMenu_OptionCode").val();
+            ModelData["TfatMenu_Menu"] = $("#TfatMenu_Menu").val();
+            ModelData["TfatMenu_ParentMenu"] = $("#TfatMenu_ParentMenu").val();
+            ModelData["TfatMenu_FormatCode"] = $("#TfatMenu_FormatCode").val();
+            ModelData["TfatMenu_AllowClick"] = $("#TfatMenu_AllowClick").is(':checked');
+            ModelData["TfatMenu_Hide"] = $("#TfatMenu_Hide").is(':checked');
+            ModelData["TfatMenu_TableName"] = $("#TfatMenu_TableName").val();
+            ModelData["TfatMenu_Controller"] = $("#TfatMenu_Controller").val();
+            ModelData["TfatMenu_DisplayOrder"] = $("#TfatMenu_DisplayOrder").val();
+            ModelData["TfatMenu_Level"] = $("#TfatMenu_Level").val();
+            ModelData["TfatMenu_QuickMenu"] = $("#TfatMenu_QuickMenu").is(':checked');
+            ModelData["TfatMenu_QuickMaster"] = $("#TfatMenu_QuickMaster").is(':checked');
+            ModelData["TfatMenu_MainType"] = $("#TfatMenu_MainType").val();
+            ModelData["TfatMenu_SubType"] = $("#TfatMenu_SubType").val();
+            ModelData["TfatMenu_ZoomURL"] = $("#TfatMenu_ZoomURL").val();
+            ModelData["TfatMenu_SystemDefault"] = $("#TfatMenu_SystemDefault").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType="+$("#TfatMenu_ModuleName").val();
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="MyMenu" role="form" style="margin-top:25px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            @if (Model.Mode == "Add")
+            {
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Menu ID:</label>
+                    <div class="col-sm-1">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.TfatMenu_ID, new { @maxlength = "10", @readonly = "readonly", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatMenu_ID", @Value = Model.TfatMenu_ID, @Id = "TfatMenu_ID" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.TfatMenu_ID, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatMenu_ID", @readonly = "readonly", @Value = Model.TfatMenu_ID, @Id = "TfatMenu_ID" })
+                        }
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ModuleName:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatMenu_ModuleName, Model.ModuleNameList, new { @class = "form-control", @Id = "TfatMenu_ModuleName", @Name = "TfatMenu_ModuleName", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">OptionType:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatMenu_OptionType, Model.OptionTypeList, new { @class = "form-control", @Id = "TfatMenu_OptionType", @Name = "TfatMenu_OptionType", @style = "border-color:black;height:24px;padding:2px 4px;",@disabled="disabled" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">OptionCode:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_OptionCode, new { @maxlength = "40", @class = "form-control", @Name = "TfatMenu_OptionCode", @Value = Model.TfatMenu_OptionCode, @Id = "TfatMenu_OptionCode" })
+                    </div>
+                    <label class="col-sm-1 control-label">Menu:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_Menu, new { @maxlength = "60", @class = "form-control", @Name = "TfatMenu_Menu", @Value = Model.TfatMenu_Menu, @Id = "TfatMenu_Menu" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ParentMenu:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatMenu_ParentMenu, Model.ParentMenuList, new { @class = "form-control", @Id = "TfatMenu_ParentMenu", @Name = "TfatMenu_ParentMenu", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">FormatCode:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_FormatCode, new { @maxlength = "75", @class = "form-control", @Name = "TfatMenu_FormatCode", @Value = Model.TfatMenu_FormatCode, @Id = "TfatMenu_FormatCode" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Active?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_AllowClick, new { @value = Model.TfatMenu_AllowClick, @id = "TfatMenu_AllowClick", @name = "TfatMenu_AllowClick", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label style="display:none;" class="col-sm-1 control-label">Hide:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_Hide, new { @value = Model.TfatMenu_Hide, @id = "TfatMenu_Hide", @name = "TfatMenu_Hide", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">TableName:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_TableName, new { @maxlength = "255", @class = "form-control", @Name = "TfatMenu_TableName", @Value = Model.TfatMenu_TableName, @Id = "TfatMenu_TableName" })
+                    </div>
+                    <label class="col-sm-1 control-label">Controller:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_Controller, new { @maxlength = "60", @class = "form-control", @Name = "TfatMenu_Controller", @Value = Model.TfatMenu_Controller, @Id = "TfatMenu_Controller" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">DisplayOrder:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatMenu_DisplayOrder, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatMenu_DisplayOrder", @Value = Model.TfatMenu_DisplayOrder, @Id = "TfatMenu_DisplayOrder" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-1 control-label">Level:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatMenu_Level, new { @maxlength = "3", @class = "form-control", @style = "text-align:right;", @Name = "TfatMenu_Level", @Value = Model.TfatMenu_Level, @Id = "TfatMenu_Level", @disabled = "disabled" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Add to Favorite:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_QuickMenu, new { @value = Model.TfatMenu_QuickMenu, @id = "TfatMenu_QuickMenu", @name = "TfatMenu_QuickMenu", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Add to QuickMaster:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_QuickMaster, new { @value = Model.TfatMenu_QuickMaster, @id = "TfatMenu_QuickMaster", @name = "TfatMenu_QuickMaster", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">MainType:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_MainType, new { @maxlength = "12", @class = "form-control", @Name = "TfatMenu_MainType", @Value = Model.TfatMenu_MainType, @Id = "TfatMenu_MainType" })
+                    </div>
+                    <label class="col-sm-1 control-label">SubType:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_SubType, new { @maxlength = "12", @class = "form-control", @Name = "TfatMenu_SubType", @Value = Model.TfatMenu_SubType, @Id = "TfatMenu_SubType" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ZoomURL:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_ZoomURL, new { @maxlength = "10", @class = "form-control", @Name = "TfatMenu_ZoomURL", @Value = Model.TfatMenu_ZoomURL, @Id = "TfatMenu_ZoomURL", @disabled = "disabled" })
+                    </div>
+                    <label style="display:none;" class="col-sm-1 control-label">System Default:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_SystemDefault, new { @value = Model.TfatMenu_SystemDefault, @id = "TfatMenu_SystemDefault", @name = "TfatMenu_SystemDefault", @style = "height:16px;width:16px;" })
+                        @*@Html.DropDownListFor(m => m.TfatMenu_SystemDefault, DropdownHelper.EmptyList(), new { @class="form-control", @Id = "TfatMenu_SystemDefault", @readonly = "readonly", @Name = "TfatMenu_SystemDefault" })*@
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Menu ID:</label>
+                    <div class="col-sm-1">
+                        @if (Model.Mode != "Add")
+                        {
+                            @Html.TextBoxFor(x => x.TfatMenu_ID, new { @maxlength = "10", @readonly = "readonly", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatMenu_ID", @Value = Model.TfatMenu_ID, @Id = "TfatMenu_ID" })
+                        }
+                        else
+                        {
+                            @Html.TextBoxFor(x => x.TfatMenu_ID, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatMenu_ID", @readonly = "readonly", @Value = Model.TfatMenu_ID, @Id = "TfatMenu_ID" })
+                        }
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ModuleName:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatMenu_ModuleName, Model.ModuleNameList, new { @class = "form-control", @Id = "TfatMenu_ModuleName", @Name = "TfatMenu_ModuleName", @style = "border-color:black;height:24px;padding:2px 4px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">OptionType:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatMenu_OptionType, Model.OptionTypeList, new { @class = "form-control", @Id = "TfatMenu_OptionType", @Name = "TfatMenu_OptionType", @style = "border-color:black;height:24px;padding:2px 4px;", @disabled = "disabled" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">OptionCode:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_OptionCode, new { @maxlength = "40", @class = "form-control", @Name = "TfatMenu_OptionCode", @Value = Model.TfatMenu_OptionCode, @Id = "TfatMenu_OptionCode", @disabled = "disabled" })
+                    </div>
+                    <label class="col-sm-1 control-label">Menu:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_Menu, new { @maxlength = "60", @class = "form-control", @Name = "TfatMenu_Menu", @Value = Model.TfatMenu_Menu, @Id = "TfatMenu_Menu" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ParentMenu:</label>
+                    <div class="col-sm-3">
+                        @Html.DropDownListFor(m => m.TfatMenu_ParentMenu, Model.ParentMenuList, new { @class = "form-control", @Id = "TfatMenu_ParentMenu", @Name = "TfatMenu_ParentMenu", @style = "border-color:black;height:24px;padding:2px 4px;", @disabled = "disabled" })
+                    </div>
+                    <label class="col-sm-1 control-label">FormatCode:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_FormatCode, new { @maxlength = "75", @class = "form-control", @Name = "TfatMenu_FormatCode", @Value = Model.TfatMenu_FormatCode, @Id = "TfatMenu_FormatCode", @disabled = "disabled" })
+                    </div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Active?:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_AllowClick, new { @value = Model.TfatMenu_AllowClick, @id = "TfatMenu_AllowClick", @name = "TfatMenu_AllowClick", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label style="display:none;" class="col-sm-1 control-label">Hide:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_Hide, new { @value = Model.TfatMenu_Hide, @id = "TfatMenu_Hide", @name = "TfatMenu_Hide", @style = "height:16px;width:16px;", @disabled = "disabled" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">TableName:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_TableName, new { @maxlength = "255", @class = "form-control", @Name = "TfatMenu_TableName", @Value = Model.TfatMenu_TableName, @Id = "TfatMenu_TableName", @disabled = "disabled" })
+                    </div>
+                    <label class="col-sm-1 control-label">Controller:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_Controller, new { @maxlength = "60", @class = "form-control", @Name = "TfatMenu_Controller", @Value = Model.TfatMenu_Controller, @Id = "TfatMenu_Controller", @disabled = "disabled" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">DisplayOrder:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatMenu_DisplayOrder, new { @maxlength = "10", @class = "form-control", @style = "width:100px;text-align:right;", @Name = "TfatMenu_DisplayOrder", @Value = Model.TfatMenu_DisplayOrder, @Id = "TfatMenu_DisplayOrder" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                    <label class="col-sm-1 control-label">Level:</label>
+                    <div class="col-sm-1">
+                        @Html.TextBoxFor(x => x.TfatMenu_Level, new { @maxlength = "3", @class = "form-control", @style = "text-align:right;", @Name = "TfatMenu_Level", @Value = Model.TfatMenu_Level, @Id = "TfatMenu_Level", @disabled = "disabled" })
+                    </div>
+                    <div class="col-sm-2"></div>
+                </div>
+                <br />
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">Add to Favorite:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_QuickMenu, new { @value = Model.TfatMenu_QuickMenu, @id = "TfatMenu_QuickMenu", @name = "TfatMenu_QuickMenu", @style = "height:16px;width:16px;" })
+                    </div>
+                    <label class="col-sm-1 control-label">Add to QuickMaster:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_QuickMaster, new { @value = Model.TfatMenu_QuickMaster, @id = "TfatMenu_QuickMaster", @name = "TfatMenu_QuickMaster", @style = "height:16px;width:16px;" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">MainType:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_MainType, new { @maxlength = "12", @class = "form-control", @Name = "TfatMenu_MainType", @Value = Model.TfatMenu_MainType, @Id = "TfatMenu_MainType" })
+                    </div>
+                    <label class="col-sm-1 control-label">SubType:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_SubType, new { @maxlength = "12", @class = "form-control", @Name = "TfatMenu_SubType", @Value = Model.TfatMenu_SubType, @Id = "TfatMenu_SubType" })
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-1 control-label">ZoomURL:</label>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.TfatMenu_ZoomURL, new { @maxlength = "10", @class = "form-control", @Name = "TfatMenu_ZoomURL", @Value = Model.TfatMenu_ZoomURL, @Id = "TfatMenu_ZoomURL", @disabled = "disabled" })
+                    </div>
+                    <label style="display:none;" class="col-sm-1 control-label">System Default:</label>
+                    <div class="col-sm-1">
+                        @Html.CheckBoxFor(x => x.TfatMenu_SystemDefault, new { @value = Model.TfatMenu_SystemDefault, @id = "TfatMenu_SystemDefault", @name = "TfatMenu_SystemDefault", @style = "height:16px;width:16px;", @disabled = "disabled" })
+                        @*@Html.DropDownListFor(m => m.TfatMenu_SystemDefault, DropdownHelper.EmptyList(), new { @class="form-control", @Id = "TfatMenu_SystemDefault", @readonly = "readonly", @Name = "TfatMenu_SystemDefault" })*@
+                    </div>
+                </div>
+            }
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Fri 19-Jul-2019 04:37 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 47
+    by Team Suchan, T.FAT *@
+

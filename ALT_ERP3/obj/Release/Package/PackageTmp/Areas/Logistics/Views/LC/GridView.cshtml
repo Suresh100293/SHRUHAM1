@@ -1,0 +1,182 @@
+﻿@model IEnumerable<ALT_ERP3.Areas.Logistics.Models.StockDetails>
+
+@{
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        $("#example > tbody  > tr").each(function () {
+            if ($(this).find(".LrMode").text() == 'G')
+            {
+                $(this).find(".LrMode").html('');
+                $(this).find(".LrMode").append('<center><span><svg width="25" height="25" ><circle cx="12" cy="12" r="10" stroke="black" stroke-width="4" fill="green" /></svg ></span></center>');
+            }
+            if ($(this).find(".LrMode").text() == 'R')
+            {
+                $(this).find(".LrMode").html('');
+                $(this).find(".LrMode").append('<center><span><svg width="25" height="25" ><circle cx="12" cy="12" r="10" stroke="black" stroke-width="4" fill="red" /></svg ></span></center>');
+            }
+            if ($(this).find(".LrMode").text() == 'W')
+            {
+                $(this).find(".LrMode").html('');
+                $(this).find(".LrMode").append('<center><span><svg width="25" height="25" ><circle cx="12" cy="12" r="10" stroke="black" stroke-width="4" fill="white" /></svg ></span></center>');
+            }
+        });
+
+        $(".deletebtn").click(function () {
+            var Row = $(this).closest('tr');
+            var url = '@Url.Action("DeleteConsignment")';
+            var ModelData = {};
+            var Tablekey = Row.find('td:eq(0)').text();
+            ModelData["StockTableky"] = Tablekey;
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                   
+                },
+            });
+            $(this).closest('tr').remove();
+        });
+    });
+    function LoadQtyBlur1(value) {
+        debugger;
+        var Row = $("#" + value);
+        var Qty = Row.find('td:eq(6)').text();
+        var LoadQty = parseInt(Row.find(".LoadGQty").val());
+        var Weight = Row.find('td:eq(10)').text();
+        if (LoadQty == 0) {
+            alert("Allocate Qty Not Allow 0 Otherwise You Can Delete This LR.....!");
+            Row.find(".LoadGQty").val(Qty);
+            Row.find(".LoadWeight").val(Weight);
+        }
+        else {
+            if (parseFloat(Qty) < parseFloat(LoadQty)) {
+
+                alert("Allocate Qty Not Greater Than Qty OF Consignment.....!");
+                Row.find(".LoadGQty").val(Qty);
+                Row.find(".LoadWeight").val(Weight);
+            }
+            else {
+                var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+                if (parseInt(CalculateWeight) >= parseInt(Weight)) {
+                    $(this).find(".LoadWeight").val(Math.round(Weight));
+                }
+                else {
+                    $(this).find(".LoadWeight").val(Math.round(CalculateWeight));
+                }
+            }
+        }
+    }
+    function LoadweightBlur1(value) {
+        debugger;
+        var Row = $("#" + value);
+
+        var Qty = Row.find('td:eq(6)').text();
+        var LoadQty = parseInt(Row.find(".LoadGQty").val());
+        var Weight = Row.find('td:eq(10)').text();
+        var LWeight = Row.find(".LoadWeight").val();
+
+        if (parseFloat(Weight) < parseFloat(LWeight)) {
+            Row.find(".LoadWeight").val(Weight);
+            alert("Weight Not Greater Than Act Weight OF Consignment.....!");
+        } else {
+            if (Qty == LoadQty) {
+                if (Weight != LWeight) {
+                    alert("Weight Cant Change .....!");
+                    Row.find(".LoadWeight").val(Weight);
+                }
+            } else if (parseInt(Qty) > parseInt(LoadQty)) {
+                if (Weight == LWeight) {
+                    alert("Cant Enter Total Weight .....!");
+                    var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+                    Row.find(".LoadWeight").val(Math.round(CalculateWeight));
+                }
+            }
+        }
+    }
+</script>
+<style>
+    .span6 {
+        display: none !important;
+    }
+</style>
+<div class="container-fluid" style="margin-top:8px;margin-left:-5px;">
+    <div>
+        <table id="example" class="table-bordered example" style="">
+            <thead>
+                <tr>
+                    <th class="hidden">StockKey</th>
+                    <th class="hidden">ConsignmentKey</th>
+                    <th>Delete</th>
+                    <th>LRNo</th>
+                    <th>Book Date</th>
+                    <th>Stock From</th>
+                    <th>Quantity</th>
+                    <th>Allocate Quantity</th>
+                    <th>Allocate Weight</th>
+                    <th>Charge Weight</th>
+                    <th>Actual Weight</th>
+                    <th>Charge Type</th>
+                    <th>Unit</th>
+                    <th>From</th>
+                    <th>TO</th>
+                    <th>Consigner</th>
+                    <th>Consignee</th>
+                    <th>LR Type</th>
+                    <th>Delivery</th>
+                    <th>Collection</th>
+                    <th>Mode</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr id="@item.StockTableky">
+                        <td class="hidden StockTableky">@item.StockTableky</td>
+                        <td class="hidden">@item.ConsignmentTableky</td>
+                        <td>
+                            <center>
+                                <button class="btn btn-danger deletebtn" style="font-size: 13px;padding:3px 13px;" id="@(" btnDelete"+item.StockTableky)"><i class="glyphicon glyphicon-trash" style="font-size: 1.2em;"></i></button>
+                            </center>
+                        </td>
+                        <td>@item.LrNo</td>
+                        <td>@item.LrBookDate</td>
+                        <td>@item.StockAvlIn</td>
+                        <td>@item.AvlQty</td>
+                        <td><center><input type="text" class="LoadGQty" style="width:100px;" value="@item.LoadQty" onblur='LoadQtyBlur1("@item.StockTableky")' disabled/></center></td>
+                        <td><center><input type="text" class="LoadWeight" style="width:70px;" value="@item.LoadWeight" onblur='LoadweightBlur1("@item.StockTableky")' disabled/></center></td>
+                        <td>@item.ChrWeight</td>
+                        <td>@item.ActWeight</td>
+                        <td>@item.ChgType</td>
+                        <td>@item.UnitCode</td>
+                        <td>@item.From</td>
+                        <td>@item.To</td>
+                        <td>@item.Consigner</td>
+                        <td>@item.Consignee</td>
+                        <td>@item.LRType</td>
+                        <td>@item.DeliveryOfLR</td>
+                        <td>@item.Collection</td>
+                        <td class="LrMode">@item.Mode</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+
+</div>
+
+
+

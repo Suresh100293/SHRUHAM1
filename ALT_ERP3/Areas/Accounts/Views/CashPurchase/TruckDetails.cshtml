@@ -1,0 +1,172 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.CreditPurchaseVM
+@using Common
+
+<div class="form-horizontal" id="ledgerupdate" style="margin-left:30px;">
+    <div class="form-group" id="divrelto">
+        <label class="col-sm-2 control-label">RelatedTo:</label>
+        <div class="col-sm-3">
+            @Html.TextBoxFor(m => m.RelatedTo, new { @style = "width:99%; margin-top:2px;height:25px;", @class = "input-large search-query", @Name = "RelatedTo", @Id = "RelatedTo", @value = Model.RelatedTo })
+
+        </div>
+        <div class="col-sm-1">
+            <button class="btn btn-info" style="font-size:14pt;font-weight:bolder;padding:0px 0px;width:40px;" id="btnCostRefresh" title='Refresh'><i style="color:black;" class="fa fa-refresh"></i></button>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <div class="grid" id="TruckRelatedDiv" @*style="max-height:350px;min-height:330px; width:100%; overflow: scroll;"*@>
+            @Html.Partial("TruckTableView", Model)
+        </div>
+    </div>
+    <div class="col-sm-6" id="hdnDivSpareStkSrl" hidden="hidden">
+        @Html.Partial("SpareDetails", Model)
+    </div>
+
+    <div class="col-sm-6" id="hdnDivTyreStkSrl" hidden="hidden">
+        @Html.Partial("TyreStockSerial", Model)
+    </div>
+</div>
+<br />
+
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        if ('@Model.Code' == "000100949" || '@Model.Code' == "000100950" || '@Model.Code' == "000100343" || '@Model.Code' == "000100736" || '@Model.Code' == "000100653" || '@Model.Code' == "000100811" ||	'@Model.Code' == "000100326" ||	'@Model.Code' == "000100951" ||	'@Model.Code' == "000100952" ||	'@Model.Code' == "000100404" ||	'@Model.Code' == "000100781" ||	'@Model.Code' == "000100953" ||	'@Model.Code' == "000100954" ||	'@Model.Code' == "000100788" ||	'@Model.Code' == "000101135" ||	'@Model.Code' == "000100789" ||	'@Model.Code' == "000100346" ||	'@Model.Code' == "000100341" ||	'@Model.Code' == "000100345") {
+            $('#divrelto').hide();
+        }
+        else {
+            $('#divrelto').show();
+        }
+
+        if ('@Model.RelatedTo' == '000100345' || '@Model.Code' == '000100345') {
+            $('#hdnDivTyreStkSrl').show();
+        }
+        $('#btnCostRefresh').click(function () {
+            $('#RelatedTo').select2('data', { id: '', text: '' });
+            //$("#TruckRelatedDiv").html('');
+            $("#truckrelatedtable tbody").hide();
+            $("#hdnDivSpareStkSrl").html('');
+            $("#hdnDivTyreStkSrl").html('');
+        });
+        loadRelatedTo();
+        $('#RelatedTo').change(function () {
+            var ModelData = {};
+            ModelData["RelatedTo"] = $('#RelatedTo').val();
+            ModelData["Amt"] = $('#addAmt').val();
+            ModelData["Code"] = $("#RelatedTo").val();
+            ModelData["DocuDate"] = $("#DocuDate").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetTruckTypeWiseViewListRelatedToE")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    debugger;
+                    $('#truckrlmodel').modal('show');
+                    $('#TruckRelatedDialog').html('');
+                    $('#TruckRelatedDialog').html(data.Html);
+                    $('#RelatedTo').select2('data', { id: data.RelatedTo, text: data.RelatedToN });
+                    $('#RelatedChoice').select2('data', { id: data.RelatedTo, text: data.RelatedToN });
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+        $('#RelatedChoice').change(function () {
+            debugger;
+            if (($('#RelatedTo').val() == "000100345" || $("#txtAccount").val() == "000100345"))
+            {
+                if ($('#RelatedChoice').val() == "Tyrestock" || $('#RelatedChoice').val() == "Remould") {
+                    debugger;
+                    $("#truckrelatedtable tbody tr").each(function () {
+                        var sectds = $(this).find('td');
+                        if (sectds.eq(0).text() == "F002" || sectds.eq(0).text() == "F003") {
+                            sectds.find(".addontxtfvalue").prop('disabled', true);
+                        }
+                    });
+                    $("#itemrelatedtable tbody tr").each(function () {
+                        var sectds = $(this).find('td');
+                        if (sectds.eq(0).text() == "F008" || sectds.eq(0).text() == "F009" || sectds.eq(0).text() == "F012") {
+                            sectds.find(".addontxtfvalue").prop('disabled', true);
+                        }
+                    });
+
+                }
+                else
+                {
+                    debugger;
+                    $("#truckrelatedtable tbody tr").each(function () {
+                        var sectds = $(this).find('td');
+                        if (sectds.eq(0).text() == "F002" || sectds.eq(0).text() == "F003") {
+                            sectds.find(".addontxtfvalue").prop('disabled', false);
+                        }
+                    });
+                    $("#itemrelatedtable tbody tr").each(function () {
+                        var sectds = $(this).find('td');
+                        if (sectds.eq(0).text() == "F008" || sectds.eq(0).text() == "F009" || sectds.eq(0).text() == "F012") {
+                            sectds.find(".addontxtfvalue").prop('disabled', false);
+                        }
+                    });
+                }
+            }
+        });
+    });
+     function loadRelatedTo() {
+         var url = '@Url.Action("GetRelatedToList")';
+       //var url = '@Url.Action("GetAccountList")';
+         $('#RelatedTo').select2({
+             minimumInputLength: 0,
+             placeholder: 'Search',
+             ajax: {
+                 url: url,
+                 dataType: 'json',
+                 quietMillis: 100,
+                 enableFiltering: true,
+                 allowClear: true,
+                 minimumInputLength: 0,
+                 multiple: true,
+                 width: 300,
+                 data: function (term, page) {
+                     return {
+                         types: ["exercise"],
+                         limit: -1,
+                         term: term
+                     };
+                 },
+                 results: function (data, page) {
+                     clientObj = JSON.stringify(data);
+                     return {
+                         results: $.map(data, function (item) {
+                             return {
+                                 text: item.Name,
+                                 id: item.Code
+                             }
+                         })
+                     };
+                 }
+             },
+             initSelection: function (element, callback) {
+                 var data = { id: '@Model.RelatedTo', text: '@Model.RelatedToN' };
+                 callback(data);
+             },
+             formatResult: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+             formatSelection: function (exercise) {
+                 return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                     "</div></span></div></div>";
+             },
+         });
+    };
+</script>

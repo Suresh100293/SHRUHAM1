@@ -1,0 +1,329 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.ViaChargesMaVM
+@using Common;
+@{
+    ViewBag.Title = "TripChargesPartial";
+    Layout = null;
+}
+<script src="~/Scripts/jquery.jstree.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function ()
+    {
+        $("#chkSelectAll").click(function ()
+        {
+            $(".checkbox").prop('checked', $(this).prop('checked'));
+        });
+
+        $(".TDLocalCharge,.TDLocalAdvance").constrain({ allow: { regex: "[0-9]" } });
+        //$(".TDLocalKM").constrain({ allow: { regex: "[0-9]" } });
+
+        $('#btnCopy').click(function (event)
+        {
+            debugger;
+            event.preventDefault();
+            var check = $('#detail_table').find('input[type=checkbox]:checked').length;
+            if (check > 0)
+            {
+                var url = '@Url.Action("Copy")';
+                var DTO = { DocNo: $("#Document").val() };
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        var AttachDoc = $("#CopyModal");
+                        AttachDoc.html('');
+                        AttachDoc.html(data.Html);
+                        $('#copymodal').modal('show');
+                    },
+                });
+            }
+            else
+            {
+                alert("Please Select Atleast One Area To Copy...!");
+            }
+        });
+
+
+
+        $(".MinusBtn").click(function () {
+            debugger;
+            var Class = "." + this.id;
+            $('#detail_table ' + Class).addClass("hidden");
+
+            var Row = $(this).closest('tr');
+            Row.find(".AddBtnTD").removeClass("hidden");
+            Row.find(".MinusBtnTD").addClass("hidden");
+        });
+        $(".AddBtn").click(function () {
+            debugger;
+            var Class = "." + this.id;
+            $('#detail_table ' + Class).removeClass("hidden");
+            var Row = $(this).closest('tr');
+            Row.find(".AddBtnTD").addClass("hidden");
+            Row.find(".MinusBtnTD").removeClass("hidden");
+        });
+
+        $('.TDLocalCharge,.TDLocalAdvance').click(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            if (Row.attr("class") != "MainTR") {
+                var OriginalContent = $(this).text();
+                $(this).addClass("cellEditing");
+                $(this).html("<input type='text'  value='" + OriginalContent + "' />");
+                $(this).children().first().focus();
+                $(this).children().first().keypress(function (e) {
+
+                    if (e.which == 13) {
+                        var newContent = $(this).val();
+                        OriginalContent = newContent;
+                        $(this).parent().text(newContent);
+                        $(this).parent().removeClass("cellEditing");
+                    }
+                });
+                $(this).children().first().blur(function () {
+                    if ($(this).val() == "") {
+                        $(this).parent().text("0.00");
+                    } else {
+                        $(this).parent().text($(this).val());
+                    }
+
+                    $(this).parent().removeClass("cellEditing");
+                });
+            }
+        });
+        $('.TDLocalTime').click(function () {
+            debugger;
+            var Row = $(this).closest('tr');
+            if (Row.attr("class") != "MainTR") {
+                var OriginalContent = $(this).text();
+                $(this).addClass("cellEditing");
+                $(this).html("<input type='text' onkeyup='colon(this)' pattern='([01]?[0-9]|2[0-3]):[0-5][0-9]'  value='" + OriginalContent + "' />");
+                $(this).children().first().focus();
+                $(this).children().first().keypress(function (e) {
+
+                    if (e.which == 13) {
+                        var newContent = $(this).val();
+                        OriginalContent = newContent;
+                        $(this).parent().text(newContent);
+                        $(this).parent().removeClass("cellEditing");
+                    }
+                });
+                $(this).children().first().blur(function () {
+                    if ($(this).val() == "" || $(this).val() == "0") {
+                        $(this).parent().text("00:00");
+                    } else {
+                        var Value = $(this).val();
+                        if (Value.length > 2) {
+                            var length = Value.length;
+                            if (length == 3) {
+                                Value += "00";
+                            }
+                            else if (length == 4) {
+                                Value += "0";
+                            }
+                            else {
+                                Value = Value.substring(0, 5);
+                            }
+                        }
+                        var ssnRE = new RegExp('([01]?[0-9]|2[0-3]):[0-5][0-9]');
+                        if (!ssnRE.test(Value)) {
+                            alert('Invalid Plese Enter Proper Format Eg.HH:MM');
+                            $(this).parent().text("00:00");
+                        } else {
+                            $(this).parent().text(Value);
+                        }
+
+                    }
+
+                    $(this).parent().removeClass("cellEditing");
+                });
+            }
+        });
+    });
+
+
+    function colon(x) {
+        if (x.value.length == 2) {
+            x.value += ":";
+        }
+        return x;
+    }
+
+</script>
+<div class="col-sm-12">
+
+    <table id="detail_table" class="detail zui-table" style="width:63%">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                <th colspan="2">VehicleNo / VehicleCategory : @Model.VehicleN</th>
+                <th colspan="2">Via Charges List</th>
+                <th>
+                    <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="btnCopy" data-toggle="tooltip" data-placement="top" title="Copy">Copy From</button>
+                </th>
+            </tr>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                <th style="width:23%;" colspan="2">Area</th>
+                <th class="hidden" style="width:10%;">Id</th>
+                @*<th style="width:10%;">Time <span style="color:red;">(HH : MM)</span></th>
+                    <th style="width:10%;">Local KM</th>
+                    <th style="width:10%;">Extra Freight</th>*@
+                <th style="width:10%;">Via Charges</th>
+                <th style="width:10%;">Via Advance</th>
+                <th style="width:3%;"><input type="checkbox" style="height:20px;width:20px;" id="chkSelectAll" /></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.list != null)
+            {
+                foreach (var item in Model.list)
+                {
+                    if (item.Category == "0")
+                    {
+                        <tr role="row" class="MainTR" style="font-family:Tahoma;font-size:9pt;" id="@item.ID">
+
+                            <td class="AddBtnTD hidden ">
+                                <center><a class="btn btn-info AddBtn" disabled id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">+</a></center>
+                            </td>
+
+                            <td class="MinusBtnTD">
+                                <center><a class="btn btn-danger MinusBtn" disabled id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 13px;">-</a></center>
+                            </td>
+                            <td style="display:flex;">@item.Area.ToString() <span style="width:20px;"></span></td>
+                            <td class="hidden">NA</td>
+                            <td>NA</td>
+                            <td>NA</td>
+                            <td></td>
+                        </tr>
+                    }
+                    else if (item.Category == "Zone")
+                    {
+                        <tr role="row" class="MainTR" style="font-family:Tahoma;font-size:9pt;" id="@item.ID">
+
+                            <td class="AddBtnTD hidden ">
+                                <center><a class="btn btn-info AddBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">+</a></center>
+                            </td>
+
+                            <td class="MinusBtnTD">
+                                <center><a class="btn btn-danger MinusBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 13px;">-</a></center>
+                            </td>
+
+                            <td style="display:flex;"><span style="width:10px;"></span>@item.Area.ToString()<span style="width:15px;"></span></td>
+                            <td class="hidden">NA</td>
+                            <td>NA</td>
+                            <td>NA</td>
+                            <td></td>
+                        </tr>
+                    }
+                    else if (item.Category == "Branch")
+                    {
+                        <tr role="row" class="Branch" style="font-family:Tahoma;font-size:9pt;" id="@item.ID">
+                            <td class="AddBtnTD hidden ">
+                                <center><a class="btn btn-info AddBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">+</a></center>
+                            </td>
+
+                            <td class="MinusBtnTD">
+                                <center><a class="btn btn-danger MinusBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 13px;">-</a></center>
+                            </td>
+                            <td style="display:flex;"><span style="width:15px;"></span>@item.Area.ToString()<span style="width:10px;"></span></td>
+                            <td class="hidden">@item.ID</td>
+                            <td class="TDLocalCharge">@item.VaiCharge.ToString("F2")</td>
+                            <td class="TDLocalAdvance">@item.ViaAdvance.ToString("F2")</td>
+                            <td><center><input type="checkbox" class="checkbox" id="@item.ID" style="height:20px;width:20px;" /></center></td>
+
+                        </tr>
+                    }
+                    else if (item.Category == "OwnB")
+                    {
+                        <tr role="row" class="Branch" style="font-family:Tahoma;font-size:9pt;background-color: chocolate;" id="@item.ID">
+                            <td class="AddBtnTD hidden ">
+                                <center><a class="btn btn-info AddBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">+</a></center>
+                            </td>
+
+                            <td class="MinusBtnTD">
+                                <center><a class="btn btn-danger MinusBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 13px;">-</a></center>
+                            </td>
+                            <td style="display:flex;"><span style="width:15px;"></span>@item.Area.ToString()<span style="width:10px;"></span></td>
+                            <td class="hidden">@item.ID</td>
+                            @*<td class="TDLocalTime">@item.LocalTime</td>
+                                <td class="TDLocalKM">@item.LocalKM</td>
+                                <td class="TDFreight">@item.ExraFreight.ToString("F2")</td>*@
+                            <td class="TDLocalCharge">@item.VaiCharge.ToString("F2")</td>
+                            <td class="TDLocalAdvance">@item.ViaAdvance.ToString("F2")</td>
+                            <td><center><input type="checkbox" class="checkbox" id="@item.ID" style="height:20px;width:20px;" /></center></td>
+
+                        </tr>
+                    }
+                    else if (item.Category == "SubBranch")
+                    {
+                        <tr role="row" class="SubBranch @item.GRP" style="font-family:Tahoma;font-size:9pt;" id="@item.ID">
+                            <td class="AddBtnTD hidden ">
+                                <center><a class="btn btn-info AddBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">+</a></center>
+                            </td>
+
+                            <td class="MinusBtnTD">
+                                <center><a class="btn btn-danger MinusBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 13px;">-</a></center>
+                            </td>
+                            <td style="display:flex;"><span style="width:20px;"></span>@item.Area.ToString()<span style="width:5px;"></span></td>
+                            <td class="hidden">@item.ID</td>
+                            @*<td class="TDLocalTime">@item.LocalTime</td>
+                                <td class="TDLocalKM">@item.LocalKM</td>
+                                <td class="TDFreight">@item.ExraFreight.ToString("F2")</td>*@
+                            <td class="TDLocalCharge">@item.VaiCharge.ToString("F2")</td>
+                            <td class="TDLocalAdvance">@item.ViaAdvance.ToString("F2")</td>
+                            <td><center><input type="checkbox" class="checkbox" id="@item.ID" style="height:20px;width:20px;" /></center></td>
+
+                        </tr>
+                    }
+                    else if (item.Category == "OwnSB")
+                    {
+                        <tr role="row" class="SubBranch @item.GRP" style="font-family:Tahoma;font-size:9pt;background-color: chocolate;" id="@item.ID">
+                            <td class="AddBtnTD hidden ">
+                                <center><a class="btn btn-info AddBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;">+</a></center>
+                            </td>
+
+                            <td class="MinusBtnTD">
+                                <center><a class="btn btn-danger MinusBtn" id="@item.ID" style="color:white;font-weight:bolder;font-size:13px;padding:3px 13px;">-</a></center>
+                            </td>
+                            <td style="display:flex;"><span style="width:20px;"></span>@item.Area.ToString()<span style="width:5px;"></span></td>
+                            <td class="hidden">@item.ID</td>
+                            @*<td class="TDLocalTime">@item.LocalTime</td>
+                                <td class="TDLocalKM">@item.LocalKM</td>
+                                <td class="TDFreight">@item.ExraFreight.ToString("F2")</td>*@
+                            <td class="TDLocalCharge">@item.VaiCharge.ToString("F2")</td>
+                            <td class="TDLocalAdvance">@item.ViaAdvance.ToString("F2")</td>
+                            <td><center><input type="checkbox" class="checkbox" id="@item.ID" style="height:20px;width:20px;" /></center></td>
+
+                        </tr>
+                    }
+                    else if (item.Category == "Area")
+                    {
+                        <tr role="row" class="Area @item.GRP @item.ParentOfID" style="font-family:Tahoma;font-size:9pt;" id="@item.ID">
+                            <td></td>
+                            <td class="hidden"></td>
+                            <td style="display:flex;"><span style="width:25px;"></span>@item.Area.ToString()</td>
+                            <td class="hidden">@item.ID</td>
+                            @*<td class="TDLocalTime">@item.LocalTime</td>
+                                <td class="TDLocalKM">@item.LocalKM</td>
+                                <td class="TDFreight">@item.ExraFreight.ToString("F2")</td>*@
+                            <td class="TDLocalCharge">@item.VaiCharge.ToString("F2")</td>
+                            <td class="TDLocalAdvance">@item.ViaAdvance.ToString("F2")</td>
+                            <td><center><input type="checkbox" class="checkbox" id="@item.ID" style="height:20px;width:20px;" /></center></td>
+
+                        </tr>
+                    }
+
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+

@@ -1,0 +1,323 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.LrAllocateVM
+@using Common;
+@{
+    ViewBag.Title = "FM Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+
+<style>
+
+    .AutoRetrive {
+        background: #95cac7;
+        color: black;
+    }
+
+    .bold {
+        font-weight: bold !important;
+    }
+
+    hr {
+        border: 1px solid #dec0c0;
+    }
+
+    .SearchRow {
+        background-color: coral;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        /*xmin-width: 0;*/
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+
+    .legend {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        background-color: white;
+        color: red !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 45px 5px 45px;
+    }
+
+    .legend2 {
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        /*background-color: #dec0c0;*/
+        background-color: #57c8f1;
+        color: white !important;
+        width: auto;
+        z-index: auto;
+        padding: 5px 20px 5px 20px;
+        margin-bottom: 0px !important;
+        margin-top: -40px;
+    }
+
+    .legend3 {
+        top: -0.0em;
+        color: white !important;
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #57c8f1;
+        line-height: 1.2em;
+        margin-top: -40px;
+        padding: 5px 20px 5px 20px;
+    }
+
+    .legend4 {
+        top: -0.0em;
+        color: white !important;
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #57c8f1;
+        line-height: 1.2em;
+        margin-top: -40px;
+        padding: 5px 20px 5px 20px;
+    }
+
+    .legend5 {
+        top: -0.0em;
+        color: white !important;
+        position: relative;
+        font-size: 14px;
+        font-weight: bold;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        background-color: #57c8f1;
+        line-height: 1.2em;
+        margin-top: -40px;
+        padding: 5px 30px 5px 30px;
+    }
+
+    .display {
+        display: block;
+    }
+
+    .toggle {
+        border-radius: 15px !important;
+        margin-top: -35px !important;
+    }
+
+    .example {
+        border: 1px solid #ccc;
+        border-collapse: collapse;
+        width: max-content;
+        font-size: 9px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+        .example th {
+            background-color: #F7F7F7;
+            font-weight: bold;
+        }
+
+        .example th, .example td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            font-size: 12px;
+        }
+
+        .example, .example table td {
+            border: 0px solid #ccc;
+        }
+</style>
+
+<script type="text/javascript">
+
+    $(document).ready(function () {
+        GetMyFavorites('@Model.ViewDataId');
+        $("#AllocateFrom,#AllocateTo").constrain({ allow: { regex: "[0-9]" } });
+
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+
+            if ($("#AllocateFrom").val() == '' || $("#AllocateFrom").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('From required..');
+                return;
+            }
+            if ($("#AllocateTo").val() == '' || $("#AllocateTo").val() == '0') {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To required..');
+                return;
+            }
+
+            if (parseInt($("#AllocateFrom").val()) > parseInt($("#AllocateTo").val())) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Start Range Should Be Less Than End Range..');
+                return;
+            }
+
+            var url = '@Url.Action("CheckRange")';
+                $.ajax({
+                    type: "POST",
+                    traditional: true,
+                    url: url,
+                    data: { From: $("#AllocateFrom").val(), To: $("#AllocateTo").val(), Document: $("#Document").val(), Transaction: '@Model.Transaction'},
+                    success: function (result) {
+
+                        if (result.Message == "T") {
+                            $("#ErrorMessage").show();
+                            $("#ErrorMessage").text(result.Msg);
+                            return;
+                        } else {
+                            SaveRange();
+                        }
+                    }
+            });
+        });
+    });
+
+
+
+    function SaveRange() {
+
+        if ($("#AllocateFrom").val() == '' || $("#AllocateFrom").val() == '0') {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('From Range required..');
+            return;
+        }
+        if ($("#AllocateTo").val() == '' || $("#AllocateTo").val() == '0') {
+            $("#ErrorMessage").show();
+            $("#ErrorMessage").text('To Range required..');
+            return;
+        }
+        //if ($("#Transaction").val() == '' || $("#Transaction").val() == '0') {
+        //    $("#ErrorMessage").show();
+        //    $("#ErrorMessage").text('Transaction required..');
+        //    return;
+        //}
+        var url = '@Url.Action("SaveData")';
+        @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+        var ModelData = {};
+        ModelData["Document"] = $("#Document").val();
+        ModelData["Mode"] = '@Model.Mode';
+        ModelData["Header"] = '@Model.Header';
+        ModelData["Code"] = $("#Code").val();
+        ModelData["AllocateFrom"] = $("#AllocateFrom").val();
+        ModelData["AllocateTo"] = $("#AllocateTo").val();
+        ModelData["Transaction"] = '@Model.Transaction';
+        var DTO = { mModel: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success') {
+                    $('.spinner').hide();
+                    window.location.href = "/Logistics/@Model.Controller2/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                    $("#ErrorMessage").hide();
+                }
+                else {
+                    $('.spinner').hide();
+                    alert(data.Message);                    }
+            },
+        });
+    }
+</script>
+
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/LRAllocation/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="lrallocate" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none;"></div>
+
+            <fieldset class=" col-md-12" style="margin-top: 0px;">
+                <div class="panel panel-default" style="margin-bottom: 0px !important;">
+                    <div class="panel-body " style="padding-left: 20px;padding: 1px !important;">
+                        <div class="col-md-12">
+                            <div class="form-group" style="margin-top: 5px;">
+                                <label class=" bold   col-md-1  control-label" style="">Code:</label>
+                                <div class="col-md-1 " style="">
+                                    @Html.TextBoxFor(x => x.Code, new { @class = "form-control", @style = "width:100%;", @Value = Model.Code, @disabled = "disabled" })
+                                </div>
+                                <label class=" bold   col-md-1  control-label" style="">From:</label>
+                                <div class="col-md-1 " style="">
+                                    @Html.TextBoxFor(x => x.AllocateFrom, new { @class = "form-control", @style = "width:100%;", @Value = Model.AllocateFrom })
+                                </div>
+                                <label class=" bold   col-md-1  control-label" style="">To:</label>
+                                <div class="col-md-1 " style="">
+                                    @Html.TextBoxFor(x => x.AllocateTo, new { @class = "form-control", @style = "width:100%;", @Value = Model.AllocateTo })
+                                </div>
+                                @if (Model.Mode != "Add")
+                                {
+                                    <label class=" bold   col-md-1  control-label" style="">Transaction:</label>
+                                    <div class="col-md-1 " style="">
+                                        @Html.EnumDropDownListFor(x => x.Transaction, "--Select--", new { @class = "input-large-query form-control", @style = "width:100%;", @Value = Model.Transaction, @disabled = "disabled" })
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+<footer class="footer-section" style="height:45px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.LAT ERP-3.0, Shruham Software
+        </div>
+        <div class="col-sm-4">
+            <div class="col-md-4 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:5px;font-size:9pt; width:unset;">
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="SubmitPrint" data-toggle="tooltip" data-placement="top" title="Save & Print"><i class="glyphicon glyphicon-floppy-saved">&nbsp;&nbsp;&nbsp;<i class="glyphicon glyphicon-print"></i><br />Save & Print</i></button>
+            </div>
+            <div class="col-md-4 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                <button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="Submit" data-toggle="tooltip" data-placement="top" title="Save"><i class="glyphicon glyphicon-floppy-saved"><br />Save</i></button>
+            </div>
+            <div class="col-md-4 pull-right" style="padding-left:6px;font-family:Tahoma;padding-top:2px;padding-right:0px;font-size:9pt; width:unset;">
+                @*<button class="btn btn-info" style="font-size: 13px;padding:3px 12px;" id="btnAttachment" data-toggle="modal" data-target="#Attachmentmodal" title="Attachment"><i class="glyphicon glyphicon-paperclip"><br />Attachment</i></button>*@
+            </div>
+        </div>
+    </div>
+</footer>
+@Html.HiddenFor(x => x.Document)

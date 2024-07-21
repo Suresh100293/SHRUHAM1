@@ -1,0 +1,181 @@
+@model SalesRegisterswoStockVM
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<link href="~/Content/js/jquery-multi-select/css/multi-select.css" rel="stylesheet" />
+<script src="~/Content/js/jquery-multi-select/js/jquery.multi-select.js"></script>
+<script src="~/Content/js/jquery-multi-select/js/jquery.quicksearch.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#ViewCode').select2();
+        $('#FromDate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+    });
+
+    function clickRefresh() {
+        $('#list1').jqGrid('clearGridData');
+        $('#list1').jqGrid('GridUnload');
+        $('#list1').trigger('reloadGrid');
+        gridReload();
+    }
+
+    function clickExcel() {
+        var mPara = '';
+        var sUrlpath = window.open('@Url.Action("GetExcel")?FromDate=' + $('#FromDate').val() + '&ToDate=' + $('#ToDate').val() + '&Code=' + $('#ViewCode').val() + '&mWhat=XLS' + '&Para=' + mPara+ '&ParaReport=' + $('#hdngrp').val());
+    };
+
+    function clickPrint() {
+        var mPara = '';
+        var sUrlpath = window.open('@Url.Action("GetPDF")?FromDate=' + $('#FromDate').val() + '&ToDate=' + $('#ToDate').val() + '&Code=' + $('#ViewCode').val() + '&mWhat=PDF' + '&Para=' + mPara + '&ParaReport=' + $('#hdngrp').val());
+    };
+
+    function clickpara() {
+        $('#dialog1').modal('show');
+    };
+
+    function gridReload() {
+        $('.selected').each(function () {
+            $(this).attr('selected', true);
+        });
+
+        var ColName, ColData;
+        var mPara = '';
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?FromDate=' + $('#FromDate').val() + '&ToDate=' + $('#ToDate').val() + '&mWhat=' + '&Code=' + $('#ViewCode').val() + '&Para=' + mPara + '&ParaReport=' + $('#hdngrp').val();
+        var sUrlpath = '@Url.Action("GetGridData")?FromDate=' + $('#FromDate').val() + '&ToDate=' + $('#ToDate').val() + '&mWhat=' + '&Code=' + $('#ViewCode').val() + '&Para=' + mPara + '&ParaReport=' + $('#hdngrp').val();
+        var sidix = $('#hdnsidx').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                ColData = obj[1];
+                CreateGridData();
+            },
+            error: function (error) {
+                alert(error);
+            }
+        });
+
+        function CreateGridData() {
+            $('#list1').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                mtype: 'POST',
+                sortable: true,
+                colNames: ColName,
+                colModel: ColData,
+                pager: $('#pager'),
+                rowNum: @Session["GridRows"],
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                sortname: sidix,
+                height: $(window).height() - 111 - 38 - 41,
+                frozen: false,
+                sortorder: 'desc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                gridComplete: function () {
+                    $('#header').show();
+                    $('#footer').show();
+                },
+            });
+            jQuery("#list1").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, search: false, refresh: false, searchtext: "Search", });
+            jQuery("#list1").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <div class="col-md-6" style="padding-left:unset;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+
+        <div class="col-md-1" style="padding-right:1px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;text-align:right">
+             Period:
+        </div>
+        <div class="col-md-3">
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="FromDate" data-date-format="dd/mm/yyyy" style="text-align:center;font-weight:bolder;">
+                <span class="input-group-addon">To</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="text-align:center;font-weight:bolder;">
+            </div>
+        </div>
+
+        <div class="col-md-2 pull-right" style="padding-top:-3px;float:right;width:180px;align-items:flex-end;">
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:2px;font-size:14pt; width:unset;text-align:right">
+                <a onclick="clickRefresh()" class="fa fa-refresh"></a>
+            </div>
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:2px;font-size:14pt; width:unset;text-align:right">
+                <a onclick="clickpara()" class="fa fa-cogs"></a>
+            </div>
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:2px;font-size:14pt; width:unset;text-align:right">
+                <a onclick="clickPrint()" class="fa fa-print"></a>
+            </div>
+            <div class="col-sm-1" style="padding-right:1px;font-family:Tahoma;padding-top:2px;font-size:14pt; width:unset;text-align:right">
+                <a onclick="clickExcel()" class="fa fa-download"></a>
+            </div>
+        </div>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:32px;padding-left:0px;padding-right:0px;">
+        <div id="page-contentgrid">
+            <div class="jqGrid">
+                <table id="list1" class="scroll" cellpadding="0" cellspacing="0"></table>
+                <div id="pager" style="height:34px;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:lightgray;height:34px;color:unset;">
+    <div class="row" style="text-align:center">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+</footer>
+
+<div class="example-modal">
+    <div id="dialog1" class="modal modal-primary">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="Dialog">
+                @Html.Partial("Parameter")
+            </div>
+        </div>
+    </div>
+</div>
+<input type="hidden" id="hdngrp" />
+@Html.HiddenFor(x => x.sidx, new { @id = "hdnsidx" })
+
+@* -- End of Code --
+   Code Auto Generated on Sun 27-Jan-2019 10:38 AM, Engine: oorooX9Design, ver: 15.0 Revision: 0
+   by Team ooroo, ooroobooks ver. ERPiX9 *@

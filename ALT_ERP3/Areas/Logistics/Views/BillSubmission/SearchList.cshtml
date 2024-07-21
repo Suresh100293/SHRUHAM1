@@ -1,0 +1,124 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.BillSubmissionVM
+@{
+    Layout = null;
+}
+
+<style>
+    /*input[type=text] {
+        color: black !important;
+    }
+
+    .span6 {
+        display: none !important;
+    }*/
+</style>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        
+        
+        $('#Searchexample1 > tbody  > tr').dblclick(function () {
+            var Row = $(this).closest('tr');
+            var BiiType = Row.find('td:eq(3)').text();
+            var BiiNo = Row.find('td:eq(1)').text();
+            var BillDetail = {
+                BillNo: Row.find('td:eq(1)').text(),
+                PartyParent: Row.find('td:eq(5)').text(),
+                BillParty: Row.find('td:eq(7)').text(),
+                BillTableKey: Row.find('td:eq(10)').text()
+            };
+            var ModelData = {};
+            ModelData["Mode"] = 'Add';
+            ModelData["BillDetail"] = BillDetail;
+            ModelData["Party"] = $("#Party").val();
+            ModelData["SendBillController"] = '@Model.SendBillController';
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddEditSelectedLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage1').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message)
+                        return;
+                    }
+
+                    $('#addnewbill').modal('hide');
+                    $('#BillListDiv').html(data.Html);
+                    $('#SearchBillNo').html("");
+                    $('#SearchBillNo').focus();
+                    AlertNoteMaster(BiiNo, BiiType);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });
+
+
+</script>
+
+<div class="container-fluid" style="margin-top:8px;margin-left:-5px;">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            <h4 class="modal-title">@Model.Mode Record</h4>
+        </div>
+        <div class="modal-body">
+            <table id="Searchexample1" class="zui-tableww" style="width:100%;text-align: center;">
+                <thead style="background-color:#3ccf9d;">
+                    <tr>
+                        <td style="border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">Srno</td>
+                        <td style="border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">Bill No</td>
+                        <td style="border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">Bill Type</td>
+                        <td style="border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">Bill Party Head</td>
+                        <td style="border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">Bill Party</td>
+                        <td style="border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">Amount</td>
+                    </tr>
+                </thead>
+                <tbody style="background-color: #bfa27d !important;">
+                    @{
+                        int i = 1;
+                        foreach (var item in Model.BillDetails)
+                        {
+                            <tr id="@item.BillNo">
+                                <td style="vertical-align:inherit;width:1%;">@i</td>
+                                <td style="vertical-align:inherit;width:1%;">@item.BillNo</td>
+                                <td style="vertical-align:inherit;width:1%;">@item.BillTypeName</td>
+                                <td class="hidden" style="width:1%">@item.BillType</td>
+                                <td style="vertical-align:inherit;width:1%;">@item.PartyParentName</td>
+                                <td class="hidden" style="width:1%">@item.PartyParent</td>
+                                <td style="vertical-align:inherit;width:1%;">@item.BillPartyName</td>
+                                <td class="hidden" style="width:1%">@item.BillParty</td>
+                                <td style="vertical-align:inherit;width:1%;">@item.Amount</td>
+                                <td class="hidden tmpindex" style="width:1%">@i</td>
+                                <td class="hidden" style="width:1%">@item.BillTableKey</td>
+                            </tr>
+                            i += 1;
+                        }
+                    }
+                </tbody>
+            </table>
+            
+        </div>
+    </div>
+    @*<div class="modal-footer" style="background-color:#cccccc">
+            @if (Model.Mode == "Add")
+            {
+                <button type="button" class="btn btn-success" id="btnAddSave">Save</button>
+            }
+            <button type="button" class="btn btn-danger" data-dismiss="modal" id="btnAddSaveCancel">Close</button>
+        </div>*@
+</div>
+

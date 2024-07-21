@@ -1,0 +1,271 @@
+﻿@model GridOption
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        $('#ewaydoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        })
+        $("#ewaydoc").modal("hide");
+
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $("#viewcode").val('@Model.ViewDataId');
+        $("#hdnformatname").val('@Model.ViewDataId');
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+
+        $('#btnExcel').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&mWhat=XLS', '_blank');
+        });
+
+        $('#btnPrint').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId'+ '&mWhat=PDF', '_blank');
+        });
+
+        $('#btnPDF').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetJSON")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId', '_blank');
+        });
+
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+            $('#gsteway').jqGrid('clearGridData');
+            $("#gsteway").jqGrid("GridUnload");
+            $('#gsteway').trigger('reloadGrid');
+            GridReload();
+        });
+
+        $('#gsteway').jqGrid('clearGridData');
+        $("#gsteway").jqGrid("GridUnload");
+        $('#gsteway').trigger('reloadGrid');
+        //GridReload();
+
+
+    });
+
+    function OpenModelEway(Value) {
+        var url = '@Url.Action("EwayBillReParam")';
+        var ModelData = {};
+        ModelData["Document"] = Value;
+        var DTO = { Model: ModelData };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                var AttachDoc = $("#EwayDoc");
+                AttachDoc.html('');
+                AttachDoc.html(data.Html);
+                $('#ewaydoc').modal('show');
+            },
+        });
+    }
+
+    function GridReload() {
+        event.preventDefault();
+        var ColName, Coldata;
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId';
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId';
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert(Message);
+            }
+        });
+
+        function CreateGridData() {
+            $('#gsteway').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                mtype: 'POST',
+                colNames: ColName,
+                colModel: Coldata,
+                pager: $('#pager'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],//, 15, 20, 50, 100],
+                height: $(window).height() - 131 - 38 - 41,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    //var myGrid = $('#gsteway');
+                    //var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                    //if (flagVal == "L") {
+                    //    location.href = "Ledgers/Index?Document=" + cellVal + "&ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    //} else {
+                    //    location.href = "AcDisplay/Index?Document=" + cellVal + "&ViewDataId=AcDisplay&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Schedules&Controller2=AcDisplay&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    //}
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+
+                    $("button").click(function (event)
+                    {
+                        debugger;
+                        event.preventDefault();
+                        var btnname = this.id;
+                        var curRowId = this.value;
+                        var btntype = btnname.replace(/[0-9]/g, "");
+
+
+                        switch (btntype)
+                        {
+                            case "btnGenEway":
+                                OpenModelEway(curRowId);
+                                break;
+                            case "btnActivity":
+                                location.href = "/Logistics/" + '@ViewBag.Controller2' + "/Index1?Document=" + encodeURIComponent(cellVal) + "&TableName=" + '@ViewBag.Table' + "&MainType=" + '@ViewBag.MainType' + "&Mode=Activity&Header=" + '@ViewBag.Header' + "&ViewDataId=" + '@ViewBag.id' + '&Controller2=' + '@ViewBag.Controller2' + '&Module=' + '@ViewBag.Module' + '&optiontype=' + '@ViewBag.optiontype' + '&optioncode=' + '@ViewBag.optioncode';
+                                break;
+                            case "btnForceActivity":
+                                CheckNextRouteActivity(curRowId);
+                                break;
+                            case "btnClear":
+                                checkLastBranchOrNot(curRowId);
+                                break;
+                            case "FMAttach":
+                                FMAttachment(curRowId);
+                                break;
+                        }
+                    });
+                    $('.spinner').hide();
+                    $('#pager').height = 5;
+
+                },
+            });
+            jQuery("#gsteway").jqGrid('navGrid', "#pager",
+                { edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#gsteway").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+    }
+</script>
+<style>
+
+
+
+    .button {
+        padding: 3px 10px;
+        font-size: 10pt;
+        text-align: center;
+        cursor: pointer;
+        outline: none;
+        color: #fff;
+        background-color: #04AA6D;
+        border: none;
+        border-radius: 15px;
+        box-shadow: 0 3px #999;
+    }
+
+        .button:hover {
+            background-color: #dd4a68
+        }
+
+        .button:active {
+            background-color: #3e8e41;
+            box-shadow: 0 3px #666;
+            transform: translateY(4px);
+        }
+</style>
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <div class="col-md-5" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        <div class="col-md-4 pull-right" style="padding-right:unset;display:flex;">
+            <div class="col-md-1" style="padding-left:6px;font-family:Tahoma;padding-top:5px;font-size:9pt; width:unset;">
+                Period:
+            </div>
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+                <span class="input-group-addon">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-weight:bolder;text-align:center;">
+            </div>
+            <button class="btn btn-info" style="font-size:10pt;padding:3px 10px;height:27px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i></button>
+        </div>
+        @*<div class="col-md-3 pull-right" style="padding-top:-3px;float:right;align-items:flex-end;">
+            <button class="btn btn-info" style="font-size:10pt;padding:3px 3px;width:27px;height:27px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i></button>
+            <button class="btn btn-success" style="font-size:10pt;padding:3px 3px;width:27px;height:27px;" id="btnExcel" title='Excel'><i class="fa fa-file-text-o"></i></button>
+            <button class="btn btn-warning" style="width:115px;font-size:10pt;padding:3px 3px;" id="btnPDF">Download JSON</button>
+            <button class="btn btn-warning" style="font-size:10pt;padding:3px 3px;width:27px;height:27px;" id="btnPrint" title='Print'><i class="fa fa-print"></i></button>
+        </div>*@
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:3%;height:auto;padding-left:0px;padding-right:0px;">
+        <div id="page-contentgrid">
+            <div class="jqGrid">
+                <table id="gsteway" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                <div id="pager" style="height:32px;"></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>
+
+<div class="example-modal">
+    <div id="ewaydoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="EwayDoc">
+            </div>
+        </div>
+    </div>
+</div>

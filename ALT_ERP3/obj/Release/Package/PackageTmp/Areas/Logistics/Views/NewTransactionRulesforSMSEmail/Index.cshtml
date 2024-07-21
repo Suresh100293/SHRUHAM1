@@ -1,0 +1,233 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.NewTransactionSMSModel
+@using Common;
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<link href="~/Content/ToogleCreate/CreateTgl.css" rel="stylesheet" />
+<script src="~/Content/ToogleCreate/CreateTgl.js"></script>
+<script>
+    $(document).ready(function () {
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        var mheight = $(window).innerHeight() - 175;
+        $('#TransactionTypesdiv').height(mheight-30);
+        $('#dynamic-table').height(mheight - 200);
+        $('#MessageRulesdiv').height(mheight - 12);
+        loadSearchList()
+
+        $('.btntabledatapick1').change(function () {
+            debugger;
+            if (this.checked) {
+                $('#tabledatapick1').hide();
+
+            } else {
+                $('#tabledatapick1').show();
+
+            }
+        });
+        $('.btntabledatapick2').change(function () {
+            debugger;
+            if (this.checked) {
+                $('#tabledatapick2').hide();
+
+            } else {
+                $('#tabledatapick2').show();
+
+            }
+        });
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            $('.spinner').show();
+            var myTableArray1 = [];
+            var selected = "";
+            $(".addontxtfvalue input:checked").each(function () {
+                selected = selected + $(this).val() + ",";
+            })
+
+            var myTableArray = [];
+            $('#tabledatapick1 tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    MessageRules_Code: tds.find("input[id='MessageRules_Code']").val(),
+                    MessageRules_xAdd: tds.find("input[id='MessageRules_xAdd']").is(':checked'),
+                    MessageRules_xEdit: tds.find("input[id='MessageRules_xEdit']").is(':checked'),
+                    MessageRules_xDelete: tds.find("input[id='MessageRules_xDelete']").is(':checked'),
+                    MessageRules_xPrint: tds.find("input[id='MessageRules_xPrint']").is(':checked'),
+                    MessageRules_xBackDated: tds.find("input[id='MessageRules_xBackDated']").is(':checked'),
+                    MessageRules_SendEmail: tds.find("input[id='MessageRules_SendEmail']").is(':checked'),
+                    MessageRules_SendSMS: tds.find("input[id='MessageRules_SendSMS']").is(':checked'),
+                    MessageRules_SendMSG: tds.find("input[id='MessageRules_SendMSG']").is(':checked'),
+                    MessageRules_LimitAmount: tds.find("input[id='MessageRules_LimitAmount']").val()
+                }
+                myTableArray.push(myDets);
+            })
+
+
+
+            $('#tabledatapick2 tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    PartyId: tds.eq(1).text(),
+                    SendEmail: tds.find("input[id='SendEmail']").is(':checked'),
+                    SendSMS: tds.find("input[id='SendSMS']").is(':checked'),
+                    SendSalesMan: tds.find("input[id='SendSalesMan']").is(':checked'),
+                    SendBroker: tds.find("input[id='SendBroker']").is(':checked'),
+                    SendUser: tds.find("input[id='SendUser']").is(':checked'),
+                    SendCheckBlank: tds.find("input[id='SendCheckBlank']").is(':checked'),
+
+                }
+                myTableArray1.push(myDets);
+            })
+            var ModelData = {};
+            ModelData["mRightList"] = myTableArray1;
+            ModelData["mRightUList"] = myTableArray;
+            ModelData["Type"] = $("#Type").val();
+            ModelData["SMSTemplate"] = $("#SMSTemplate").val();
+            ModelData["EmailTemplate"] = $("#EmailTemplate").val();
+            ModelData["Users"] = selected;
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveData")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                success: function (data) {
+                    $('.spinner').hide();
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });
+
+    function myFunction() {
+        var ModelData = {};
+        ModelData["SearchContent"] = $('#myInput').val();
+        ModelData["SearchBy"] = $('#SearchBy').val();
+        var DTO = { mModel: ModelData };
+        var url = '@Url.Action("GetLeftGrid")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#TransactionTypesdiv').html(data.Html);
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("error occured while processing your request.");
+            }
+        });
+    }
+
+    function loadSearchList() {
+        var url = '@Url.Action("GetSearchList")'
+        $.ajax({
+            type: "GET",
+            dataType: "json",
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#SearchBy").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+
+                $('.spinner').hide();
+            },
+
+            error: function () {
+                $('.spinner').hide();
+                alert("An error occurred while processing the request.");
+            }
+        });
+    }
+
+
+</script>
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt" id="headercaption">Transaction SMS/E-Mail Rules</b>
+        <span class="tools pull-right">
+            <a href="~/ControlPanel/AdminDashBoard" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="padding-left:0px;">
+        <form class="form-horizontal" id="MessageRulesFrm" role="form" style="margin-top:0%;margin-left:0px">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            <div class="panel-body" style="min-height:375px;max-height:375px;padding-top:0px;">
+                <div class="col-sm-4" style="border-right:solid;overflow:scroll;">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" style="font-size: 15px;font-weight:bolder;">Types:</label>
+                        <label class="col-sm-1 control-label">Search:</label>
+                        <div class="col-sm-3">
+                            @Html.DropDownListFor(m => m.SearchBy, DropdownHelper.EmptyList(), new { @class = "form-control", @Id = "SearchBy", @Name = "SearchBy" })
+                        </div>
+                        <div class="col-sm-3">
+                            <input type="text" style="height:28px;font-weight:bolder;" id="myInput" onkeyup="myFunction()" placeholder="Search..">
+                        </div>
+                    </div>
+                    <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                        Transaction Types:
+                    </b>
+                    <div id="TransactionTypesdiv" style="min-height:490px;overflow:scroll">
+                        @Html.Partial("PartialTypeView")
+                    </div>
+                </div>
+                <div class="col-sm-8" style="overflow:scroll;">
+                    <div class="form-group">
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-2">
+                            <b class="CodeSt" style="font-size:15px;font-weight:bolder;">
+                                Rules:
+                            </b>
+                        </div>
+                        <div class="col-sm-3">
+                            @Html.TextBoxFor(x => x.Type, new { @id = "Type", @Name = "Type", @style = "font-size:14px;font-weight:bolder;", @class = "form-control", @disabled = "disabled" })
+                        </div>
+                    </div>
+                    <div id="MessageRulesdiv" style="min-height:360px;">
+                        @Html.Partial("TransactionMessageRulesPartial")
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-4"></div>
+        <div class="col-sm-4" style="text-align:center;margin-top:4px;color:white;font-family:Tahoma;">
+            T.FAT ERP-iX9 by Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4" style="padding-right:15px;">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size:13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/ControlPanel/AdminDashBoard" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>

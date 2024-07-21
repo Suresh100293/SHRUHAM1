@@ -1,0 +1,242 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.AccountOpeningVM
+@using Common
+<script>
+    $(document).ready(function () {
+
+
+        //loadCostCentre()
+        loadbranch();
+        
+        $("#CostBranch").change(function (event) {
+            CheckBranch();
+        });
+        $("#btnAddCCSave").click(function (event) {
+            event.preventDefault();
+            //if ($('#CostCentre').val() == '' || $('#CostCentre').val() == null) {
+            //    alert('Select Cost Centre')
+            //    return;
+            //}
+            if ($('#aAmount').val() == '0') {
+                alert('Enter Amount')
+                return;
+            }
+            if ($("input[name=addAmtType]:checked").val() == '' ||$("input[name=addAmtType]:checked").val() ==null ) {
+                alert('Select Debit/Credit')
+                return;
+            }
+            if ($("#CostBranch").val() == '' || $("#CostBranch").val() == null) {
+                alert('Select Branch')
+                return;
+            }
+            var ModelData = {};
+            ModelData["CostBranch"] = $('#CostBranch').val();
+            //ModelData["CostCentre"] = $('#CostCentre').val();
+            ModelData["Amount"] = $('#aAmount').val();
+            ModelData["SessionFlag"] = $('#hdnCCSessionFlag').val();
+            ModelData["addAmtType"] = $("input[name=addAmtType]:checked").val();
+            ModelData["tEmpID"] = $('#hdnCCtEmpID').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddEditSelectedCC")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage1').hide();
+                    $('#addnewccentre').modal('hide');
+                    $('#divLedgerTable2').html(data.Html);
+                    $('#Amount').val(data.Amount);
+                    if (data.AmtType == "Debit") {
+                        $('input:radio[name="AmtType"]').filter('[value="Debit"]').attr('checked', true);
+                    }
+                    if (data.AmtType == "Credit") {
+                        $('input:radio[name="AmtType"]').filter('[value="Credit"]').attr('checked', true);
+                    }
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+
+
+    })
+
+    function loadCostCentre() {
+        var url = '@Url.Action("GetCostCentre")';
+        $('#CostCentre').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CostCentre', text: '@Model.CostCentreName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+    function loadbranch() {
+        var url = '@Url.Action("GetBranchOpening")';
+        $('#CostBranch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.CostBranch', text: '@Model.CostBranchN' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function CheckBranch() {
+        var ModelData = {};
+        ModelData["CostBranch"] = $('#CostBranch').val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetExistingCostCenter")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    if (data.Status == "Error") {
+                        alert(data.Message)
+                        $('#CostBranch').select2('data', { id: '', text: '' });
+                        return;
+                    }
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+    }
+</script>
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title">@Model.SessionFlag Record</h4>
+    </div>
+    <div class="modal-body">
+        <div class="form-horizontal" id="ProListupdate">
+            <div class="form-group">
+                @*<div class="col-sm-2 control-label">Cost Centre</div>
+                    <div class="col-sm-3">
+                        @Html.TextBoxFor(x => x.CostCentre, new { @class = "input-large-query", @id = "CostCentre", @Name = "CostCentre", @style = "width:100%" })
+                    </div>*@
+                <label class="col-sm-2 control-label">Branch:<span class="red">*</span></label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.CostBranch, new { @class = "input-large-query", @style = "width:99%;margin-top:2px;height:25px;", @Name = "CostBranch", @Id = "CostBranch", @value = Model.CostBranch })
+                </div>
+                <div class="col-sm-2 control-label">Amount</div>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Amount, new { @class = "form-control", @id = "aAmount", @Name = "aAmount", @style = "width:100%;text-align:right" })
+                </div>
+                <div class="form-group" id="addccradio">
+
+                    <div class="col-sm-1 control-label" style="padding-top:0px;">
+                        Debit:  @Html.RadioButtonFor(x => x.addAmtType, "Debit", new { @style = "padding-left:0px;width:20px;height:20px;" })
+                    </div>
+
+                    <div class="col-sm-1 control-label" style="padding-top:0px;">
+                        Credit: @Html.RadioButtonFor(x => x.addAmtType, "Credit", new { @style = "padding-left:0px;width:20px;height:20px;" })
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc">
+        <button type="button" class="btn btn-success" id="btnAddCCSave">Save</button>
+        <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+    </div>
+</div>
+@Html.HiddenFor(x => x.SessionFlag, new { @Id = "hdnCCSessionFlag" })
+@Html.HiddenFor(x => x.tEmpID, new { @Id = "hdnCCtEmpID" })

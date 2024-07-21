@@ -1,0 +1,292 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.TripSheetVM
+@using Common
+
+<style>
+    .fixTableHead {
+        overflow-y: auto;
+        height: 365px !important;
+    }
+
+        .fixTableHead thead th {
+            position: sticky;
+            top: 0;
+        }
+</style>
+
+<div class="fixTableHead" id="SelectedledgerTable" style="max-height:365px;min-height:365px; width: auto; overflow: auto;">
+
+    <center>
+        <table id="" class="zui-table" style="border-color:gray;width:72%;">
+            <thead>
+                <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Trip Charges</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">KM Expenses</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Other Expenses</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Other Deduction</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Cost Center</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Net Amount</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#eb965a,#c5bbdd);">Debit Adv. Adjust</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#eb965a,#c5bbdd);">Credit Bal. Adjust</th>
+                    @*<th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Trip Charges</th>*@
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#eb965a,#c5bbdd);">TDS</th>
+                    <th style="width: 8%;vertical-align:inherit;background: linear-gradient(#eb965a,#c5bbdd);">Trip Bal.</th>
+                    
+                </tr>
+            </thead>
+            <tbody>
+                @{
+
+                    decimal TotalNetAmount = 0, TotalTripAMt = 0, TotExpensesAmt = 0, TotalDeductionAMt = 0, TotalAdvAMt = 0,TotalBalAmt = 0, TotalCCAMt = 0, BillBal = 0;
+                <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;text-align: center;" id="TotalRow">
+                    @if (Model.fMMasters != null)
+                    {
+                        foreach (var item in @Model.fMMasters.ToList())
+                        {
+                            TotalTripAMt += item.Total;
+                            TotalNetAmount += item.Total;
+                        }
+                        <td>@TotalTripAMt</td>
+                    }
+                    else
+                    {
+                        <td>0</td>
+                    }
+
+                    @if (Model.TripChrgKMExp != 0)
+                    {
+
+                        TotalNetAmount += Model.TripChrgKMExp;
+
+                        <td>@Model.TripChrgKMExp</td>
+                    }
+                    else
+                    {
+                        <td>0</td>
+                    }
+
+                    @if (Model.expenseslist != null)
+                    {
+                        foreach (var item in @Model.expenseslist.ToList())
+                        {
+                            TotExpensesAmt += item.Amount;
+                            TotalNetAmount += item.Amount;
+                        }
+                        <td>@TotExpensesAmt</td>
+                    }
+                    else
+                    {
+                        <td>0</td>
+                    }
+
+                    @if (Model.deductionlist != null)
+                    {
+                        foreach (var item in @Model.deductionlist.ToList())
+                        {
+                            TotalDeductionAMt += item.Amount;
+                            TotalNetAmount -= item.Amount;
+                        }
+                        <td>@TotalDeductionAMt</td>
+                    }
+                    else
+                    {
+                        <td>0</td>
+                    }
+
+                    @if (Model.CCledgers != null)
+                    {
+                        foreach (var item in @Model.CCledgers.Where(x => x.Reminder == true).ToList())
+                        {
+                            TotalCCAMt += item.Debit.Value;
+                            TotalNetAmount -= item.Debit.Value;
+                        }
+                        <td>@TotalCCAMt</td>
+                    }
+                    else
+                    {
+                        <td>0</td>
+                    }
+                    <td>@TotalNetAmount </td>
+
+                    @if (Model.Advledgers != null)
+                    {
+                        foreach (var item in @Model.Advledgers.ToList())
+                        {
+                            TotalAdvAMt += item.Debit.Value;
+                            TotalNetAmount -= item.Debit.Value;
+                        }
+                        <td>@TotalAdvAMt</td>
+                    }
+                    else
+                    {
+                        <td>0</td>
+                    }
+
+                    @if (Model.Balledgers != null)
+                    {
+                        foreach (var item in @Model.Balledgers.ToList())
+                        {
+                            TotalBalAmt += item.Credit.Value;
+                            TotalNetAmount += item.Credit.Value;
+                        }
+                        <td>@TotalBalAmt</td>
+                    }
+                    else
+                    {
+                        <td>0</td>
+                    }
+
+                    <td>@Model.TDSAmt</td>
+
+                    @{
+                        BillBal = TotalNetAmount - @Model.TDSAmt;
+                        <td>@BillBal</td>
+                    }
+                </tr>
+                }
+
+            </tbody>
+
+        </table>
+    </center>
+    <br />
+    @*@if (Model.FMOrNOt == false)*@
+    @{
+        <center>
+            <table id="" class="zui-table" style="border-color:gray;width:40%;">
+                <thead>
+                    <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Total Diesel(Declare)</th>
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Use Diesel</th>
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Difference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        decimal TotalDiesel = 0, TotalUseDiesel = 0, CalculateDiesel = 0;
+                        <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;text-align: center;" id="TotalRow">
+                            @if (Model.fMMasters != null)
+                            {
+                                foreach (var item in @Model.fMMasters.ToList())
+                                {
+                                    TotalDiesel += Convert.ToDecimal(item.DieselLtr);
+                                }
+                                if (Model.CCledgers != null)
+                                {
+                                    foreach (var item in @Model.CCledgers.ToList())
+                                    {
+                                        TotalDiesel += Convert.ToDecimal(item.AUTHIDS);
+                                    }
+                                }
+                                <td>@TotalDiesel</td>
+                            }
+                            else
+                            {
+                                <td>0</td>
+                            }
+
+                            @if (Model.CCledgers != null)
+                            {
+                                foreach (var item in @Model.CCledgers.ToList())
+                                {
+                                    TotalUseDiesel += Convert.ToDecimal(item.RefDoc);
+                                }
+                                <td>@TotalUseDiesel</td>
+                            }
+                            else
+                            {
+                                <td>0</td>
+                            }
+
+                            @{
+                                CalculateDiesel = TotalDiesel - TotalUseDiesel;
+                                <td>@CalculateDiesel</td>
+                            }
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+        </center>
+    }
+    <br />
+    @*@if (Model.FMOrNOt == true)*@
+    @{
+        <center>
+            <table id="" class="zui-table" style="border-color:gray;width:40%;">
+                <thead>
+                    <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Chargeable KM</th>
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Schedule KM</th>
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Difference</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        /**/
+
+                        decimal ScheduleKM = 0, Difference = 0, ChargeableKM = 0;
+                        <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;text-align: center;" id="TotalRow">
+
+                            @{
+                                ChargeableKM = Convert.ToDecimal(Model.RunningKM);
+                                <td>@ChargeableKM.ToString("F2")</td>
+                            }
+
+                            @if (Model.fMMasters != null)
+                            {
+                                foreach (var item in @Model.fMMasters.ToList())
+                                {
+                                    ScheduleKM += Convert.ToDecimal(item.RunningKM);
+                                }
+                                <td>@ScheduleKM</td>
+                            }
+                            else
+                            {
+                                <td>0</td>
+                            }
+
+                            @{
+                                Difference = Convert.ToDecimal(Model.RunningKM) - ScheduleKM;
+                                <td>@Difference.ToString("F2")</td>
+                            }
+
+                        </tr>
+                    }
+
+                </tbody>
+
+            </table>
+        </center>
+    }
+    <br />
+
+    @if (Model.ShowSummary == true)
+    {
+        @*<center>
+            <table id="" class="zui-table" style="border-color:gray;width:40%;">
+                <thead>
+                    <tr role="row" style="font-family:Tahoma;font-size:9pt;">
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Driver Trip Opening.</th>
+                        <th style="width: 15%;vertical-align:inherit;background: linear-gradient(#2cdee6,#b95656);">Driver Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{
+                        decimal DriverBal = 0;
+                        <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;text-align: center;" id="TotalRow">
+
+                            <td>@Model.DriverOpening.ToString("F2")</td>
+                            @{
+                                DriverBal = TotalNetAmount - @Model.TDSAmt + Convert.ToDecimal(@Model.DriverOpening);
+                                <td>@DriverBal.ToString("F2")</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </center>*@
+    }
+    <br />
+</div>

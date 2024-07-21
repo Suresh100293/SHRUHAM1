@@ -1,0 +1,666 @@
+﻿@model GridOption
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+
+<script type="text/javascript">
+    var mmain = "@Model.MainType";
+    $(document).ready(function () {
+        //ShowHideCL();
+        document.getElementById("headerdiv").style.backgroundColor = '@Session["headerdivcolor"]';
+        document.getElementById("headercaption").style.color = '@Session["headercaptioncolor"]';
+        document.getElementById("fixedbottom").style.backgroundColor = '@Session["bottomcolor"]';
+        $('#Fromdate').val('@Model.FromDate');
+        $('#ToDate').val('@Model.ToDate');
+        $("#viewcode").val('@Model.ViewDataId');
+        $("#hdnformatname").val('@Model.ViewDataId');
+        LoadLocation();
+        LoadBranch();
+        $('#isbranch').prop("checked", true);
+        $('#branch').prop("disabled", false);
+        ShowHideCL();
+
+        @*$('#btnExcel').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDF")?mWhat=XLS&Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&LocationCode=' + $("#locations").val(), '_blank');
+        });*@
+
+        @*$('#btnPrint').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDF")?mWhat='PDF' + '&Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId', '_blank');
+        });*@
+
+        @*$('#btnPDF').click(function () {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var sUrlpath = window.open('@Url.Action("GetPDF")?mWhat=PDF&Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&LocationCode=' + $("#locations").val(), '_blank');
+        });*@
+
+        $('#iswarehouse').click(function () {
+            if ($('#iswarehouse').is(':checked')) {
+                $('#locations').prop("disabled", false);
+            } else {
+                $('#locations').prop("disabled", true);
+            }
+        });
+
+        $('#isbranch').click(function () {
+            if ($('#isbranch').is(':checked')) {
+                $('#branch').prop("disabled", false);
+            } else {
+                $("#branch").val(null).trigger("change");
+                $('#branch').prop("disabled", true);
+            }
+            ShowHideCL();
+        });
+
+        $('#reporttype').change(function () {
+            ShowHideCL();
+        });
+
+        //$('#btnRefresh').click(function (event) {
+        //    event.preventDefault();
+        //    $('#balancesheet').jqGrid('clearGridData');
+        //    $("#balancesheet").jqGrid("GridUnload");
+        //    $('#balancesheet').trigger('reloadGrid');
+        //    GridReload();
+        //});
+
+        $('#locations').change(function (event) {
+            event.preventDefault();
+            RefreshReport()
+        });
+
+        //$('#branch').change(function (event) {
+        //    event.preventDefault();
+        //    RefreshReport()
+        //});
+
+        $('#btnRefresh').click(function (event) {
+            event.preventDefault();
+            RefreshReport()
+        });
+
+        //$('#balancesheet').jqGrid('clearGridData');
+        //$("#balancesheet").jqGrid("GridUnload");
+        //$('#balancesheet').trigger('reloadGrid');
+        //GridReload();
+    });
+
+    function ShowHideCL() {
+        if ($('#isbranch').is(':checked') == false || $('#reporttype').val() == 'monthly' || $('#reporttype').val() == 'monthlyplus' || $('#reporttype').val() == 'branch' || $('#reporttype').val() == 'branchplus') {
+            $('#closingstock').hide();
+            $('#btncalculate').hide();
+            $('#cllabel').hide();
+        } else {
+            $('#closingstock').show();
+            $('#btncalculate').show();
+            $('#cllabel').show();
+        }
+    };
+
+    function btncalculate() {
+        var mlocation, mbranch;
+        if ($('#iswarehouse').is(':checked')) {
+            mlocation = $("#locations").val();
+        } else {
+            mlocation = 0;
+        }
+        if ($('#isbranch').is(':checked')) {
+            mbranch = $("#branch").val();
+        } else {
+            mbranch = '';
+        }
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        $('.spinner').show();
+        $.ajax({
+            url: '@Url.Action("GetClosingStock")?mlocation=' + mlocation + "&mbranch=" + mbranch + "&mdate=" + mDate,
+            data: [],
+            success: function (result) {
+                $('.spinner').hide();
+                $('#closingstock').val(result.data);
+            }
+        });
+    };
+
+    function RefreshReport() {
+        $('#balancesheet').jqGrid('clearGridData');
+        $("#balancesheet").jqGrid("GridUnload");
+        $('#balancesheet').trigger('reloadGrid');
+        GridReload();
+    }
+
+    // reportprintoptions
+    function clickPrint() {
+        // to pass local parameters use hdnparastring..e.g. locationcode is passed to gridoption Model in GetPdf at controller.
+        var mmain = "@Model.MainType";
+        var mm = mmain;
+        if ($('#reporttype').val() == "stdplus" || $('#reporttype').val() == "monthlyplus" || $('#reporttype').val() == "teeplus") {
+            mm = mmain + "L";
+        }
+        $("#hdnparastring").val("&LocationCode=" + $("#locations").val() + "&MainType=" + mm + "&Branch=" + $("#branch").val() + "&THead=" + $("#reporttype").val() + "&IsHidden=" + $("#issuppress").is(":checked") + "&Closing=" + $("#closingstock").val());
+        $('#dialogprint').modal('show');
+    };
+
+    // reportprintoptions
+    function GetEmail() {
+        $.ajax({
+            url: "/Base/GetEmail",
+            data: {
+                mcode: $('#Account').val()
+            },
+            success: function( result ) {
+            $('#emailid').val(result.data);
+            }
+        });
+    }
+
+    function LoadLocation() {
+        var url = '@Url.Action("GetLocations")';
+        $('#locations').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Text, id: item.Value }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                @*var data = { id: '@ViewBag.ViewDataId', text: '@ViewBag.ViewDataId' };
+                callback(data);*@
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadBranch() {
+        var url = '@Url.Action("GetBranch")';
+        $('#branch').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return { text: item.Text, id: item.Value }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Branch', text: '@Model.BranchName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function GridReload() {
+        event.preventDefault();
+        // reportprintoptions
+        GetEmail();
+        var ColName, Coldata;
+        var mlocation,mbranch;
+        if ($('#iswarehouse').is(':checked')) {
+            mlocation = $("#locations").val();
+        } else {
+            mlocation = 0;
+        }
+        if ($('#isbranch').is(':checked')) {
+            mbranch = $("#branch").val();
+        } else {
+            mbranch = '';
+        }
+        var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+        var sPathUrl = '@Url.Action("GetGridStructureRecords")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&THead=' + $('#reporttype').val() + '&IsHidden=' + $('#issuppress').is(':checked');
+        var sUrlpath = '@Url.Action("GetGridData")?Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId' + '&LocationCode=' + mlocation + '&Branch=' + mbranch + '&THead=' + $('#reporttype').val() + '&IsHidden=' + $('#issuppress').is(':checked') + '&Closing=' + $('#closingstock').val();
+        $.ajax({
+            url: sPathUrl,
+            type: "POST",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            success: function (data) {
+                var obj = $.parseJSON(data);
+                ColName = obj[0].split(",");
+                Coldata = obj[1];
+                CreateGridData();
+                $('.spinner').hide();
+                ////////// merged column heading - this works good but backcolor is not ok
+                ////////jQuery("#balancesheet").jqGrid('setGroupHeaders', {
+                ////////    useColSpanStyle: false,
+                ////////    groupHeaders: [
+                ////////        {
+                ////////            startColumnName: 'Opening (Dr)',
+                ////////            numberOfColumns: 2,
+                ////////            titleText: '<em>Opening</em>'
+                ////////        },
+                ////////    ]
+                ////////});
+                ////////for (var i = 0; i <= mydata.length; i++)
+                ////////    jQuery("#grid").jqGrid('addRowData', i + 1, mydata[i]);
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert(Message);
+            }
+        });
+
+        function CreateGridData() {
+            $('#balancesheet').jqGrid({
+                url: sUrlpath,
+                datatype: 'json',
+                contentType: "application/json; charset=utf-8",
+                cellEdit: false,
+                mtype: 'POST',
+                //sortable: true,
+                colNames: ColName,
+                colModel: Coldata,
+                //pager: $('#pager'),
+                rowNum: 3000,
+                rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],//, 15, 20, 50, 100],
+                //sortname: 'Ledger.Docdate',
+                height: $(window).height() - 111 - 84 ,/*38 for search panel*/
+                //height: $(window).height() - 111 - 38 - 41,
+                frozen: false,
+                sortorder: 'asc',
+                gridview: true,
+                viewrecords: true,
+                scroll: false,
+                autoencode: true,
+                search: true,
+                recordtext: "View {0} - {1} of <span style='font-weight:bold;font-size: 13px;'>{2}</span>",
+                ondblClickRow: function (id) {
+                    event.preventDefault();
+                    var myGrid = $('#balancesheet');
+                    var flagVal = myGrid.jqGrid('getCell', id, 'Flag');
+                    var cellVal = myGrid.jqGrid('getCell', id, 'Code');
+                    if (flagVal == "L") {
+                        window.open("Ledgers/Index?Document=" + cellVal + "&ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&LocationCode=' + $("#locations").val() + '&Branch=' + $("#branch").val(), '_blank');
+                        //location.href = "Ledgers/Index?Document=" + cellVal + "&ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    } else {
+                        window.open("AccountSchedules/Index?Document=" + cellVal + "&ViewDataId=AcDisplay&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Schedules&Controller2=AcDisplay&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&LocationCode=' + $("#locations").val() + '&Branch=' + $("#branch").val(), '_blank');
+                        //location.href = "AccountSchedules/Index?Document=" + cellVal + "&ViewDataId=AcDisplay&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Schedules&Controller2=AcDisplay&Fromdate=" + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val();
+                    }
+                    //Reports/Ledgers?ViewDataId=AcLedgerScreen&Module=Finance&optiontype=R&optioncode=Ledgers&Header=Accounts%20Ledger&Controller2=Ledgers
+                },
+                onCellSelect: function (rowid, iCol, cellcontent, e) {
+                //onSelectRow: function (id, status, e) {
+                    e.preventDefault();
+                    $('#subgrid').jqGrid('clearGridData');
+                    $('#subgrid').jqGrid("GridUnload");
+                    $('#subgrid').trigger('reloadGrid');
+                    if ($('#reporttype').val() == "tee" || $('#reporttype').val() == "teeplus") {
+                        var mname = "";
+                        if (iCol < 17) {
+                            gridreloadsub($('#balancesheet').jqGrid('getCell', rowid, 'FlagL') + $('#balancesheet').jqGrid('getCell', rowid, 'CodeL'));
+                            if (mmain == "BS") {
+                                mname = $('#balancesheet').jqGrid('getCell', rowid, 'Liabilities');
+                            } else {
+                                mname = $('#balancesheet').jqGrid('getCell', rowid, 'Expenditure');
+                            }
+                        } else {
+                            gridreloadsub($('#balancesheet').jqGrid('getCell', rowid, 'FlagA') + $('#balancesheet').jqGrid('getCell', rowid, 'CodeA'));
+                            if (mmain == "BS") {
+                                mname = $('#balancesheet').jqGrid('getCell', rowid, 'Assets');
+                            } else {
+                                mname = $('#balancesheet').jqGrid('getCell', rowid, 'Income');
+                            }
+                        }
+                        $('#accountname').html(mname);
+                    } else {
+                        gridreloadsub($('#balancesheet').jqGrid('getCell', rowid, 'Flag') + $('#balancesheet').jqGrid('getCell', rowid, 'Code'));
+                        $('#accountname').html($('#balancesheet').jqGrid('getCell', rowid, 'Name'));
+                    }
+                },
+                beforeRequest: function () {
+                    responsive_jqgridData($(".jqGrid"));
+                },
+                loadComplete: function () {
+                    $('.spinner').hide();
+                    //$('#pager').height = 5;
+                },
+                gridComplete: function () {
+                    $('.spinner').hide();
+                    var mytrxgrid = $('#balancesheet');
+                    var trxrows = $(mytrxgrid).getDataIDs();
+                    for (var i = 0; i < trxrows.length; i++) {
+                        var trxstatus = $(mytrxgrid).getCell(trxrows[i], "_Style");
+                        if (trxstatus == '%boldblack') {
+                            //$(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bold' });
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, 'myboldblack');
+                        }
+                        if (trxstatus == '%boldgray') {
+                            //$(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bold' });
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, 'myboldgray');
+                        }
+                        if (trxstatus == '%blank') {
+                            //doesnt work
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { value: null });
+                        }
+                        if (trxstatus == '%V') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#f6c0f6' });
+                        }
+                        if (trxstatus == '%I') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#a57fc0' });
+                        }
+                        if (trxstatus == '%B') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#9999ff' });
+                        }
+                        if (trxstatus == '%G') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#7fbf7f' });
+                        }
+                        if (trxstatus == '%Y') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#ffff99' });
+                        }
+                        if (trxstatus == '%O') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#ffd27f' });
+                        }
+                        if (trxstatus == '%R') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#ff7f7f' });
+                        }
+                        // foreground red only
+                        if (trxstatus == '%RF') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Red', weightfont: 'bolder' });
+                        }
+                        if (trxstatus == '%E') {
+                            $(mytrxgrid).jqGrid('setRowData', trxrows[i], false, { color: 'Black', weightfont: 'bolder', background: '#bfbfbf' });
+                        }
+                    }
+                },
+            });
+            //jQuery("#balancesheet").jqGrid('navGrid', "#pager",
+                //{ edit: false, add: false, del: false, search: true, refresh: true, searchtext: "filter"});
+            jQuery("#balancesheet").jqGrid("setFrozenColumns");
+        };
+
+        function responsive_jqgridData(jqgrid) {
+            jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid').addClass('ui-widget-content jqgrow ui-row-ltr ui-state-highlight').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+            jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+            jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+            //jqgrid.find('#pager_right').css('width', '180px');
+            jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+            jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-family', 'Tahoma');
+            jqgrid.find('.ui-jqgrid tr.jqgrow').css('font-size', '9pt');
+        };
+
+        // subgrid populate routine
+        function gridreloadsub(mCode) {
+            var ColName, Coldata;
+            var sPathUrl = '@Url.Action("GetSubGridStructureBS")?Document=' + mCode + '&Date=' + mDate + '&ViewDataId=' + '@Model.ViewDataId';
+            var sUrlpath = '@Url.Action("GetSubGridDataBS")?Document=' + mCode + '&Fromdate=' + $('#Fromdate').val() + '&ToDate=' + $('#ToDate').val() + '&Type=' + '@Model.Type' + '&ViewDataId=' + '@Model.ViewDataId' + '&LocationCode=' + $("#locations").val() + '&Branch=' + $("#branch").val();
+            var sidix = "";
+            $.ajax({
+                url: sPathUrl,
+                type: "POST",
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    $('.spinner').show();
+                    var obj = $.parseJSON(data);
+                    ColName = obj[0].split(",");
+                    Coldata = obj[1];
+                    var mvalues = obj[4].split(",");
+                    var mwidth = (($(window).innerWidth() / 4) - 20).toString(); // '250px'
+                    $('.sparkbalances').width = mwidth;
+                    $('.sparkbalances').sparkline(mvalues, { type: 'line', lineColor: 'darkorange', barWidth: '30px', height: '40px', width: mwidth });
+                    CreateGridDataSub();
+                    $('.spinner').hide();
+                },
+                Error: function () {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            });
+
+            function CreateGridDataSub() {
+                $('#subgrid').jqGrid({
+                    url: sUrlpath,
+                    datatype: 'json',
+                    mtype: 'POST',
+                    sortable: true,
+                    colNames: ColName,
+                    colModel: Coldata,
+                    //pager: $('#pager2'),
+                    rowNum: 1000,
+                    rowList: [10, 15, 20, 50, 100, 500, 1000, 5000, 10000],
+                    height: $(window).height() - 111 - 82 - 77 - 22,
+                    sortname: sidix,
+                    frozen: false,
+                    sortorder: 'desc',
+                    gridview: true,
+                    viewrecords: true,
+                    scroll: false,
+                    autoencode: true,
+                    autowidth: false,
+                    shrinkToFit: false,
+                    search: true,
+                    caption: "Transaction Details",
+                    beforeRequest: function () {
+                        responsive_jqgridData($(".jqGrid"));
+                    },
+                    ondblClickRow: function (id) {
+                        event.preventDefault();
+                        var myGrid = $('#subgrid');
+                        var cellVal = myGrid.jqGrid('getCell', id, 'Document');
+                        GetURL(cellVal);
+                        //http://localhost:52070/Transactions/CashBank/Index?Document=HO0000BRC0018000003&Mode=View&ChangeLog=View&ViewDataId=ViewData-Ledger&Header=Bank%20Receipts&Module=Finance&TableName=Ledger&OptionType=T&OptionCode=BankReceipts&Controller2=CashBank
+                    },
+                    loadComplete: function () {
+                        $('.spinner').hide();
+                        //$('#pager').height = 5;
+                    },
+                });
+                //jQuery("#list2").jqGrid('navGrid', "#pager2",
+                //    { edit: false, add: false, del: false, print: false, search: true, refresh: false, searchtext: "Search" });
+                jQuery("#subgrid").jqGrid("setFrozenColumns");
+            };
+
+            function responsive_jqgridData(jqgrid) {
+                jqgrid.find('.ui-jqgrid').addClass('clear-margin span12').css('width', '');
+                jqgrid.find('.ui-jqgrid-view').addClass('clear-margin span12').css('width', '');
+                jqgrid.find('.ui-jqgrid-view > div').eq(1).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                jqgrid.find('.ui-jqgrid-view > div').eq(2).addClass('clear-margin span12').css('width', '').css('min-height', '0').css('display', 'grid');
+                jqgrid.find('.ui-jqgrid-sdiv').addClass('clear-margin span12').css('width', '');
+                //jqgrid.find('.ui-jqgrid-pager').addClass('clear-margin span12').css('width', '');
+                //jqgrid.find('#pager_right').css('width', '180px');
+                jqgrid.find('.ui-state-default,.ui-widget-content .ui-state-default,.ui-widget-header .ui-state-default').css('background', '#e7e4e4');
+                jqgrid.find('.ui-widget-content .ui-state-focus, .ui-widget-header .ui-state-focus .ui-state-hover').css('background', 'skyblue');
+            };
+        }
+    }
+</script>
+
+<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    @*<header class="header fixed-top" id="headerdiv" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:3px;">*@
+    <div class="fixhead">
+        <div class="col-sm-3" style="padding-left:unset;padding:1px;">
+            <b class="CodeSt" id="headercaption">@Model.Header</b>
+        </div>
+        @*<div class="col-sm-1"></div>*@
+        <div class="col-sm-4 pull-right" style="width:200px;padding-top:-3px;align-items:flex-end;">
+            @*<button class="btn btn-info" style="font-size:13px;padding:4px 10px;width:50px;height:27px;" id="btnRefresh" title='Refresh'><i class="fa fa-refresh"></i></button>*@
+            @*reportprintoptions*@
+            <button class="btn" style="font-size:14pt;font-weight:bolder;padding:0px 3px;width:27px;height:27px;background-color:transparent;" id="btnRefresh" title='Refresh'><i style="color:black;" class="fa fa-refresh"></i></button>
+            <div class="col-sm-1"></div>
+            <button class="btn btn-success" onclick="clickPrint()" style="font-size:14px;padding:3px 12px;" id="btnPrint">Print / Export</button>
+        </div>
+        <div class="col-sm-3 pull-right" style="padding-right:unset;">
+            <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                Period:
+            </div>
+            <div class="input-group input-large" data-date-format="dd/mm/yyyy">
+                <input type="text" class="form-control dpd1" name="from" id="Fromdate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;">
+                <span class="input-group-addon" style="color:black;">to</span>
+                <input type="text" class="form-control dpd2" name="to" id="ToDate" data-date-format="dd/mm/yyyy" style="font-size:10pt;font-weight:bolder;text-align:center;">
+            </div>
+        </div>
+        @*</div>*@
+    </div>
+</header>
+
+<section class="panel">
+    <div class="panel-body" style="margin-top:47px;height:auto;padding:0px;">
+        <div class="form-horizontal" id="optionpanel" role="form" style="margin-top:3px;">
+            <div class="form-group" style="margin-left:0px;margin-right:0px;margin-bottom:3px;">
+                <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                    Branch:
+                </div>
+                <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt; width:unset;">
+                    <input title='Branch wise Consolidted' type="checkbox" id="isbranch" name="isbranch" style="margin-top:6px;width:17px;height:17px;" />
+                </div>
+                <div class="col-sm-1" style="padding-right:unset;">
+                    @Html.TextBoxFor(x => x.Branch, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-size:9pt;font-weight:bold;background-color:lightgray;", @id = "branch", @name = "branch", @disabled = "disabled" })
+                </div>
+                <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                    Location:
+                </div>
+                <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt; width:unset;">
+                    <input title='Warehouse/Location wise Report' type="checkbox" id="iswarehouse" name="iswarehouse" style="margin-top:6px;width:17px;height:17px;" />
+                </div>
+                <div class="col-sm-1" style="padding-right:unset;">
+                    @Html.TextBoxFor(x => x.LocationCode, new { @class = "input-large search-query", @style = "width:100%;margin-top:2px;font-size:9pt;font-weight:bold;background-color:lightgray;", @id = "locations", @name = "locations", @disabled = "disabled" })
+                </div>
+                <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                    Report Type:
+                </div>
+                <div class="col-sm-1" style="padding-left:0px;width:170px;">
+                    <select id="reporttype" name="reporttype" class="form-control" style="background-color:#e4e4e4;">
+                        <option value="std" selected="selected">Standard</option>
+                        <option value="stdplus">Standard-Detailed</option>
+                        @if (Model.MainType != "TB")
+                        {
+                            <option value="tee">T-Format</option>
+                            <option value="teeplus">T-Format-Detailed</option>
+                        }
+                        <option value="monthly">Monthly</option>
+                        <option value="monthlyplus">Monthly-Detailed</option>
+                        <option value="branch">Branch Wise</option>
+                        <option value="branchplus">Branch Wise-Detailed</option>
+                    </select>
+                </div>
+                <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                    Suppress 0:
+                </div>
+                <div class="col-sm-1" style="padding-left:6px;font-family:Tahoma;padding-top:0px;padding-right:0px;font-size:9pt; width:unset;">
+                    <input title='Suppress Zero Balances' type="checkbox" id="issuppress" name="issuppress" style="margin-top:6px;width:17px;height:17px;" />
+                </div>
+                <div class="col-sm-1" id="cllabel" style="padding-left:6px;font-family:Verdana;padding-top:5px;font-size:10pt;color:black;width:unset;">
+                    Closing Stock:
+                </div>
+                <div class="col-sm-1" style="padding-left:6px;font-family:Verdana;padding-top:0px;font-size:10pt;color:black;width:unset;">
+                    <input type="text" id="closingstock" alt="" class="form-control" style="font-size:11pt; width:100%;text-align:right;font-weight:bolder;background-color:lightblue;" />
+                </div>
+                <div class="col-sm-1" style="padding-left:0px;font-family:Verdana;padding-top:0px;font-size:10pt;color:black;width:unset;">
+                    <button class="Button" style="font-size:14pt;font-weight:bolder;padding:0px 3px;width:27px;height:27px;border:none;" id="btncalculate" onclick="btncalculate()" title='Calculate Closing Stock based on Method set in ItemMaster, this may take some time to finish..'><i style="color:black;" class="fa fa-calendar"></i></button>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-9" style="padding-left:0px;padding-right:0px;">
+            <div class="panel-body" style="margin-top:0px;height:auto;padding-left:0px;padding-right:0px;padding-top:2px;">
+                <div id="page-contentgrid">
+                    <div class="jqGrid">
+                        <table id="balancesheet" class="scroll" cellpadding="0" cellspacing="0" style="border-collapse:unset;"></table>
+                        @*                        <div id="pager" style="height:32px;"></div>*@
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-3" style="padding-left:0px;overflow:scroll;">
+            <div class="panel-body" style="margin-top:0px;height:auto;padding-left:0px;padding-right:0px;padding-top:2px;">
+                <div class="col-sm-12" style="padding-left:0px;padding-right:0px;">
+                    <div class="form-group">
+                        <label id="accountname" class="col-sm-12 control-label" style="text-wrap:none;word-wrap:unset;margin:0;margin-top:0px;border:none;font-size:13pt;font-weight:bold;"></label>
+                    </div>
+                    <span style="text-align:left;height:40px;" class="sparkbalances"></span>
+                    <div id="page-contentgridright">
+                        <div class="jqGrid">
+                            <table id="subgrid" class="scroll" cellpadding="0" cellspacing="0" style="overflow:scroll;border-collapse:unset;"></table>
+                            @*<div id="pager2" style="height:34px;"></div>*@
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" id="fixedbottom" style="position:fixed;background-color:#4B4A4A;padding:8px;color:white;height:33px;">
+    <div class="col-sm-4"></div>
+    <div class="col-sm-4" style="margin-top:0px;text-align:center;">
+        T.FAT ERP-iX9 by Suchan Software Private Limited
+    </div>
+    <div class="col-sm-4"></div>
+</footer>
+
+@* reportprintoptions*@
+<div class="example-modal">
+    <div id="dialogprint" class="modal modal-primary" style="z-index:2100;">
+        <div class="modal-dialog" style="width:600px;">
+            <div id="dialogtoprint">
+                @Html.Partial("ReportPrintOptions")
+            </div>
+        </div>
+    </div>
+</div>
+
+@* reportprintoptions - all following three*@
+@Html.HiddenFor(x => x.ViewCode, new { @Id = "viewcode" })
+@*<input type="hidden" id="hdnformatname" />*@
+<input type="hidden" id="hdnparastring" />
+<input type="hidden" id="hiddenvalues" />

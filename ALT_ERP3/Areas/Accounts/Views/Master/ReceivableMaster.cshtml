@@ -1,0 +1,618 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.MasterVM
+@using Common;
+
+<script src="~/Content/js/iCheck/jquery.icheck.js"></script>
+<script src="~/Content/js/icheck-init.js"></script>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        //$('#AcType').val('@Model.MainType').attr("selected", "selected");
+        loadaccgroup();
+        loadCategory();
+        loadPayTerms();
+        loadRank();
+        LoadAcType();
+        loadacccustomer();
+        loadRelatedTo();
+        if ('@Model.Mode' == "Add") {
+            $('#Name').change(function () {
+                var acc = $('#Name').val();
+                $('#AName').val(acc);
+            });
+        }
+        debugger;
+        if ('@Model.Brokr' =="True") {
+            $("#Brokr").prop("checked", true);
+        } else if ('@Model.Vehicle' == "True") {
+            $("#Vehicle").prop("checked", true);
+        } else if ('@Model.Driver' == "True")  {
+            $("#Driver").prop("checked", true);
+        }
+        if ('@Model.AllBranch' == "True") {
+            $("#AppBranch").prop('disabled', true).trigger("chosen:updated");
+
+        } else {
+            $("#AppBranch").prop('disabled', false).trigger("chosen:updated");
+        }
+
+        $("#AllBranch").change(function () {
+            debugger;
+            if (this.checked) {
+                $("#AppBranch").prop('disabled', true).trigger("chosen:updated");
+                $(".multiselect").prop('disabled', true);
+            } else {
+                $("#AppBranch").prop('disabled', false).trigger("chosen:updated");;
+                $(".multiselect").prop('disabled', false);
+                $(".multiselect").removeClass('disabled');
+
+            }
+        });
+
+
+
+
+        @*if ('@Model.Collection' == 'D') {
+            $("#CDirect").prop("checked", true);
+        } else {
+            $("#CGodown").prop("checked", true);
+        }
+
+        if ('@Model.Delivery' == 'D') {
+            $("#DDoor").prop("checked", true);
+        } else {
+            $("#DGodown").prop("checked", true);
+        }*@
+
+        var values = $('#hdnAppBranch').val();
+        $("#hdnBranchCodeArray").val(values);
+        if (values == "") {
+        }
+        else {
+            $.each(values.split(","), function (i, e) {
+                $(".listbox option[value='" + e + "']").prop("selected", true);
+            });
+        }
+
+        $(".listbox").change(function () {
+            $('#hdnBranchCodeArray').val('');
+            var selected = [];
+            $(".listbox :selected").each(function () {
+                selected.push($(this).val());
+            });
+            $('#hdnBranchCodeArray').val(selected)
+            return false;
+        });
+
+
+        $('.listbox').multiselect({
+            includeSelectAllOption: true,
+            enableFiltering: true,
+            enableCaseInsensitiveFiltering: true,
+            filterPlaceholder: 'Search for something...',
+            buttonWidth: '140',
+            numberDisplayed: 1,
+            nonSelectedText: 'Select Account',
+        })
+    });
+    function ResetRelatedTo() {
+        $('#RelatedTo').select2('data', { id: 'NA', text: 'NA' });
+    }
+    function loadaccgroup() {
+        var url = '@Url.Action("GetAccountGrps")';
+        $('#Grp').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term,
+                        Maintype:'@Model.MainType'
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Grp', text: '@Model.GrpName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+    function loadRelatedTo() {
+        var url = '@Url.Action("GetRelatedTo")';
+        $('#RelatedTo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.RelatedTo', text: '@Model.RelatedToN' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+    function loadacccustomer() {
+        var url = '@Url.Action("GetAccountGrps")';
+        $('#DefaultCustomerCode').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.DefaultCustomerCode', text: '@Model.DefaultCustomerCodeN' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+
+    function loadCategory() {
+        event.preventDefault();
+        var url = '@Url.Action("GetPartyCategory")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Country: $('#Grp').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Category").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Category').val('@Model.Category').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+
+    };
+    function loadPayTerms() {
+        event.preventDefault();
+        var url = '@Url.Action("GetPayTerms")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: { Country: $('#Grp').val() },
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#PaymentTerms").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#PaymentTerms').val('@Model.PaymentTerms').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+
+    };
+
+    function loadRank() {
+        event.preventDefault();
+        var url = '@Url.Action("GetCreditRank")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#Rank").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#Rank').val('@Model.Rank').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+
+    function LoadAcType() {
+        event.preventDefault();
+        var url = '@Url.Action("GetAcType")';
+        $.ajax({
+            type: 'POST',
+            url: url,
+            dataType: 'json',
+            data: {},
+            success: function (result) {
+                $.each(result, function (i, item) {
+                    $("#AcType").append("<option value='" + item.Value + "'>" + item.Text + "</option>");
+                });
+                $('#AcType').val('@Model.AcType').attr("selected", "selected");
+                $('.spinner').hide();
+            },
+            error: function (ex) {
+                alert("Error occured while processing your request." + ex);
+            }
+        });
+        return false;
+    };
+</script>
+
+<div class="form-horizontal" id="Rmaster" role="form" style="margin-top:0%; overflow-x:hidden; ">
+    <div class="form-group">
+        <label class="col-sm-2 hidden control-label">System Code:</label>
+        <div class="col-sm-3 hidden">
+            @Html.TextBoxFor(x => x.Code, new { @class = "form-control", @Name = "Code", @Id = "Code", @Value = Model.Code, @readonly = "readonly", @maxlength = "9", @style = "font-size:12pt;font-weight:bolder;" })
+        </div>
+
+        <label class="col-sm-2 control-label">Account Name:<span class="red">*</span></label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.Name, new { @class = "form-control", @Name = "Name", @Id = "Name", @Value = Model.Name, @MaxLength = "70" })
+        </div>
+        <label class="col-sm-2 control-label">Default Customer :</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.DefaultCustomerCode, new { @class = "input-large search-query", @Name = "DefaultCustomerCode", @Id = "DefaultCustomerCode", @Style = "width:100%;height:26px;", @disabled = "disabled" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Short Name (Alias):</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.ShortName, new { @class = "form-control", @Name = "ShortName", @Id = "ShortName", @Value = Model.ShortName, @MaxLength = "25" })
+        </div>
+        <label class="col-sm-2 control-label">Account Group:<span class="red">*</span></label>
+        <div class="col-sm-4">
+            @if (Model.MainType == "S" || Model.MainType == "A")
+            {
+                @Html.TextBoxFor(x => x.Grp, new { @class = "input-large search-query", @Name = "Grp", @Id = "Grp", @Style = "width:100%;height:26px;" })
+            }
+            else
+            {
+                @Html.TextBoxFor(x => x.Grp, new { @class = "input-large search-query", @Name = "Grp", @Id = "Grp", @Style = "width:100%;height:26px;", @disabled = "disabled" })
+
+            }
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Account Type:<span class="red">*</span></label>
+        <div class="col-sm-4">
+            @if (Model.MainType == "A")
+            {
+                @Html.DropDownListFor(m => m.AcType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "AcType", @Id = "AcType" })
+            }
+            else
+            {
+                @Html.DropDownListFor(m => m.AcType, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "AcType", @Id = "AcType", @disabled = "disabled" })
+            }
+        </div>
+        <label class="col-sm-2 control-label">Member Of Group:</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.AcHeadCode, new { @class = "form-control", @Name = "AcHeadCode", @Id = "AcHeadCode", @Value = Model.AcHeadCode })
+        </div>
+    </div>
+    <div class="form-group" id="Group">
+        <label class="col-sm-2 control-label">Interest Rate%:</label>
+        <div class="col-sm-4">
+            @Html.TextBoxFor(x => x.IntRate, new { @class = "form-control", @Name = "IntRate", @Id = "IntRate", @Value = Model.IntRate })
+        </div>
+        <label class="col-sm-2 control-label">Party Category:</label>
+        <div class="col-sm-4">
+            @Html.DropDownListFor(m => m.Category, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "Category", @Id = "Category" })
+        </div>
+    </div>
+    <div class="form-group" id="Payment">
+        <label class="col-sm-2 control-label">Payment Terms:</label>
+        <div class="col-sm-4">
+            @Html.DropDownListFor(m => m.PaymentTerms, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "PaymentTerms", @Id = "PaymentTerms" })
+        </div>
+        <label class="col-sm-2 control-label">Credit Rank:</label>
+        <div class="col-sm-4">
+            @Html.DropDownListFor(m => m.Rank, DropdownHelper.EmptyList(), new { @class = "form-control", @Name = "Rank", @Id = "Rank" })
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-2 control-label">Applicable Branches:</label>
+        <div class="col-sm-2">
+            @Html.ListBoxFor(x => x.AppBranchL, Model.Branches, new { @class = "listbox", @id = "AppBranch" })
+        </div>
+        <div class="col-sm-1" style="width:auto;">
+            @Html.CheckBoxFor(x => x.AllBranch, new { @value = Model.AllBranch, @style = "height:23px;width:26px;" })
+        </div>
+        <label class="col-sm-1 control-label" style="font-size: 15px!important;padding-left: 0px!important;font-weight: bold;">(ALL Branch)</label>
+
+        @if (Model.MainType == "S")
+        {
+            <label class="col-sm-1 control-label" style="width:auto;"> AcPostType :</label>
+            <div class="col-sm-3" style="display:flex;">
+
+                @Html.CheckBoxFor(x => x.Brokr, new { @id = "Brokr", @style = "padding-left:0px;width:30px;height:20px;" })<label class="control-label"> Broker</label>
+                @Html.CheckBoxFor(x => x.Vehicle, new { @id = "Vehicle", @style = "padding-left:0px;width:30px;height:20px;" })<label class=" control-label"> Vehicle</label>
+                @Html.CheckBoxFor(x => x.Driver, new { @id = "Driver", @style = "padding-left:0px;width:30px;height:20px;" })<label class=" control-label"> Driver</label>
+
+            </div>
+        }
+        else if (Model.MainType == "D")
+        {
+            if (Model.Mode == "Add")
+            {
+                <label class="col-sm-1 control-label" style="width:auto;"> Generate Default Customer :</label>
+                <div class="col-sm-3" style="display:flex;">
+                    @Html.CheckBoxFor(x => x.GenerateDefaultCust, new { @id = "GenerateDefaultCust", @style = "padding-left:0px;width:30px;height:20px;" })
+                </div>
+            }
+        }
+        else if (Model.MainType == "A")
+        {
+            <label class="col-sm-1 control-label" style="width:auto;"> AcPostType :</label>
+            <div class="col-sm-3" style="display:flex;">
+                @Html.CheckBoxFor(x => x.Brokr, new { @id = "Brokr", @style = "padding-left:0px;width:30px;height:20px;" })<label class="control-label"> Broker</label>
+                @Html.CheckBoxFor(x => x.Vehicle, new { @id = "Vehicle", @style = "padding-left:0px;width:30px;height:20px;" })<label class=" control-label"> Vehicle</label>
+                @Html.CheckBoxFor(x => x.Driver, new { @id = "Driver", @style = "padding-left:0px;width:30px;height:20px;" })<label class=" control-label"> Driver</label>
+            </div>
+            if (Model.Mode == "Add")
+            {
+                <label class="col-sm-1 control-label" style="width:auto;"> Generate Default Customer :</label>
+                <div class="col-sm-2" style="display:flex;">
+                    @Html.CheckBoxFor(x => x.GenerateDefaultCust, new { @id = "GenerateDefaultCust", @style = "padding-left:0px;width:30px;height:20px;" })
+                </div>
+            }
+        }
+        <label class="col-sm-1 control-label" style="width:auto;"> Show Ledger Bal(All Branch) In Trasaction :</label>
+        <div class="col-sm-1" style="width:auto;">
+            @Html.CheckBoxFor(x => x.FetchBalAcc, new { @value = Model.FetchBalAcc, @style = "height:23px;width:26px;" })
+        </div>
+    </div>
+
+    @if (Model.MainType == "D")
+    {
+        <div class="form-group hidden">
+            <label class=" bold   col-sm-1 control-label">Collection :</label>
+            <div class="col-sm-3" style="display: flex;margin-left: 25px;">
+                <input type="radio" class="form-control" name="Coln" id="CGodown" value="CGodown" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Godown</label>
+                <input type="radio" class="form-control" name="Coln" id="CDirect" value="CDirect" style="height:20px;width:35px;" /><label class=" bold control-label"> Direct</label>
+            </div>
+        </div>
+        <div class="form-group hidden">
+            <label class=" bold   col-sm-1 control-label">Delivery :</label>
+            <div class="col-sm-3" style="display: flex;margin-left: 25px;">
+                <input type="radio" class="form-control" name="Delv" id="DGodown" value="DGodown" style="height:20px;width:35px;" /><label class=" bold control-label"> Godown</label>
+                <input type="radio" class="form-control" name="Delv" id="DDoor" value="DDoor" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Door</label>
+            </div>
+        </div>
+    }
+
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Hide in the List?</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.Hide, new { @id = "Hide", @name = "Hide", @value = Model.Hide, @style = "height:16px;width:16px;" })
+        </div>
+        @if (Model.MainType == "D")
+        {
+            <label class="col-sm-2 control-label hidden">PO-Number</label>
+            <div class="col-sm-3 hidden">
+                @Html.CheckBoxFor(x => x.PONumber, new { @value = Model.PONumber, @style = "height:16px;width:16px;" })
+            </div>
+
+        }
+
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Non Accounting Master?</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.NonActive, new { @id = "NonActive", @name = "NonActive", @value = Model.NonActive, @style = "height:16px;width:16px;" })
+        </div>
+        @if (Model.MainType == "D")
+        {
+            <label class="col-sm-2 hidden control-label">BE-Number</label>
+            <div class="col-sm-3 hidden">
+                @Html.CheckBoxFor(x => x.BENumber, new { @value = Model.BENumber, @style = "height:16px;width:16px;" })
+            </div>
+        }
+
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Maintain AR/AP Records?</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.ARAP, new { @id = "ARAP", @name = "ARAP", @value = Model.ARAP, @style = "height:16px;width:16px;" })
+        </div>
+        @if (Model.MainType == "D")
+        {
+            <label class="col-sm-2 hidden control-label">Party Invoice</label>
+            <div class="col-sm-3 hidden">
+                @Html.CheckBoxFor(x => x.PartyInvoice, new { @value = Model.PartyInvoice, @style = "height:16px;width:16px;" })
+            </div>
+        }
+
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Cost-Centre Budget Check:</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.CCBudget, new { @id = "CCBudget", @name = "CCBudget", @value = Model.CCBudget, @style = "height:16px;width:16px;" })
+        </div>
+        @if (Model.MainType == "D")
+        {
+            <label class="col-sm-2 hidden control-label">Party Challan</label>
+            <div class="col-sm-3 hidden">
+                @Html.CheckBoxFor(x => x.PartyChallan, new { @value = Model.PartyChallan, @style = "height:16px;width:16px;" })
+            </div>
+        }
+
+    </div>
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Cost-Centre Compulsory:</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.CCReqd, new { @id = "CCReqd", @name = "CCReqd", @value = Model.CCReqd, @style = "height:16px;width:16px;" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Cost-Centre Tally Amt Check:</label>
+        <div class="col-sm-3">
+            @Html.CheckBoxFor(x => x.CostCenterTally, new { @id = "CostCenterTally", @name = "CostCenterTally", @value = Model.CostCenterTally, @style = "height:16px;width:16px;" })
+        </div>
+    </div>
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Refer Account Req:</label>
+        <div class="col-sm-3">
+            @if (Model.Code == "000100949" || Model.Code == "000100950" || Model.Code == "000100343" || Model.Code == "000100736" || Model.Code == "000100653" || Model.Code == "000100811" || Model.Code == "000100326" || Model.Code == "000100951" || Model.Code == "000100952" || Model.Code == "000100404" || Model.Code == "000100781" || Model.Code == "000100953" || Model.Code == "000100954" || Model.Code == "000100788" || Model.Code == "000100789" || Model.Code == "000100346" || Model.Code == "000101135" || Model.Code == "000100341" || Model.Code == "000100345")
+            {
+                @Html.CheckBoxFor(x => x.ReferAcReq, new { @id = "ReferAcReq", @name = "ReferAcReq", @value = Model.ReferAcReq, @style = "height:16px;width:16px;", @disabled = "disabled" })
+            }
+            else
+            {
+                @Html.CheckBoxFor(x => x.ReferAcReq, new { @id = "ReferAcReq", @name = "ReferAcReq", @value = Model.ReferAcReq, @style = "height:16px;width:16px;" })
+            }
+        </div>
+    </div>
+    @if (Model.MainType != "D")
+    {
+        <div class="form-group">
+            <label class="col-sm-3 control-label">Related To:</label>
+            <div class="col-sm-5">
+                @if (Model.Code == "000100949" || Model.Code == "000100950" || Model.Code == "000100343" || Model.Code == "000100736" || Model.Code == "000100653" || Model.Code == "000100811" || Model.Code == "000100326" || Model.Code == "000100951" || Model.Code == "000100952" || Model.Code == "000100404" || Model.Code == "000100781" || Model.Code == "000100953" || Model.Code == "000100954" || Model.Code == "000100788" || Model.Code == "000100789" || Model.Code == "000100346" || Model.Code == "000101135" || Model.Code == "000100341" || Model.Code == "000100345")
+                {
+                    @Html.TextBoxFor(x => x.RelatedTo, new { @class = "input-large search-query", @Name = "RelatedTo", @Id = "RelatedTo", @Style = "width:100%;height:26px;", @value = Model.RelatedTo, @disabled = "disabled" })
+                }
+                else
+                {
+                    @Html.TextBoxFor(x => x.RelatedTo, new { @class = "input-large search-query", @Name = "RelatedTo", @Id = "RelatedTo", @Style = "width:100%;height:26px;", @value = Model.RelatedTo })
+                }
+
+            </div>
+        </div>
+    }
+    else if (Model.MainType != "A")
+    {
+        <div class="form-group">
+            <label class="col-sm-3 control-label">Related To:</label>
+            <div class="col-sm-5">
+                @if (Model.Code == "000100949" || Model.Code == "000100950" || Model.Code == "000100343" || Model.Code == "000100736" || Model.Code == "000100653" || Model.Code == "000100811" || Model.Code == "000100326" || Model.Code == "000100951" || Model.Code == "000100952" || Model.Code == "000100404" || Model.Code == "000100781" || Model.Code == "000100953" || Model.Code == "000100954" || Model.Code == "000100788" || Model.Code == "000100789" || Model.Code == "000100346" || Model.Code == "000101135" || Model.Code == "000100341" || Model.Code == "000100345")
+                {
+                    <div class="col-sm-6" style="padding: 0px;">
+                        @Html.TextBoxFor(x => x.RelatedTo, new { @class = "input-large search-query", @Name = "RelatedTo", @Id = "RelatedTo", @Style = "width:100%;height:26px;", @value = Model.RelatedTo, @disabled = "disabled" })
+                    </div>
+                    <label class="col-sm-3 control-label">Allow To Change:</label>
+                    <div class="col-sm-2" style="padding: 0px;">
+                        @Html.CheckBoxFor(x => x.AllowtoChange, new { @id = "AllowtoChange", @name = "AllowtoChange", @value = Model.AllowtoChange, @style = "height:16px;width:16px;", @title = "Transaction Time Allow To Change Cost Center.", @disabled = "disabled" })
+                    </div>
+                }
+                else
+                {
+                    <div class="col-sm-6" style="padding: 0px;">
+                        @Html.TextBoxFor(x => x.RelatedTo, new { @class = "input-large search-query", @Name = "RelatedTo", @Id = "RelatedTo", @Style = "width:100%;height:26px;", @value = Model.RelatedTo })
+                    </div>
+                    <div class="col-sm-1" style="padding-left: 3px;">
+                        <button class="btn btn-danger" onclick="ResetRelatedTo();" style="padding: 4px 5px;"><i class="glyphicon glyphicon-remove"></i></button>
+                    </div>
+                    <label class="col-sm-3 control-label">Allow To Change:</label>
+                    <div class="col-sm-2" style="padding: 0px;">
+                        @Html.CheckBoxFor(x => x.AllowtoChange, new { @id = "AllowtoChange", @name = "AllowtoChange", @value = Model.AllowtoChange, @style = "height:16px;width:16px;", @title = "Transaction Time Allow To Change Cost Center." })
+                    </div>
+                }
+
+            </div>
+        </div>
+    }
+</div>
+
+@Html.HiddenFor(x => x.AppBranch, new { @id = "hdnAppBranch" })
+<input type="hidden" id="hdnBranchCodeArray" />

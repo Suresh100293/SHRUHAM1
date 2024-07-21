@@ -1,0 +1,773 @@
+﻿@model ALT_ERP3.Areas.Accounts.Models.HSNMasterVM
+@using Common;
+@{
+    ViewBag.Title = "HSN Master";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        
+
+        GetMyFavorites('@Model.ViewDataId');
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadGrp();
+        LoadUnit();
+        LoadIGSTIn();
+        LoadIGSTOut();
+        LoadSGSTIn();
+        LoadSGSTOut();
+        LoadCGSTIn();
+        LoadCGSTOut();
+        LoadCessIn();
+        LoadCessOut();
+            
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#HSNMaster').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                //HSNMaster_Code: {required: true,},
+                HSNMaster_Name: {required: true,},
+                HSNMaster_Grp: {required: true,},
+                HSNMaster_Unit: {required: true,},
+               },
+            messages: {
+                //HSNMaster_Code: {required: 'Code is Required',},
+                HSNMaster_Name: {required: 'Name is Required',},
+                HSNMaster_Grp: {required: 'Grp is Required',},
+                HSNMaster_Unit: {required: 'Unit is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#HSNMaster_Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#HSNMaster_Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#HSNMaster_Grp").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#HSNMaster_Unit").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#HSNMaster").validate().form() == false)
+            //    return;
+
+            if ($("#HSNMaster_Code").val() == null || $("#HSNMaster_Code").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Code is Required..');
+                return;
+            }
+            if ($("#HSNMaster_Name").val() == null || $("#HSNMaster_Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+            if ($("#HSNMaster_Grp").val() == null || $("#HSNMaster_Grp").val() == 0)
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Category is Required..');
+                return;
+            }
+            if ($("#HSNMaster_Unit").val() == null || $("#HSNMaster_Unit").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Unit is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["HSNMaster_Code"] = $("#HSNMaster_Code").val();
+            ModelData["HSNMaster_Name"] = $("#HSNMaster_Name").val();
+            ModelData["HSNMaster_Grp"] = $("#HSNMaster_Grp").val();
+            ModelData["HSNMaster_Unit"] = $("#HSNMaster_Unit").val();
+            ModelData["HSNMaster_IGSTIn"] = $("#HSNMaster_IGSTIn").val();
+            ModelData["HSNMaster_IGSTOut"] = $("#HSNMaster_IGSTOut").val();
+            ModelData["HSNMaster_SGSTIn"] = $("#HSNMaster_SGSTIn").val();
+            ModelData["HSNMaster_SGSTOut"] = $("#HSNMaster_SGSTOut").val();
+            ModelData["HSNMaster_CGSTIn"] = $("#HSNMaster_CGSTIn").val();
+            ModelData["HSNMaster_CGSTOut"] = $("#HSNMaster_CGSTOut").val();
+            ModelData["HSNMaster_CessIn"] = $("#HSNMaster_CessIn").val();
+            ModelData["HSNMaster_CessOut"] = $("#HSNMaster_CessOut").val();
+            ModelData["HSNMaster_Narr"] = $("#HSNMaster_Narr").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else if (data.Status == 'Error') {
+                        alert(data.Message);
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);
+                    }
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadGrp() {
+        var url = '@Url.Action("AutoCompleteGrp")'
+        $('#HSNMaster_Grp').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_Grp', text: '@Model.GrpName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadUnit() {
+        var url = '@Url.Action("AutoCompleteUnit")'
+        $('#HSNMaster_Unit').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_Unit', text: '@Model.UnitName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadIGSTIn() {
+        var url = '@Url.Action("AutoCompleteIGSTIn")'
+        $('#HSNMaster_IGSTIn').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_IGSTIn', text: '@Model.IGSTInName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadIGSTOut() {
+        var url = '@Url.Action("AutoCompleteIGSTOut")'
+        $('#HSNMaster_IGSTOut').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_IGSTOut', text: '@Model.IGSTOutName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadSGSTIn() {
+        var url = '@Url.Action("AutoCompleteSGSTIn")'
+        $('#HSNMaster_SGSTIn').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_SGSTIn', text: '@Model.SGSTInName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadSGSTOut() {
+        var url = '@Url.Action("AutoCompleteSGSTOut")'
+        $('#HSNMaster_SGSTOut').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_SGSTOut', text: '@Model.SGSTOutName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCGSTIn() {
+        var url = '@Url.Action("AutoCompleteCGSTIn")'
+        $('#HSNMaster_CGSTIn').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_CGSTIn', text: '@Model.CGSTInName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCGSTOut() {
+        var url = '@Url.Action("AutoCompleteCGSTOut")'
+        $('#HSNMaster_CGSTOut').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_CGSTOut', text: '@Model.CGSTOutName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCessIn() {
+        var url = '@Url.Action("AutoCompleteCessIn")'
+        $('#HSNMaster_CessIn').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_CessIn', text: '@Model.CessInName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadCessOut() {
+        var url = '@Url.Action("AutoCompleteCessOut")'
+        $('#HSNMaster_CessOut').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.HSNMaster_CessOut', text: '@Model.CessOutName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="HSNMaster" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-3">
+                    @if (Model.Mode == "Add")
+                    {
+                        @Html.TextBoxFor(x => x.HSNMaster_Code, new { @maxlength = "10", @class = "form-control",  @Name = "HSNMaster_Code", @Id = "HSNMaster_Code" })
+                    }
+                    else
+                    {
+                        @Html.TextBoxFor(x => x.HSNMaster_Code, new { @maxlength = "10", @class = "form-control", @readonly = "readonly", @Name = "HSNMaster_Code", @Id = "HSNMaster_Code" })
+                    }
+                </div>
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_Name, new { @maxlength = "100", @class = "form-control", @Name = "HSNMaster_Name", @Id = "HSNMaster_Name" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Category:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_Grp, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_Grp", @Name = "HSNMaster_Grp" })
+                </div>
+                <label class="col-sm-1 control-label">Unit:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_Unit, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_Unit", @Name = "HSNMaster_Unit" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-3 control-label" style="font-size:13px;text-decoration: underline;font-weight:bold;">GST Posting Details</label>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">IGST Input:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_IGSTIn, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_IGSTIn", @Name = "HSNMaster_IGSTIn" })
+                </div>
+                <label class="col-sm-1 control-label">IGST Output:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_IGSTOut, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_IGSTOut", @Name = "HSNMaster_IGSTOut" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">SGST Input:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_SGSTIn, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_SGSTIn", @Name = "HSNMaster_SGSTIn" })
+                </div>
+                <label class="col-sm-1 control-label">SGST Output:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_SGSTOut, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_SGSTOut", @Name = "HSNMaster_SGSTOut" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">CGST Input:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_CGSTIn, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_CGSTIn", @Name = "HSNMaster_CGSTIn" })
+                </div>
+                <label class="col-sm-1 control-label">CGST Output:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_CGSTOut, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_CGSTOut", @Name = "HSNMaster_CGSTOut" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Cess Input:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_CessIn, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_CessIn", @Name = "HSNMaster_CessIn" })
+                </div>
+                <label class="col-sm-1 control-label">Cess Output:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_CessOut, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "HSNMaster_CessOut", @Name = "HSNMaster_CessOut" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Narr:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.HSNMaster_Narr, new { @maxlength = "100", @class = "form-control", @Name = "HSNMaster_Narr", @Id = "HSNMaster_Narr" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+            @* iX9: -- Code for Body Starts -- *@
+            @* iX9: Tab Body Panels *@
+            @* iX9: -- Call Grid Partial View -- *@
+            <div>
+                @Html.Partial("GridDataView")
+            </div>
+            @* iX9: -- Code for Body Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:0px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            ALT AIR-3.0, Shruham Software
+
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                }
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Fri 08-Mar-2019 04:16 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 15
+    by Team Shruham Software *@

@@ -1,0 +1,239 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+@using Common;
+<style>
+    .zui-table tbody td {
+        height: 25px;
+    }
+
+    .txtshowpaddvalue:focus {
+        border-color: #83eae4;
+    }
+</style>
+<div class="modal-body" style="overflow:unset">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+
+            <h4 class="modal-title"><b>Product AddOns</b></h4>
+        </div>
+        <div class="modal-body">
+
+            <div class="grid" id="ProductEditDiv" style="max-height:400px;min-height:400px; width:100%; overflow: scroll;">
+                <table id="prodshowaddongrid" class="zui-table" style="overflow:scroll;">
+                    <thead>
+
+                    </thead>
+                    <tbody>
+                        @if (Model.PEdtAddOnList != null)
+                        {
+                            foreach (var item in @Model.PEdtAddOnList.ToList())
+                            {
+                                <tr id="shwproductcharge" style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+
+                                    <td style="width:10%;">@item.Fld</td>
+                                    <td style="width:20%;">@item.Head</td>
+                                    <td style="width:1%;" hidden="hidden">@item.Eqsn</td>
+                                    @if (item.FldType == "C")
+                                    {
+                                        <td style="width:50%;">
+                                            <select class="txtshowpaddvalue" id="txtshwpadd_@item.Fld" alt="@item.Fld" style="width:100%">
+                                                @foreach (var item2 in item.QueryText.Split('^').ToList())
+                                                {
+
+                                                    <option value="@item2" @(item2 == item.ApplCode ? "selected" : "")>@item2</option>
+
+
+                                                }
+                                            </select>
+                                        </td>
+
+
+
+                                    }
+                                    else if (item.FldType == "M")
+                                    {
+                                        <td style="width:50%;"><textarea type="textarea" rows="5" cols="20" id="txtshwpadd_@item.Fld" alt="@item.Fld" class="txtshowpaddvalue" style="width:100%;">@item.ApplCode</textarea></td>
+
+                                    }
+                                    else if (item.FldType == "L")
+                                    {
+                                        <td style="width:50%;">
+                                            <select class="txtshowpaddvalue" id="txtshwpadd_@item.Fld" alt="@item.Fld" style="width:100%">
+                                                <option value="False" @("False" == item.ApplCode ? "selected" : "")>False</option>
+                                                <option value="True" @("True" == item.ApplCode ? "selected" : "")>True</option>
+                                            </select>
+                                        </td>
+                                    }
+                                    else
+                                    {
+                                        <td style="width:50%;"><input type="text" id="txtshwpadd_@item.Fld" alt="@item.Fld" value="@item.ApplCode" class="txtshowpaddvalue" maxlength="250" /></td>
+
+                                    }
+                                    <td style="width:1%;" hidden="hidden">@item.FldType</td>
+                                    <td style="width:1%;" hidden="hidden">@item.PlaceValue</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+
+            </div>
+
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <button type="button" class="btn btn-success" id="paddonedtcalc" style="float:left;">Calculate</button>
+            <button type="button" class="btn btn-warning" id="paddonshwSave">Save</button>
+            <button id="producteditaddon" class="btn btn-danger" type="button">Close</button>
+
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $("#paddonshwSave").click(function (event) {
+            event.preventDefault();
+            var PShwAddonSerial = [];
+            $('#prodshowaddongrid').find('tr[id="shwproductcharge"]').each(function () {
+                var $tds = $(this).find('td');
+                var myDets = {
+                    Fld: $tds.eq(0).text(),
+                    ApplCode:  $tds.find(".txtshowpaddvalue").val(),
+                    FldType: $tds.eq(4).text(),
+                    PlaceValue: $tds.eq(5).text()
+                }
+                PShwAddonSerial.push(myDets);
+            });
+            var ModelData = {};
+            ModelData["PAddOnList"] = PShwAddonSerial;
+            ModelData["tempId"] = $("#hdnPtempId").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("SaveProdShwAddVal")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('#prodshwaddonmodel').modal('hide');
+                    if (data.Rate != 0) {
+                        $('#UpdateRate').val(data.Rate);
+                    }
+                    if (data.Qty != 0) {
+                        $('#UpdateQty').val(data.Qty);
+                    }
+                },
+                error: function (error) {
+                    alert("errror");
+                }
+            });
+        });
+
+        $('#producteditaddon').click(function (event) {
+            event.preventDefault();
+            $('#prodshwaddonmodel').modal('hide');
+        });
+
+
+        $('#paddonedtcalc').click(function (event) {
+            event.preventDefault();
+            CAlPEAddon()
+        });
+
+
+        @*$(".txtshowpaddvalue").one("focusout", function (event) {
+            event.preventDefault();
+            var PPSerial = [];
+            $('#prodshowaddongrid').find('tr[id="shwproductcharge"]').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    ApplCode: (tds.eq(4).text() == "C" || tds.eq(4).text() == "M") ? tds.find(".txtshowpaddvalue").val() : tds.find("input[class='txtshowpaddvalue']").val(),
+                    FldType: tds.eq(4).text(),
+                }
+                PPSerial.push(myDets);
+            });
+            var ModelData = {};
+            ModelData["Fld"] = $(this).attr("alt");
+            ModelData["AddonValueLast"] = PPSerial;
+            ModelData["MainType"] = $("#hdnMType").val();
+            ModelData["ChangeLog"] = $("#hdnchangelog").val();
+            ModelData["tempId"] = $("#hdnPtempId").val();
+            ModelData["Type"] = $("#hdnType").val();
+            ModelData["Account"] = $("#Account").val();
+            ModelData["Code"] = $("#UpdateCode").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("CalByEquationProdAddonEditMode")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#prodshwDialog').html(data.Html);
+                    $('#prodshowaddongrid input[id=txtshwpadd_' + data.Fld + ']').focus();
+                    $('#prodshowaddongrid textarea[id=txtshwpadd_' + data.Fld + ']').focus();
+                    //$('#prodshowaddongrid select[id=txtshwpadd_' + data.Fld + ']').focus();
+                 },
+                error: function () {
+                    $('.spinner').hide();
+                    alert("error occured while processing your request.");
+                }
+            });
+        });
+    });*@
+    });
+    function CAlPEAddon() {
+        var PPSerial = [];
+        $('#prodshowaddongrid').find('tr[id="shwproductcharge"]').each(function () {
+            var tds = $(this).find('td');
+            var myDets = {
+                ApplCode: tds.find(".txtshowpaddvalue").val(),
+                FldType: tds.eq(4).text(),
+            }
+            PPSerial.push(myDets);
+        });
+        var ModelData = {};
+        ModelData["Fld"] = $(this).attr("alt");
+        ModelData["AddonValueLast"] = PPSerial;
+        ModelData["MainType"] = $("#hdnMType").val();
+        ModelData["ChangeLog"] = $("#hdnchangelog").val();
+        ModelData["tempId"] = $("#hdnPtempId").val();
+        ModelData["Type"] = $("#hdnType").val();
+        ModelData["Account"] = $("#Account").val();
+        ModelData["Code"] = $("#UpdateCode").val();
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("CalByEquationProdAddonEditMode")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforesend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                $('#prodshwDialog').html(data.Html);
+
+            },
+            error: function () {
+                $('.spinner').hide();
+                alert("error occured while processing your request.");
+            }
+        });
+    }
+</script>
+
+@Html.HiddenFor(x => x.PtempId, new { @Id = "hdnPtempId" })

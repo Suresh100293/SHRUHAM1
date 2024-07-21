@@ -1,0 +1,187 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.ItemMasterVM
+@using Common;
+@{
+    ViewBag.Title = "Item Master";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+
+        if ('@Model.Category' == 'GenaralCategory')
+            {
+            $("#GenaralCategory").prop("checked", true);
+            } else {
+            $("#Hazardous").prop("checked", true);
+            }
+
+
+        if ('@Model.Mode' == "Delete") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#ItemMaster').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                Code: {required: true,},
+                Name: {required: true,},
+               },
+            messages: {
+                Code: {required: 'Code is Required',},
+                Name: {required: 'Name is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#Code").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#Name").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#UnitofMeasurementMaster").validate().form() == false)
+            //    return;
+
+            //if ($("#Code").val() == null || $("#Code").val() == '')
+            //{
+            //    $("#ErrorMessage").show();
+            //    $("#ErrorMessage").text('Code is Required..');
+            //    return;
+            //}
+            if ($("#Name").val() == null || $("#Name").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Name is Required..');
+                return;
+            }
+
+            if (($("#GenaralCategory").is(":checked") == false) && ($("#Hazardous").is(":checked") == false)) {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Category is Required..');
+                return; 
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["Document"] = $("#Document").val();
+            ModelData["Code"] = $("#Code").val();
+            ModelData["Name"] = $("#Name").val();
+            if ($("#GenaralCategory").is(":checked") == true) {
+                ModelData["Category"] = "GenaralCategory";
+            } else {
+                ModelData["Category"] = "Hazardous";
+            }
+            ModelData["Hide"] = $("#Hide").is(':checked');
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        alert(data.Message);                    }
+                },
+            });
+        });
+    });
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal" id="ItemMaster" role="form" style="margin-top:3%;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Code:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Code, new { @maxlength = "6", @class = "form-control", @Value = Model.Code, @disabled = "disabled" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.Name, new { @maxlength = "25", @class = "form-control", @Value = Model.Name })
+                </div>
+            </div>
+            <div class="form-group " style="">
+                <label class="col-md-1 control-label">Category :</label>
+                <div class="col-md-3" style="display: flex;padding-left:5px;">
+                    <input type="radio" class="form-control" name="Category" id="GenaralCategory" value="GenaralCategory" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Genaral Category</label>
+                    <input type="radio" class="form-control" name="Category" id="Hazardous" value="Hazardous" style="height:20px;width:35px;" /><label class=" bold control-label"> Hazardous</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Hide:</label>
+                <div class="col-sm-3">
+                    @Html.CheckBoxFor(x => x.Hide, new { @value = Model.Hide, @style = "height:16px;width:16px;" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                @if (Model.Mode != "View")
+                {
+                    if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Delete</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                    }
+                }
+                <a href="~/Logistics/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Thu 14-Mar-2019 02:32 PM
+    Engine: iX9Generator, ver: 3.7 Revision: 21
+    by Team Suchan, T.FAT *@
+
+

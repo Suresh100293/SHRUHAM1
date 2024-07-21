@@ -1,0 +1,681 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.BillSubmissionVM
+@using Common;
+@{
+    ViewBag.Title = "DirectSubMission";
+    Layout = "~/Views/Shared/_LayoutMenu.cshtml";
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script>
+    $(document).ready(function () {
+
+
+        $('#attachdoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        });
+        $("#attachdoc").modal("hide");
+        GetMyFavorites('@Model.ViewDataId');
+        $("#BillDetailBillNoD").focus();
+        $('#DocDate,#SubmitDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        if ('@Model.Mode' != "Add") {
+            $("#BillDetailBillNoD").prop("disabled", true);
+            if ('@Model.Through' == "ByHand") {
+                $("#ByHand").prop("checked", true)
+                $("#ByCourier").prop("checked", false)
+                $("#Other").prop("checked", false)
+            } else if ('@Model.Through' =="ByCourier") {
+                $("#ByCourier").prop("checked", true)
+                $("#ByHand").prop("checked", false)
+                $("#Other").prop("checked", false)
+            } else {
+                $("#Other").prop("checked", true)
+                $("#ByCourier").prop("checked", false)
+                $("#ByHand").prop("checked", false)
+            }
+        } else {
+
+            $("#btnAddDoc").prop("disabled", true);
+        }
+
+        if ('@Model.Mode' == "Delete" || '@Model.Mode' == "View") {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+
+
+        $('#BillDetailDateD,#SubmitDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        LoadBillType();
+        LoadParty();
+
+
+        $('#BillDetailBillNoD').blur(function ()
+        {
+            event.preventDefault();
+            $('#ErrorMessage').hide();
+            if ($('#BillDetailBillNoD').val() != "" && $('#BillDetailBillNoD').val() != null)
+            {
+
+                var BillDetail =
+                {
+                    BillNo: $('#BillDetailBillNoD').val(),
+                    BillType: $('#BillSubTypeD').val()
+                }
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val()
+                ModelData["BillDetail"] = BillDetail;
+                ModelData["Methods"] = '@Model.Methods';
+
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetBillDeatilsDirect")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function ()
+                    {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        if (data.Status == "Error")
+                        {
+                            $('#BillDetailBillNoD').val('');
+                            alert("Not Found...!");
+                            $('#PartyD').select2('data', { id: '', text: '' });
+                            $("#PartyParentD").val('');
+                            $("#BillDetailDateD").val('');
+                            $("#BillTableKeyD").val('');
+                            $("#BillParentKeyD").val('');
+                            $("#BillDetailAmountD").val('0');
+                            $("#BillBranchND").val('');
+                            $("#BillBranchD").val('');
+                        } else if (data.Status == "Success")
+                        {
+                            $('#PartyD').select2('data', { id: data.Party, text: data.PartyN });
+                            $("#PartyParentD").val(data.Parent);
+                            $("#BillDetailDateD").val(data.Date);
+                            $("#BillDetailAmountD").val(data.Amount);
+                            $("#BillBranchND").val(data.BranchN);
+                            $("#BillTableKeyD").val(data.BillKey);
+                            $("#BillParentKeyD").val(data.PBillKey);
+                            $("#BillBranchD").val(data.Branch);
+                            $("#btnAddDoc").prop("disabled", false);
+                            AlertNoteMaster($('#BillDetailBillNoD').val(), $('#BillSubTypeD').val());
+                        } else {
+                            var result = confirm("This Bill Submited Already R U Sure To Submit Bill?");
+                            if (result)
+                            {
+                                $('#PartyD').select2('data', { id: data.Party, text: data.PartyN });
+                                $("#PartyParentD").val(data.Parent);
+                                $("#BillDetailDateD").val(data.Date);
+                                $("#BillTableKeyD").val(data.BillKey);
+                                $("#BillParentKeyD").val(data.PBillKey);
+                                $("#BillDetailAmountD").val(data.Amount);
+                                $("#BillBranchND").val(data.BranchN);
+                                $("#BillBranchD").val(data.Branch);
+                                $("#btnAddDoc").prop("disabled", false);
+                                AlertNoteMaster($('#BillDetailBillNoD').val(), $('#BillSubTypeD').val());
+                            }
+                            else
+                            {
+                                $('#PartyParentD').val('');
+                                $('#BillDetailBillNoD').val('');
+                                $('#BillTableKeyD').val('');
+                                $('#BillParentKeyD').val('');
+                                $('#PartyD').select2('data', { id: '', text: '' });
+                                $("#BillDetailDateD").val('');
+                                $("#BillDetailAmountD").val('0');
+                                $("#BillBranchND").val('');
+                                $("#BillBranchD").val('');
+                            }
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+
+
+        $('#Submit').click(function () {
+            $('#ErrorMessage').hide();
+            var Flag = true;
+            if ($("#BillDetailBillNoD").val() == '' || $("#BillDetailBillNoD").val() == null) {
+                alert('Bill No Required...');
+                Flag = false;
+                return;
+
+            }
+            if ($("#PartyD").val() == '' || $("#PartyD").val() == null) {
+                alert('Invalid Bill NO...');
+                Flag = false;
+                return;
+
+            }
+            if ($("#BillDetailDateD").val() == '' || $("#BillDetailDateD").val() == null) {
+                alert('Invalid Bill NO...');
+                Flag = false;
+                return;
+            }
+            if ($("#BillDetailAmountD").val() == '' || $("#BillDetailAmountD").val() == null) {
+                alert('Invalid Bill NO...');
+                Flag = false;
+                return;
+            }
+
+            if (Flag)
+            {
+                CheckAlertNoteMaster();
+            }
+        });
+        $('#btnDelete').click(function () {
+            var result = confirm("Are you sure you want to delete?");
+            if (result) {
+                var ModelData = {};
+                ModelData["Document"] = $("#Document").val();
+                ModelData["Mode"] = '@Model.Mode';
+                ModelData["Header"] = '@Model.Header';
+                var DTO = { mModel: ModelData };
+                var url = '@Url.Action("SaveData")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").hide();
+                        if (data.Status == 'Success') {
+                            window.location.href = "/Logistics/BillSubmission/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        }
+                        else {
+                            alert(data.Message);
+                        }
+                    },
+                });
+            }
+        });
+        $("#btnAddDoc").click(function (event) {
+            event.preventDefault();
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = 'Edit';
+            ModelData["Srl"] = $("#BillParentKeyD").val();
+            ModelData["Type"] = $("#BillSubTypeD").val();
+            ModelData["RefType"] = "@Model.Header";
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+
+    });
+
+    function AlertNoteMaster(value,BillT) {
+        event.preventDefault();
+        var url = '/Logistics/AlertNote/ShoWAlertNoteList';
+        var myTableArray = [];
+        myTableArray.push(value);
+        var DTO = { Type: BillT, TypeCode: myTableArray, DocTpe: "BLSMT" };
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                $('.spinner').hide();
+                if (data.Status == "Success") {
+                    var AttachDoc = $("#AlertNoteDiv");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#AlertNoteModal').modal('show');
+                }
+
+            },
+        });
+    }
+
+    function CheckAlertNoteMaster()
+    {
+        event.preventDefault();
+        var url = '@Url.Action("CheckStopAlertNote")';
+         var myTableArray = [];
+        myTableArray.push($("#BillDetailBillNoD").val());
+
+        var DTO = { Type: $('#BillSubTypeD').val(), TypeCode: myTableArray, DocTpe: "BLSMT"};
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json; charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data) {
+                if (data.Status == 'Success')
+                {
+                    $('.spinner').hide();
+                    $("#ErrorMessage").hide();
+                    SaveBillAlertThrough();
+                }
+                else
+                {
+                    $('.spinner').hide();
+                    alert(data.Message);
+                }
+            },
+        });
+    }
+    function SaveBillAlertThrough()
+    {
+
+            var ModelData = {};
+
+            ModelData["Document"] = $("#Document").val();
+            ModelData["DocumentNo"] = $("#DocumentNo").val();
+            ModelData["BillType"] = "Direct";
+            ModelData["SubmitDate"] = $("#SubmitDate").val();
+            ModelData["Through"] = $('input[name="Through"]:checked').val();
+            ModelData["Remark"] = $("#Remark").val();
+            ModelData["Mode"] = '@Model.Mode';
+            ModelData["Header"] = '@Model.Header';
+            ModelData["DocDate"] = $("#DocDate").val();
+            var BillDetail = {
+                BillNo: $("#BillDetailBillNoD").val(),
+                BillTableKey: $("#BillTableKeyD").val(),
+                BillParty: $("#PartyD").val(),
+                PartyParent: $("#PartyParentD").val(),
+                Date: $("#BillDetailDateD").val(),
+                Amount: $("#BillDetailAmountD").val(),
+                BillBranch: $("#BillBranchD").val(),
+                BillType: $("#BillSubTypeD").val(),
+            };
+
+            ModelData["BillDetail"] = BillDetail;
+            var DTO = { mModel: ModelData };
+            var url = '@Url.Action("SaveData")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $("#ErrorMessage").hide();
+
+                    if (data.Status == 'Success') {
+                        //window.location.href = "/Logistics/BillSubmission/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        //window.location.href = "/Logistics/BillSubmission/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                        window.location.href = "/Logistics/BillSubmission/DirectSubMission?TableName=&MainType=&Mode=Add&Header=BillSubmission&ViewDataId=BillSubmission&Controller2=BillSubmission&Module=Transactions&optiontype=&optioncode=BillSubmission";
+                    }
+                    else {
+                        alert(data.Message);
+                    }
+                },
+            });
+    }
+     function LoadBillType() {
+        var url = '@Url.Action("GetBillType")';
+        $('#BillSubTypeD').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.BillDetail.BillType', text: '@Model.BillDetail.BillTypeName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+    function LoadParty() {
+        var url = '@Url.Action("GetParty")';
+        $('#PartyD').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.Party', text: '@Model.PartyName' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+</script>
+<style>
+    .red {
+        color: red;
+    }
+
+    .control-label {
+        font-weight: bold !important;
+    }
+
+    legend {
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+</style>
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:0%;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+
+        <span class="tools pull-right">
+            <a href="~/Logistics/BillSubmission/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+        <button class="fa fa-heart pull-right" type="submit" onclick="AddToFavorite('@Model.ViewDataId','@Model.OptionCode')" title="Add/Remove from My Favorites" id="MyFavorites" style="color: rgb(145,142,142); background-color: transparent; border: none; font-size: 20px; height: 27px; margin-right: 5px;margin-top:5px;" name="MyFavorites"></button>
+
+    </div>
+</header>
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="FreightMemo" role="form" style="margin-top:50px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none;"></div>
+
+            <fieldset class=" col-md-12" style="margin-top: 0px;">
+                <legend>Direct Submission</legend>
+                <div class="panel panel-default" style="margin-bottom: 0px !important;">
+                    <div class="panel-body " style="padding-left: 20px;padding: 1px !important;">
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Bill No:<span class="red">*</span></label>
+                            <div class="col-sm-3">
+                                <div class="col-sm-7" style="padding:0px !important;margin:0px !important;">
+                                    @Html.TextBoxFor(x => x.BillDetail.BillType, new { @class = "input-large-query", @Name = "BillSubTypeD", @Id = "BillSubTypeD", @style = "text-align:right", @value = Model.BillDetail.BillType })
+                                </div>
+                                <div class="col-sm-5" style="padding:0px !important;margin:0px !important;">
+                                    @Html.TextBoxFor(x => x.BillDetail.BillNo, new { @class = "form-control", @Name = "BillDetailBillNoD", @Id = "BillDetailBillNoD", @style = "text-align:right", @value = Model.BillDetail.BillNo, @tabindex = 1 })
+                                </div>
+                                @Html.TextBoxFor(x => x.BillDetail.BillTableKey, new { @class = "form-control hidden ", @Name = "BillTableKeyD", @Id = "BillTableKeyD", @style = "width:100%;", @disabled = "disabled", @value = Model.BillDetail.BillTableKey, @tabindex = 50 })
+                                @Html.TextBoxFor(x => x.BillDetail.BillParentKey, new { @class = "form-control hidden ", @Name = "BillParentKeyD", @Id = "BillParentKeyD", @style = "width:100%;", @disabled = "disabled", @value = Model.BillDetail.BillParentKey, @tabindex = 50 })
+                            </div>
+                            <label class="col-sm-offset-1 col-sm-2 control-label" style="width:auto;">Submission Date:<span class="red">*</span></label>
+                            <div class="col-sm-1">
+                                @Html.TextBoxFor(x => x.SubmitDate, new { @class = "form-control", @Name = "SubmitDate", @Id = "SubmitDate", @style = "text-align:right", @value = Model.SubmitDate, @tabindex = 4 })
+                            </div>
+                            <label class="col-sm-1 control-label">Document No:<span class="red">*</span></label>
+                            <div class="col-sm-1">
+                                @Html.TextBoxFor(x => x.DocumentNo, new { @class = "form-control", @Name = "DocumentNo", @Id = "DocumentNo", @style = "text-align:right", @disabled = "disabled", @value = Model.DocumentNo, @tabindex = 5 })
+                            </div>
+                            <label class="col-sm-2 control-label" style="width:auto;">Doc Date:<span class="red">*</span></label>
+                            <div class="col-sm-1">
+                                @Html.TextBoxFor(x => x.DocDate, new { @class = "form-control", @Name = "DocDate", @Id = "DocDate", @style = "text-align:right", @value = Model.DocDate })
+                            </div>
+
+
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Through :<span class="red">*</span></label>
+                            <div class="col-sm-3" style="padding-left:0px !important;">
+                                <div class="col-sm-12" style="display: flex;">
+                                    <input type="radio" class="form-control" name="Through" tabindex="6" id="ByHand" value="ByHand" style="height:20px;width:35px;" checked /><label class=" bold control-label">By Hand</label>
+                                    <input type="radio" class="form-control" name="Through" tabindex="7" id="ByCourier" value="ByCourier" style="height:20px;width:35px;" /><label class=" bold control-label">By Courier</label>
+                                    <input type="radio" class="form-control" name="Through" tabindex="8" id="Other" value="Other" style="height:20px;width:35px;" /><label class=" bold control-label">Other</label>
+                                </div>
+                            </div>
+                            <label class="col-sm-1 control-label" style="width:auto;">Remark :</label>
+                            <div class="col-sm-7" style="margin-top:5px;">
+                                @Html.TextAreaFor(x => x.Remark, new { @class = "form-control", @Name = "Remark", @Id = "Remark", @value = Model.Remark, @maxlength = "150", @rows = "1", @tabindex = 2 })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Branch:</label>
+                            <div class="col-sm-2">
+                                @Html.TextBoxFor(x => x.BillDetail.BillBranchN, new { @class = "form-control", @Name = "BillBranchND", @Id = "BillBranchND", @style = "width:100%;", @disabled = "disabled", @value = Model.BillDetail.BillBranchN })
+                            </div>
+                            <div class="col-sm-3 hidden">
+                                @Html.TextBoxFor(x => x.BillDetail.BillBranch, new { @class = "form-control", @Name = "BillBranchD", @Id = "BillBranchD", @style = "width:100%;", @disabled = "disabled", @value = Model.BillDetail.BillBranch })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Party:</label>
+                            <div class="col-sm-3">
+                                @Html.TextBoxFor(x => x.Party, new { @class = "input-large-query", @Name = "PartyD", @Id = "PartyD", @style = "width:100%;", @disabled = "disabled", @value = Model.Party, @tabindex = 9 })
+                                @Html.TextBoxFor(x => x.PartyParent, new { @class = "form-control hidden ", @Name = "PartyParentD", @Id = "PartyParentD", @style = "width:100%;", @disabled = "disabled", @value = Model.PartyParent, @tabindex = 50 })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Date:</label>
+                            <div class="col-sm-2">
+                                @Html.TextBoxFor(x => x.BillDetail.Date, "{0:dd/MM/yyyy}", new { @class = "form-control", @Name = "BillDetailDateD", @Id = "BillDetailDateD", @style = "width:100%;", @disabled = "disabled", @value = Model.BillDetail.Date, @tabindex = 10 })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">Amount:</label>
+                            <div class="col-sm-1">
+                                @Html.TextBoxFor(x => x.BillDetail.Amount, new { @class = "form-control", @Name = "BillDetailAmountD", @Id = "BillDetailAmountD", @style = "width:100%;text-align:right", @disabled = "disabled", @value = Model.BillDetail.Amount, @tabindex = 11 })
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+        </div>
+
+    </div>
+</section>
+
+
+<footer id="fixedbottom" class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        @if (Model.Mode == "Edit" || Model.Mode == "View" || Model.Mode == "Delete")
+        {
+            <div class="col-sm-5">
+                <button class="btn btn-warning" id="btnAddDoc" style="font-size: 13px;padding:3px 12px;" name="Command">Attach Doc</button>
+            </div>
+            <div class="col-sm-2" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                T.FAT ERP-iX9, Suchan
+            </div>
+            <div class="col-sm-5">
+                <div class="pull-right">
+                    @if (Model.Mode == "Edit")
+                    {
+                        @*<button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPrintOnly" data-toggle="tooltip" data-placement="top" title="Print Only">Print Only</button>*@
+                        @*<button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnPrint" formtarget="_blank">Save & Print</button>*@
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save Data</button>
+                    }
+                    @if (Model.Mode == "Delete")
+                    {
+                        <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="btnDelete">Delete</button>
+                    }
+                    <a href="~/Logistics/BillSubmission/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+                </div>
+            </div>
+
+        }
+        else
+        {
+            <div class="col-sm-5">
+                <button class="btn btn-warning" id="btnAddDoc" style="font-size: 13px;padding:3px 12px;" name="Command">Attach Doc</button>
+            </div>
+            <div class="col-sm-2" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                T.FAT ERP-iX9, Suchan
+            </div>
+            <div class="col-sm-5">
+                <div class="pull-right">
+                    @*<button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Print" formtarget="_blank">Save & Print</button>*@
+                    <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save Data</button>
+                    <a href="~/Logistics/BillSubmission/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+                </div>
+            </div>
+
+        }
+    </div>
+</footer>
+@Html.HiddenFor(x => x.Document, new { @id = "Document" })
+
+
+
+
+
+
+<!--AlertNote Modal -->
+<div class="modal" id="AlertNoteModal" style="margin-top: 1%;">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <!-- Modal Header -->
+            <div class="modal-header">
+                <h4 class="modal-title col-sm-11" style="font-weight:bold;text-align:center;" id="ModalHeader">Alert Note System</h4>
+                <button type="button" class="close" style="color:red;" data-dismiss="modal" aria-hidden="true">&times;</button>
+            </div>
+            <!-- Modal body -->
+            <div class="modal-body">
+                <div class="form-group" id="AlertNoteDiv" style="min-height:500px;max-height:500px;overflow:auto;">
+
+                </div>
+            </div>
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <div class="form-group">
+                    <button class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!--Attachment Modal -->
+<div class="example-modal">
+    @*<div id="attachdoc" class="modal modal-primary" style="z-index:2500;">*@
+    <div id="attachdoc" class="modal modal-primary" style="margin-top:3%;width: 100%;display: block;" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="false">
+        <div class="modal-dialog" style="width:100%;">
+            <div id="AttachDoc">
+            </div>
+        </div>
+    </div>
+</div>
+

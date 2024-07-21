@@ -1,0 +1,594 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.PurchaseVM
+@using Common;
+
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding:7px;font-weight:bolder;">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+            @*<h4 class="modal-title">Pick from Source Document</h4>*@
+            <div class="form-group">
+                <div class="col-md-6" style=""><h4 class="modal-title"><b>Pick from Source Document</b></h4></div>
+                <div class="col-md-6" style="float:right;">
+                    <div class="col-md-5" style="display: flex;">
+                        <div><label class=" bold control-label" style="margin-top: 5px;"> Select By</label></div>
+                        <div class="col-md-8"><input type="text" id="SelectLR" class="form-control" placeholder="LR NO" /></div>
+                    </div>
+                    <div class="col-md-5" style="float:left;display: flex;">
+                        <div><label class=" bold control-label" style="margin-top: 5px;"> Search</label></div>
+                        <div class="col-md-10"><input type="text" id="Search" class="form-control" placeholder="Search Here" /></div>
+
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <div class="modal-body">
+            <div class="" id="PickTable" style="max-height:450px; min-height:450px;width:100%; overflow: scroll;">
+                <table id="example1" class="table-bordered example" style="width:145%!important;">
+                    <thead>
+                        <tr>
+                            <th><center><input type="checkbox" id="SelectAll" style="height: 17px;width: 18px;" /></center></th>
+                            <th>LR No</th>
+                            <th>LR Date</th>
+                            <th>Total Qty</th>
+                            <th>Unbill Qty</th>
+                            <th>Bill Qty</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Consigner</th>
+                            <th>Consignee</th>
+                            @if (Model.NewItemListLR != null)
+                            {
+                                if (Model.NewItemListLR.Select(x => x.ChargeName).FirstOrDefault() != null)
+                                {
+                                    var ChargeName = Model.NewItemListLR.Select(x => x.ChargeName).FirstOrDefault();
+                                    for (int i = 0; i < ChargeName.Length; i++)
+                                    {
+                                        if (ChargeName[i] != null)
+                                        {
+                                            <th>@ChargeName[i]</th>
+                                        }
+                                    }
+                                }
+                            }
+                            <th>Description</th>
+                            <th>Narr</th>
+                            <th>Bill Narr</th>
+
+                        </tr>
+                    </thead>
+                    <tbody style="max-height:400px;min-height:400px;width:100%; overflow-x:hidden;overflow-y:auto">
+                        @if (Model.NewItemListLR != null)
+                        {
+                            foreach (var item in @Model.NewItemListLR.ToList())
+                            {
+                                <tr id="@item.LRno">
+                                    <td class=""><center><input type="checkbox" id="@item.RECORDKEY" class="checkbox" style="height: 17px;width: 18px;" /></center></td>
+                                    <td class="GetLRNO">@item.LRno</td>
+                                    <td>@item.LRDate.ToString("dd/MM/yyyy")</td>
+                                    <td>@item.TotalQty</td>
+                                    <td class="UnbillQty">@item.UnbillQty</td>
+                                    <td><input type="text" class="BillQty form-control" style="width:70px;" value="@item.BillQty" onblur="LoadQtyBlur(@item.LRno)" disabled /></td>
+                                    <td id="@item.FromCode">@item.From</td>
+                                    <td id="@item.ToCode">@item.To</td>
+                                    <td id="@item.ConsignerCode">@item.Consigner</td>
+                                    <td id="@item.ConsigneeCode">@item.Consignee</td>
+                                    @if (Model.NewItemListLR.Select(x => x.ChargeName).FirstOrDefault() != null)
+                                    {
+                                        var ChargeName = Model.NewItemListLR.Select(x => x.ChargeName).FirstOrDefault();
+                                        var FLD = Model.NewItemListLR.Select(x => x.Fld).FirstOrDefault();
+                                        for (int i = 0; i < ChargeName.Length; i++)
+                                        {
+                                            if (ChargeName[i] != null)
+                                            {
+                                                <td id="@FLD[i]">
+                                                    <input type="text" class="form-control CalculationTxt" Value="@item.ChargeValue[i]" style="width: 70px;" disabled />
+                                                    @*@Html.TextBoxFor(x => item.ChargeName[i], new { @class = "form-control CalculationTxt", @Value = String.Format("{0:0.00}", item.ChargeValue[i]), @style = "width: 70px;",@disabled="disabled",@id="txtCharges"+ item.ChargeName[i] + ""+i+"" })*@
+                                                </td>
+                                            }
+                                        }
+                                    }
+                                    <td id="@item.DescriptionsCode">@item.Descriptions</td>
+                                    <td>@item.LrNarr</td>
+                                    <td><input type="text" maxlength="100" class="BillNarr" disabled /></td>
+
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+
+
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;">
+            <button type="button" class="btn btn-success" id="pickrecord">Accept Data</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal">Discard</button>
+        </div>
+    </div>
+</div>
+<style>
+    .span6 {
+        display: none !important;
+    }
+</style>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script>
+    $(document).ready(function () {
+
+
+
+
+        $(".CalculationTxt").constrain({ allow: { regex: "[0-9]" } });
+        $(".CalculationTxt").focus(function () {
+            this.value = "";
+        });
+        $(".CalculationTxt").blur(function () {
+            debugger;
+            if (this.value == "") {
+                $(this).val("0");
+            };
+        });
+
+        $("#SelectLR").val("");
+        $("#Search").val("");
+
+
+        $('#example1').DataTable();
+       
+        $("#SelectLR").blur(function () {
+            debugger;
+            //suresh
+            var LRNO = $("#SelectLR").val();
+            var Row = $('#' + LRNO);
+            //var CheckBox = Row.find('.checkbox').prop('checked', true);
+            var CheckBox = Row.find('.checkbox');
+            if (CheckBox.is(":checked")) {
+                
+            } else {
+                CheckBox.prop('checked', true);
+            }
+            Row.find(".BillQty").prop("disabled", false);
+            Row.find(".BillNarr").prop("disabled", false);
+            Row.find(".CalculationTxt").prop("disabled", false);
+            Row.find(".BillQty").val(Row.find(".UnbillQty").text());
+
+        });
+
+        $("#example1 > tbody > tr").dblclick(function () {
+            var Row = $(this).closest('tr');
+            var Lrno = Row.find(".GetLRNO").text();
+
+            if (Lrno != "") {
+
+                var url = '@Url.Action("GetSingleLR")';
+                var DTO = { LRno: Lrno, AutoSelect: true };
+
+                $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                    beforeSend: function () {
+                    $('.spinner').show();
+                    },
+                    success: function (data) {
+                        var LoadDownLoadFiles = $("#FetchSingleLRDiv");
+                        $("#ErrorMessage").hide();
+                        $('.spinner').hide();
+                        LoadDownLoadFiles.html('');
+                        LoadDownLoadFiles.html(data.Html);
+                        $('#FetchSingleLR').modal('show');
+                    },
+                });
+            }
+
+
+        });
+
+
+        
+
+
+
+        $('#Search').keyup(function () {
+
+            var value = $(this).val();
+            if (value != "") {
+                $('#example1 td').removeClass('SearchRow');
+                $("#example1 > tbody > tr > td ").each(function () {
+                    if ($(this).text().toLowerCase().indexOf(value.toLowerCase()) >= 0) {
+                        $(this).addClass("SearchRow");
+                    } else {
+                        $(this).removeClass("SearchRow");
+                    }
+                });
+            } else {
+                $('#example1 td').removeClass('SearchRow');
+                var check = $('#example1').find('input[type=checkbox]:checked').length;
+                if (check == 0) {
+                    $('#example1 td').removeClass('ClickrowColor');
+                }
+            }
+        });
+
+        $(".checkbox").click(function () {
+
+            $("#SelectAll").prop('checked', false);
+            var Row = $(this).closest('tr');
+            var CheckBox = Row.find('.checkbox').prop("checked");
+            if (CheckBox) {
+                Row.find(".BillQty").prop("disabled", false);
+                Row.find(".BillNarr").prop("disabled", false);
+                Row.find(".CalculationTxt").prop("disabled", false);
+                Row.find(".BillQty").val(Row.find(".UnbillQty").text());
+
+            } else {
+                Row.find(".BillQty").prop("disabled", true);
+                Row.find(".BillQty").val("0");
+                Row.find(".BillNarr").prop("disabled", true);
+                Row.find(".BillNarr").val("");
+                Row.find(".CalculationTxt").prop("disabled", true);
+                Row.find(".CalculationTxt").val("0");
+
+
+            }
+            //calculateWeightAndQty();
+        });
+
+        $("#SelectAll").click(function () {
+            TotalWeight = 0, TotalQty = 0;
+            $(".checkbox").prop('checked', $(this).prop('checked'));
+            if ($(this).prop("checked") == true) {
+                $("#example1 > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    Row.find(".BillQty").prop("disabled", false);
+                    Row.find(".BillNarr").prop("disabled", false);
+                    Row.find(".CalculationTxt").prop("disabled", false);
+                    Row.find(".BillQty").val(Row.find(".UnbillQty").text());
+                });
+
+            } else {
+                $("#example1 > tbody  > tr").each(function () {
+                    var Row = $(this).closest('tr');
+                    Row.find(".BillQty").prop("disabled", true);
+                    Row.find(".BillQty").val("0");
+                    Row.find(".BillNarr").prop("disabled", true);
+                    Row.find(".BillNarr").val("");
+                    Row.find(".CalculationTxt").prop("disabled", true);
+                    Row.find(".CalculationTxt").val("0");
+                });
+            }
+
+        });
+
+        if ($('#hdnVATGSTApp').val() == "V") {
+            $('#igstvatrpostlbl').html('Tax Rate');
+            $('#sgstvatrpostlbl').html('Surcharge Rate');
+            $('#cgstvatrpostlbl').html('Addl.Tax Rate');
+            $('#igstvatapostlbl').html('Tax Amt');
+            $('#cgstvatapostlbl').html('Addl Tax Amt');
+            $('#sgstvatapostlbl').html('Surcharge Amt');
+        }
+
+        if ($('#hdnMileStoneReqd').val() == "True") {
+            $('#tabledatapick tbody tr').dblclick(function () {
+                var tds = $(this).find('td');
+                var ParentKey = tds.eq(9).text();
+                $('#tabledatapick tbody tr').each(function () {
+                    var tds2 = $(this).find('td');
+                    var av = tds2.eq(9).text();
+                    if (ParentKey.includes(av)) {
+                        tds2.find('input[type="checkbox"]').prop("checked", true);
+                    }
+                })
+
+            })
+        }
+        else {
+            $('#tabledatapick tbody tr').dblclick(function () {
+                var tds = $(this).find('td');
+                var ParentKey = tds.eq(3).text();
+                $('#tabledatapick tbody tr').each(function () {
+                    var tds2 = $(this).find('td');
+                    var av = tds2.eq(3).text();
+                    if (ParentKey.includes(av)) {
+                        tds2.find('input[type="checkbox"]').prop("checked", true);
+                    }
+                })
+
+            })
+        }
+
+        $("#pickrecord").click(function (event) {
+            event.preventDefault();
+            var myTableArray = [];
+            var acheckmil = 0;
+            debugger;
+            //if ($('#hdnMileStoneReqd').val() == "True") {
+            if ("True" == "True") {
+
+                var ChargesTxtbox = $('.CalculationTxt').length;
+                var rowCount = $('#example1 tbody tr').length;
+                var SingleRowCharges = ChargesTxtbox / rowCount;
+                //var StartChargesPosition = 10;
+                var ChargeName = [];
+                var htmlTableTdPostion = 10;
+                $('#example1 > thead  > tr').each(function () {
+                    var tds = $(this).find('th');
+                    for (var i = 0; i < SingleRowCharges; i++) {
+                        ChargeName.push(tds.eq(htmlTableTdPostion).text());
+                        ++htmlTableTdPostion;
+                    }
+                });
+
+                $('#example1 > tbody  > tr').each(function () {
+
+
+
+                    var tds = $(this).find('td');
+                    if (tds.find('input[type="checkbox"]').is(':checked')) {
+                        debugger;
+                        var ChargeValue = [];
+                        var FLD = [];
+                        htmlTableTdPostion = 10;
+                        for (var i = 0; i < SingleRowCharges; i++) {
+                            ChargeValue.push(tds.eq(htmlTableTdPostion).find(".CalculationTxt").val());
+                            FLD.push(tds.eq(htmlTableTdPostion).attr("id"));
+                            ++htmlTableTdPostion;
+                        }
+
+                        //var JumpNewTD =  htmlTableTdPostion + 1;
+                        debugger;
+                        var myDets = {
+                            RECORDKEY: tds.find(".checkbox").attr("id"),
+                            LRno: tds.eq(1).text(),
+                            LRDate: tds.eq(2).text(),
+                            TotalQty: tds.eq(3).text(),
+                            UnbillQty: tds.eq(4).text(),
+                            BillQty: tds.find(".BillQty").val(),
+                            From: tds.eq(6).text(),
+                            FromCode: tds.eq(6).attr("id"),
+                            To: tds.eq(7).text(),
+                            ToCode: tds.eq(7).attr("id"),
+                            Consigner: tds.eq(8).text(),
+                            ConsignerCode: tds.eq(8).attr("id"),
+                            Consignee: tds.eq(9).text(),
+                            ConsigneeCode: tds.eq(9).attr("id"),
+                            ChargeName: ChargeName,
+                            ChargeValue: ChargeValue,
+                            Fld: FLD,
+                            Descriptions: tds.eq(htmlTableTdPostion).text(),
+                            DescriptionsCode: tds.eq(htmlTableTdPostion++).attr("id"),
+                            LrNarr: tds.eq(htmlTableTdPostion).text(),
+                            NewNarr: tds.find(".BillNarr").val(),
+                        }
+                    }
+                    myTableArray.push(myDets);
+                });
+                var ModelData = {};
+                ModelData["NewItemListLR"] = myTableArray;
+                ModelData["SubType"] = $("#hdnSType").val();
+                ModelData["MainType"] = $("#hdnMType").val();
+                ModelData["SourceDoc"] = $("#RefDoc").val();
+                ModelData["Type"] = $("#hdnType").val();
+                ModelData["ChangeLog"] = $('#hdnchangelog').val();
+                ModelData["MileStoneReqd"] = $('#hdnMileStoneReqd').val();
+                var DTO = { Model: ModelData };
+
+                if (myTableArray.length>1) {
+                    var url = '@Url.Action("PostPickUp")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforesend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        debugger;
+                        if (data.Status == "Success") {
+                            debugger;
+                            $('.spinner').hide();
+                            $('#ErrorMessage').hide();
+                            $('#pickuplist').modal('hide');
+
+                            $('#ItemListTable').html(data.Html);
+                            $('#txtf_F001').val(data.Taxable.toFixed(2));
+                            $('#txtb_F001').val(data.Taxable.toFixed(2));
+                            $('#txttottxable').val(data.Taxable.toFixed(2));
+                            $('#txttotcgst').val(data.CGSTAmt.toFixed(2));
+                            $('#txttotsgst').val(data.SGSTAmt.toFixed(2));
+                            $('#txttotigst').val(data.IGSTAmt.toFixed(2));
+                            $('#txtMLSPercent').val(parseFloat(data.MLSPercent).toFixed(2))
+                            if ($('#hdnSType').val() == "RP") {
+                                $('#TDSAble').val(data.Taxable.toFixed(2));
+                            }
+                            //SetValuesInTable()
+                            $('#divLedgerTable :input').prop('disabled', true);
+                            $('#CrPeriod').prop('disabled', false);
+                            //$('#CurrDiv :input').prop('disabled', true);
+                            if ($('#hdnSType').val() == "RP") {
+                                loadValuesTdsAble()
+                            }
+                            //document.getElementById("Sales").click();
+                        }
+                        else if (data.Status == "Fail") {
+                            alert(data.Message)
+                        }
+
+                    },
+                    error: function (err) {
+                        alert(JSON.stringify(err))
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                    });
+                } else {
+                    $('#pickuplist').modal('hide');
+                }
+
+            }
+            else {
+
+                $('#tabledatapick tr:not(:first)').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.find('input[type="checkbox"]').is(':checked')) {
+                        acheckmil = parseInt(acheckmil) + parseInt(1);
+                    }
+                })
+                if (parseInt(acheckmil) == parseInt(0)) {
+                    alert('Select a Ledger to Pickup')
+                    return;
+                }
+                if ($("#RefDoc").val() == "Blanket Order") {
+                    if (parseInt(acheckmil) > parseInt(1)) {
+                        alert('Select only one Ledger to Pickup')
+                        return;
+                    }
+                }
+
+
+                $('#tabledatapick tr:not(:first)').each(function () {
+                    var tds = $(this).find('td');
+                    if (tds.find('input[type="checkbox"]').is(':checked')) {
+                        var myDets = {
+                            tempId: tds.eq(1).text(),
+                            TableKey: tds.eq(2).text(),
+                            ParentKey: tds.eq(3).text(),
+                            Code: tds.eq(5).text(),
+                            ItemName: tds.eq(6).text(),
+                            Store: tds.eq(7).text(),
+                            Unit: tds.eq(8).text(),
+                            HSN: tds.eq(9).text(),
+                            GSTCode: tds.eq(10).text(),
+                            Qty: tds.eq(11).text(),
+                            Factor: tds.eq(12).text(),
+                            Qty2: tds.eq(13).text(),
+                            Unit2: tds.eq(14).text(),
+                            RateOn2: tds.eq(15).text(),
+                            Rate: tds.eq(16).text(),
+                            Disc: tds.eq(17).text(),
+                            DiscAmt: tds.eq(18).text(),
+                            IGSTRate: tds.eq(19).text(),
+                            CGSTRate: tds.eq(20).text(),
+                            SGSTRate: tds.eq(21).text(),
+                            IGSTAmt: tds.eq(22).text(),
+                            CGSTAmt: tds.eq(23).text(),
+                            SGSTAmt: tds.eq(24).text(),
+                            Taxable: tds.eq(25).text(),
+                            Val1: tds.eq(26).text(),
+                            Narr: tds.eq(27).text(),
+                            BinNumber: tds.eq(28).text(),
+                            MainType: tds.eq(29).text(),
+                            SubType: tds.eq(30).text(),
+                            DiscPerAmt: tds.eq(31).text(),
+                            IndKey: tds.eq(32).text(),
+                            EnqKey: tds.eq(33).text(),
+                            QtnKey: tds.eq(34).text(),
+                            OrdKey: tds.eq(35).text(),
+                            ChlnKey: tds.eq(36).text(),
+                            InvKey: tds.eq(37).text(),
+                            PKSKey: tds.eq(38).text(),
+                            RateType: tds.eq(39).text(),
+                            RateCalcType: tds.eq(40).text(),
+                            DiscChargeAmt: tds.eq(41).text(),
+                            PendingFactor: tds.eq(42).text(),
+                        }
+                        myTableArray.push(myDets);
+                    }
+                })
+                var ModelData = {};
+                ModelData["PickUpList"] = myTableArray;
+                ModelData["SubType"] = $("#hdnSType").val();
+                ModelData["MainType"] = $("#hdnMType").val();
+                ModelData["SourceDoc"] = $("#RefDoc").val();
+                ModelData["Type"] = $("#hdnType").val();
+                ModelData["ChangeLog"] = $('#hdnchangelog').val();
+                ModelData["LocationCode"] = $('#LocationCode').val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("PostPickUp")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforesend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        if (data.Status == "Success") {
+                            $('.spinner').hide();
+                            $('#ErrorMessage').hide();
+                            $('#pickuplist').modal('hide');
+                            if ($('#hdnchangelog').val() == "Add") {
+                                $('#ItemChargeMoreDiv').html(data.Html);
+                                if ($("#hdnSType").val() != "PI") {
+                                    $("#BillNumber").val(data.BillNumber);
+                                    $('#OrdDate').val(data.OrdDate);
+                                }
+                                if ($('#hdnCurrConv').val() == "Y") {
+                                    $('#CurrName').val(data.CurrName).attr("selected", "selected");
+                                    $('#CurrRate').val(data.CurrRate).attr("selected", "selected");
+                                }
+                            }
+                            if ($('#hdnchangelog').val() == "Edit") {
+                                $('#ItemListTable').html(data.Html);
+                            }
+                            $('#txtf_F001').val(data.Taxable.toFixed(2));
+                            $('#txtb_F001').val(data.Taxable.toFixed(2));
+                            $('#txttottxable').val(data.Taxable.toFixed(2));
+                            $('#txttotcgst').val(data.CGSTAmt.toFixed(2));
+                            $('#txttotsgst').val(data.SGSTAmt.toFixed(2));
+                            $('#txttotigst').val(data.IGSTAmt.toFixed(2));
+                            if ($('#hdnSType').val() == "RP") {
+                                $('#TDSAble').val(data.Taxable.toFixed(2));
+                            }
+                            SetValuesInTable()
+                            $('#divLedgerTable :input').prop('disabled', true);
+                            $('#CrPeriod').prop('disabled', false);
+                            //$('#CurrDiv :input').prop('disabled', true);
+                            if ($('#hdnSType').val() == "RP") {
+                                loadValuesTdsAble()
+                            }
+                            document.getElementById("Sales").click();
+                        }
+                        else if (data.Status == "Fail") {
+                            alert(data.Message)
+                        }
+                    },
+                    error: function (err) {
+                        alert(JSON.stringify(err))
+                        $('.spinner').hide();
+                        alert("error occured while processing your request.");
+                    }
+                });
+            }
+
+        });
+    });
+    function LoadQtyBlur(value)
+    {
+
+        var Row = $("#" + value);
+        var Qty = Row.find(".UnbillQty").text();
+        var LoadGQty = Row.find(".BillQty").val();
+        var LoadQty = parseInt(LoadGQty) ;
+
+
+        if (parseFloat(Qty) < parseFloat(LoadQty)) {
+            alert("Please Check The Bill Qty.....!");
+            Row.find(".BillQty").val(Qty);
+        }
+
+    }
+
+</script>

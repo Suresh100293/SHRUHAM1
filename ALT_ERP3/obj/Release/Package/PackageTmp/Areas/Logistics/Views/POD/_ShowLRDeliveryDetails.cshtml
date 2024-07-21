@@ -1,0 +1,577 @@
+﻿@model ALT_ERP3.Areas.Logistics.Models.PODReceivedVM
+@using Common;
+@{
+    /**/
+
+    ViewBag.Title = "Delivery Master";
+    Layout = null;
+}
+<script src="@Url.Content("~/Content/js/jquery.validate.min.js")" type="text/javascript"></script>
+<script src="@Url.Content("~/Content/js/jquery.constrain.js")" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function () {
+        //$("#Lrno").filter(':visible').focus();
+        //$("#Lrno").focus();
+
+
+        var mstartdate = $('#hdnStartDate').val();
+        var menddate = $('#hdnEndDate').val();
+        $('#PODDate').datepicker({
+            format: 'dd/mm/yyyy',
+            changeMonth: true,
+            changeYear: true,
+            yearRange: "-60:+0",
+            autoclose: true,
+        });
+        $('#DeliveryDate').datepicker({
+            format: "dd/mm/yyyy",
+            autoclose: true,
+            startDate: new Date(mstartdate),
+            endDate: new Date(menddate)
+        });
+        $('#attachdoc').modal({
+            backdrop: 'static',
+            keyboard: false
+        })
+        $("#attachdoc").modal("hide");
+        debugger;
+        $("#TglPOD").click(function () {
+            $("#PODPanel").slideToggle("slow");
+        });
+        $("#TglDelivery").click(function () {
+            $("#DeliveryPanel").slideToggle("slow");
+        });
+        GridReload();
+
+        $('#Yes').click(function () {
+            if (this.checked) {
+                $("#DeliveryDate").prop("disabled", false);
+                $("#DeliveryTime").prop("disabled", false);
+                $("#DeliveryRemark").prop("disabled", false);
+                $("#VehicleNo").prop("disabled", false);
+                $("#PersonName").prop("disabled", false);
+                $("#MobileNO").prop("disabled", false);
+                $("#OK").prop("disabled", false);
+                $("#PCK").prop("disabled", false);
+                $("#MaterialD").prop("disabled", false);
+                //$("#Short").prop("disabled", false);
+                $(".txtfDelQty").prop("disabled", false);
+            }
+        });
+        $('#No').click(function () {
+            if (this.checked) {
+                $("#DeliveryDate").prop("disabled", true);
+                $("#DeliveryTime").prop("disabled", true);
+                $("#DeliveryRemark").prop("disabled", true);
+                $("#VehicleNo").prop("disabled", true);
+                $("#PersonName").prop("disabled", true);
+                $("#MobileNO").prop("disabled", true);
+                $("#OK").prop("disabled", true);
+                $("#PCK").prop("disabled", true);
+                $("#MaterialD").prop("disabled", true);
+                //$("#Short").prop("disabled", false);
+                $(".txtfDelQty").prop("disabled", true);
+            }
+        });
+        $("#btnPODDirectAddDoc").click(function (event) {
+            event.preventDefault();
+            debugger;
+
+            if ($("#Lrno").val() == null || $("#Lrno").val() == "") {
+                alert("Please Select Consignment First...!");
+                return;
+            }
+
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = 'Edit';
+            ModelData["Srl"] = $("#ConsignmentKey").val();
+            ModelData["Type"] = "LR000";
+            ModelData["RefType"] = "POD Received";
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+
+
+        $("#btnDeliveryAddDoc").click(function (event) {
+            event.preventDefault();
+            debugger;
+            if ($("#Lrno").val() == null || $("#Lrno").val() == "") {
+                alert("Please Select Consignment First...!");
+                return;
+            }
+            var url = '/Logistics/Attachment/UploadFile';
+            var ModelData = {};
+            ModelData["Mode"] = 'Edit';
+            ModelData["Srl"] = $("#ConsignmentKey").val();
+            ModelData["Type"] = "LR000";
+            ModelData["RefType"] = "Delivery";
+            var DTO = { Model: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    var AttachDoc = $("#AttachDoc");
+                    AttachDoc.html('');
+                    AttachDoc.html(data.Html);
+                    $('#attachdoc').modal('show');
+                },
+            });
+        });
+
+        $("#Lrno").constrain({ allow: { regex: "[0-9]" } });
+
+        if ('@Model.Mode' == "Edit") {
+            //$('.form-group :input').prop("disabled", true);
+            $("#PODDate").prop("disabled", false);
+            $("#PODTime").prop("disabled", false);
+            $("#PODRemark").prop("disabled", false);
+            $("#Lrno").prop("disabled", true);
+            $("#LrComboListbtn").prop("disabled", true);
+            $("#ComingFromBranchPOD").prop("disabled", true);
+
+        } else if (('@Model.Mode' == "View") || ('@Model.Mode' == "Delete")) {
+            $('.form-group :input').prop("disabled", true);
+        }
+
+
+        LoadBranch();
+        //LoadPOdLr();
+
+        $('input[type=radio][name=DeliveryStatus]').change(function () {
+
+            var Remark = this.value;
+            var ID = this.id;
+            if (ID == "Short") {
+                $("#ShortQty").prop("disabled", false);
+            } else {
+                $("#ShortQty").prop("disabled", true);
+                $("#ShortQty").val("0");
+            }
+            if (ID != "OK") {
+                $("#lblDamageMessage").removeClass("hidden");
+            } else {
+                $("#lblDamageMessage").addClass("hidden");
+            }
+
+            $("#DeliveryRemark").val(Remark);
+        });
+        $('#Lrno').blur(function () {
+            if ($("#Lrno").val() != "" && $("#Lrno").val() != null) {
+
+                var ModelData = {};
+                ModelData["Lrno"] = $("#Lrno").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data) {
+                        $('.spinner').hide();
+                        if (data.Status == "ValidError") {
+                            $("#Lrno").val("");
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed") {
+                            ShowLRDeliveryDetails(data.Message);
+                            $("#MainLR").val($('#Lrno').val());
+                        }
+                        else
+                        {
+                            SearchGridReload();
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+        });
+
+        $('#DeliveryNo').blur(function () {
+            var url = '@Url.Action("CheckDeliveryNO")';
+            $.ajax({
+                type: "POST",
+                traditional: true,
+                url: url,
+                data: { DeliveryNO: $("#DeliveryNo").val(), DocumentNO: '@Model.Document' },
+                success: function (result) {
+                    if (result.Message == "T") {
+                        DeliverNO = true;
+                    } else {
+                        DeliverNO = false;
+
+                        $("#ErrorMessage1").show();
+                        $("#ErrorMessage1").text('DeliveryNO Exist Please CHange Delivery No.');
+                        return;
+
+                    }
+                }
+            });
+        });
+        //LoadVehicleNo();
+
+        
+    });
+
+
+    function LoadBranch() {
+        var url = '@Url.Action("BranchList")'
+        $('#ComingFromBranchPOD').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.ComingFromBranchPOD', text: '@Model.ComingFromBranchPODN' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    }
+    function DeLQty(value) {
+        var Row = $("#" + value);
+        var Qty = Row.find(".TotQty").text();
+        var LoadQty = Row.find(".txtfDelQty").val();
+        var Weight = Row.find(".TotWeight").text();
+        if (parseFloat(Qty) < parseFloat(LoadQty)) {
+            Row.find(".txtDelWeight").val(Row.find(".TotWeight").text());
+            alert("Delivery Qty Not Greater Than Qty OF Lr.....!");
+            Row.find(".txtfDelQty").val(Qty);
+        } else {
+            var CalculateWeight = parseFloat(LoadQty) / parseFloat(Qty) * parseFloat(Weight);
+            if (parseInt(CalculateWeight) >= parseInt(Weight)) {
+                Row.find(".txtDelWeight").val(Math.round(Weight));
+            } else {
+                Row.find(".txtDelWeight").val(Math.round(CalculateWeight));
+            }
+
+        }
+    }
+</script>
+<style>
+    legend {
+        margin-left: 1%;
+        font-size: 14px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        border: 1px solid #ddd;
+        border-radius: 15px;
+        padding: 5px 45px 5px 45px;
+        background-color: white;
+        width: auto;
+        color: red;
+    }
+
+    fieldset {
+        border: 1px solid #ddd !important;
+        margin: 0;
+        padding: 10px;
+        position: relative;
+        border-radius: 4px;
+        background-color: #f5f5f5;
+        padding-left: 5px !important;
+    }
+
+    .Unauthorise {
+        background-color: #5079d4 !important;
+        color: white;
+    }
+
+    .rejected {
+        background-color: #bf6860 !important;
+        color: white;
+    }
+</style>
+<div class="col-sm-12">
+    <fieldset class=" col-md-12" style="margin-bottom: 5px;">
+        <legend id="TglPOD">POD Received</legend>
+        <button class="btn btn-info legend2" id="btnPODDirectAddDoc">Attachment</button>
+        @*<button class="btn btn-info legend2" id="btnPODDirectAddDoc">Attachment</button>*@
+
+        <div class="panel panel-default" id="PODPanel" style="margin-bottom: 0px !important;">
+            <div class="panel-body ">
+                <div class="form-group">
+                    <label class=" bold   col-sm-1  control-label">POD No:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.PODNO, new { @class = "form-control", @style = "width:100%;", @Value = Model.PODNO, @disabled = "disabled" })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">LR No:</label>
+                    <div class="col-sm-2" style="display: flex;">
+                        @Html.TextBoxFor(x => x.Lrno, new { @class = "form-control", @id = "Lrno", @Name = "Lrno", @style = "width:100%", @value = Model.Lrno })
+                        <button class="btn btn-primary" style="font-size: 12px;padding:2px 9px;" title="Docket List Without POD." id="LrComboListbtn" data-toggle="modal" data-target="#LRComboList"><i class="glyphicon glyphicon-eye-open"></i></button>
+                    </div>
+                    <label class=" bold   col-sm-1  control-label" style="margin-left: 0px;">POD Date:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.PODDate, new { @class = "form-control", @style = "width:100%;background-color:#64bd62;", @Value = Model.PODDate })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">POD Time:</label>
+                    <div class="col-sm-2">
+                        @Html.TextBoxFor(x => x.PODTime, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.PODTime })
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label class=" bold   col-sm-1  control-label">Consigner:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.ConsignerName, new { @class = "form-control", @style = "width:100%;", @Value = Model.ConsignerName, @readonly = "readonly" })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">Consignee:</label>
+                    <div class="col-sm-2 " style="">
+                        @Html.TextBoxFor(x => x.ConsigneeName, new { @class = "form-control", @style = "width:100%;", @Value = Model.ConsigneeName, @readonly = "readonly" })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">POD Remark:</label>
+                    <div class="col-sm-5 ">
+                        @Html.TextAreaFor(x => x.PODRemark, new { @class = "form-control", @Value = Model.PODRemark, @rows = "1", @maxlength = "150" })
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label class=" bold   col-sm-1  control-label" style="margin-left: 0px;">LR Date:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.LRDate, new { @class = "form-control", @style = "width:100%;", @Value = Model.LRDate, @disabled = "disabled" })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">LR Time:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.LRTime, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.LRTime, @disabled = "disabled" })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">From:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.FromName, new { @class = "form-control", @style = "width:100%;", @Value = Model.FromName, @readonly = "readonly" })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">To:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.ToName, new { @class = "form-control", @style = "width:100%;", @Value = Model.ToName, @readonly = "readonly" })
+                    </div>
+
+                </div>
+                <div class="form-group">
+                    <label class=" bold   col-sm-1  control-label">Lr Qty:</label>
+                    <div class="col-sm-2 ">
+                        @Html.TextBoxFor(x => x.LRQty, new { @class = "form-control", @style = "width:100%;", @Value = Model.LRQty, @readonly = "readonly" })
+                    </div>
+                    <label class=" bold   col-sm-1  control-label">LR Weight:</label>
+                    <div class="col-sm-2 " style="">
+                        @Html.TextBoxFor(x => x.LRWeight, new { @class = "form-control", @style = "width:100%;", @Value = Model.LRWeight, @readonly = "readonly" })
+                    </div>
+                </div>
+            </div>
+        </div>
+    </fieldset>
+    @*<hr style="border: 1px solid;" />*@
+    @if (Model.Mode == "Add" && Model.pODDelRetions.Count() > 0)
+    {
+        <fieldset class=" col-md-12" style="margin-top: 0px;">
+            <legend id="TglDelivery">Delivery</legend>
+            <button class="btn btn-info legend2" id="btnDeliveryAddDoc">Attachment</button>
+
+            <div class="panel panel-default" id="DeliveryPanel" style="margin-bottom: 30px !important;">
+                <div class="panel-body ">
+                    <div class="col-sm-6">
+                        <div class="form-group">
+                            <label class=" bold   col-sm-2  control-label">Deliver No:</label>
+                            <div class="col-sm-4 ">
+                                @Html.TextBoxFor(x => x.DeliveryNo, new { @class = "form-control", @style = "width:100%;", @Value = Model.DeliveryNo, @disabled = "disabled" })
+                            </div>
+                            <label class=" bold   col-sm-2  control-label">Delivery Req:</label>
+                            <div class="col-sm-4" style="display: flex;">
+
+                                <input type="radio" class="form-control" name="DELREQ" id="Yes" value="Yes" style="height:20px;width:35px;" checked /><label class=" bold control-label"> Yes</label>
+                                <input type="radio" class="form-control" name="DELREQ" id="No" value="No" style="height:20px;width:35px;" /><label class=" bold control-label"> No</label>
+
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class=" bold   col-sm-2  control-label">Deliver Date:</label>
+                            <div class="col-sm-4 ">
+                                @Html.TextBoxFor(x => x.DeliveryDate, new { @class = "form-control", @style = "width:100%;background-color:#64bd62;", @Value = Model.DocDate.ToString("dd/MM/yyyy") })
+                            </div>
+                            <label class=" bold   col-sm-2  control-label">Deliver Time:</label>
+                            <div class="col-sm-4 ">
+                                @Html.TextBoxFor(x => x.DeliveryTime, new { @class = "form-control", @type = "time", @style = "width:100%;", @Value = Model.DeliveryTime })
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class=" bold   col-sm-2 control-label">Status:</label>
+                            <div class="col-sm-8" style="display: flex;">
+                                <input type="radio" class="form-control" name="DeliveryStatus" id="OK" value="OK" style="height:20px;width:35px;" checked /><label class=" bold control-label"> OK</label>
+                                <input type="radio" class="form-control" name="DeliveryStatus" id="PCK" value="Package Damage" style="height:20px;width:35px;" /><label class=" bold control-label"> Package Damage</label>
+                                <input type="radio" class="form-control" name="DeliveryStatus" id="MaterialD" value="Material Damage" style="height:20px;width:35px;" /><label class=" bold control-label"> Material Damage</label>
+                                <input type="radio" class="form-control" name="DeliveryStatus" id="Short" value="Short" style="height:20px;width:35px;" /><label class=" bold control-label"> Short</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class=" bold   col-sm-2  control-label">Delivery-Remark:</label>
+                            <div class="col-sm-10 ">
+                                @Html.TextAreaFor(x => x.DeliveryRemark, new { @class = "form-control", @Value = Model.DeliveryRemark, @rows = "2", @maxlength = "150" })
+                            </div>
+                            <label id="lblDamageMessage" class=" bold col-sm-offset-2   col-sm-10  control-label hidden" style="color:red;">Please Attach/Upload POD In Case Material Damage/Shortage.</label>
+                        </div>
+                        <div class="form-group">
+                            <label class=" bold   col-sm-2  control-label">Short Qty:</label>
+                            <div class="col-sm-4 ">
+                                @Html.TextBoxFor(x => x.ShortQty, new { @class = "form-control", @style = "width:100%;", @Value = Model.ShortQty, @disabled = "disabled" })
+                            </div>
+                            <label class=" bold   col-sm-2  control-label">Vehicle No:</label>
+                            <div class="col-sm-4 ">
+                                @Html.TextBoxFor(x => x.VehicleNo, new { @class = "form-control", @style = "width:100%;", @Value = Model.VehicleNo, @maxlenght = "25" })
+                            </div>
+                        </div>
+                        <div class="form-group">
+
+                            <label class=" bold   col-sm-2  control-label">Contact:</label>
+                            <div class="col-sm-4 ">
+                                @Html.TextBoxFor(x => x.PersonName, new { @class = "form-control", @style = "width:100%;", @Value = Model.PersonName })
+                            </div>
+                            <label class=" bold   col-sm-2  control-label">Contact No:</label>
+                            <div class="col-sm-4 ">
+                                @Html.TextBoxFor(x => x.MobileNO, new { @class = "form-control", @maxlength = "10", @style = "width:100%;", @Value = Model.MobileNO })
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class=" col-sm-6  ">
+                        <div style="border: 2px solid #d3d3d3;height:330px;">
+                            <div class="form-group ">
+                                <div class=" col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Rejected Stock :</label>
+                                    <svg width="20" height="20" style="margin-top:3px;">
+                                        <title>Rejected LR</title>
+                                        <rect width="20" height="20" style="fill:#bf6860;stroke-width:3;stroke:rgb(0,0,0)" />
+                                    </svg>
+                                </div>
+                                <div class="col-md-1" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;width: auto;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label" style="width:auto;color:black;">Un-Authorise Stock:</label>
+                                    <svg width="20" height="20" style="margin-top:3px;">
+                                        <title>Un-Authorise LR</title>
+                                        <rect width="20" height="20" style="fill:#5079d4;stroke-width:3;stroke:rgb(0,0,0)" />
+                                    </svg>
+                                </div>
+                                <div class="col-md-7" style="font-family:Tahoma;padding-top:2px;font-size:9pt;display:flex;padding-right: 0px;padding-left: 0px;">
+                                    <label class="col-sm-12 control-label bold" style="text-align: center;font-size: 15px;color: red;text-decoration: underline;">Stock List</label>
+                                    @*<label class=" bold   col-sm-12  control-label" style="text-align: center;font-size: 15px;color: red;text-decoration: underline;">Stock List</label>*@
+                                </div>
+
+                            </div>
+                            @{
+                                <div style="min-height:300px;max-height:300px;overflow-y: auto;">
+                                    <table id="tabledata" class="zui-table" style="width:100%;">
+                                        <thead>
+                                            <tr role="row" style="font-family:Tahoma;font-size:9pt;width:100%">
+                                                <th style="width:5%">Branch</th>
+                                                <th style="width:5%">Type</th>
+                                                <th style="width:5%">Bal Qty</th>
+                                                <th style="width:5%">Bal Weight</th>
+                                                <th style="width:7%;">Del Qty</th>
+                                                <th style="width:7%">Del Weight</th>
+                                            </tr>
+                                        </thead>
+
+                                        <tbody style="">
+                                            @if (Model.pODDelRetions != null)
+                                            {
+                                                foreach (var item in Model.pODDelRetions.ToList())
+                                                {
+                                                    <tr role="row" style="font-family:Tahoma;font-size:9pt;" id="@item.ParentKey.ToString()" name="@item.Authorise">
+                                                        <td style="width:1%">@item.StkBranch</td>
+                                                        <td style="width:1%">@item.Type</td>
+                                                        <td class="TotQty" style="width:1%">@item.DelBalQty</td>
+                                                        <td class="TotWeight" style="width:1%;text-align:right">@item.DelBalWeight</td>
+                                                        @if (item.BlockDelivery)
+                                                        {
+                                                            <td style="width:1%"><input type="text" alt="Delivery Qty" value="@item.DelQty" onblur="DeLQty('@item.ParentKey.ToString()');" class="txtfDelQty form-control" style="text-align:right;width:131px;background-color:#64bd62;" disabled /></td>
+                                                        }
+                                                        else
+                                                        {
+                                                            <td style="width:1%"><input type="text" alt="Delivery Qty" value="@item.DelQty" onblur="DeLQty('@item.ParentKey.ToString()');" class="txtfDelQty form-control" style="text-align:right;width:131px;background-color:#64bd62;" /></td>
+                                                        }
+                                                        <td style="width:1%;text-align:right"><input type="text" alt="Delivery Weight" value="@item.DelWeight" class="txtDelWeight form-control" style="text-align:right;width:131px;" disabled /></td>
+                                                        <td class="hidden" style="width:1%">@item.ParentKey</td>
+                                                    </tr>
+                                                }
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+    }
+</div>
+
+@Html.HiddenFor(x => x.ConsignmentKey)
+@Html.HiddenFor(x => x.StartDate, new { @id = "hdnStartDate" })
+@Html.HiddenFor(x => x.EndDate, new { @id = "hdnEndDate" })

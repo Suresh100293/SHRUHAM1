@@ -1,0 +1,370 @@
+﻿
+@model ALT_ERP3.Areas.Logistics.Models.LCVM
+@using Common;
+
+<script>
+    $(document).ready(function () {
+        $(".MultiPrintClass").click(function () {
+            debugger;
+            var tds = $(this).closest("tr").find("td");
+            var Format = tds.eq(2).text();
+            tds.find('input[type="checkbox"]').prop('checked', true);
+            var StoreProcedure = tds.eq(3).text();
+            window.open("/Logistics/LC/PrintSingleDocumentCrystal?StoreProcedure=" + StoreProcedure + '&Format=' + Format + '&Document=' + $('#Document').val() + '&Branch=' + $('#hdnBranch').val(), "_blank");
+            if (PrintLR != "OnlyPrint") {
+                if ('@Model.Mode' == "Add") {
+                    window.location.href = "/Logistics/LC/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType&Mode=Add";
+                } else {
+                    window.location.href = "/Logistics/MasterGridd/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                }
+            }
+        });
+        $('#btnMultiPrint').click(function (event) {
+            event.preventDefault();
+            var myFormatArray = []
+            $('#printgrid tr:not(:first)').each(function () {
+                var tds = $(this).find('td');
+                if (tds.find('input[type="checkbox"]').is(':checked')) {
+                    Format = tds.eq(2).text();
+                    myFormatArray.push(Format);
+                }
+            })
+            window.open("/Logistics/LC/SendMultiReport?Format=" + myFormatArray.toString() + "&Type=" + $('#Type').val() + "&Document=" + $('#Document').val() + '&Branch=' + $('#hdnBranch').val(), "_blank");
+            if (PrintLR !="OnlyPrint") {
+                if ('@Model.Mode' == "Add") {
+                    window.location.href = "/Logistics/LC/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType&Mode=Add";
+                } else {
+                    window.location.href = "/Logistics/MasterGridd/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2&MainType=@Model.MainType";
+                }
+            }
+        });
+
+
+    });
+</script>
+<div class="modal-body">
+    <div class="modal-content">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:5px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Print</b></h4>
+        </div>
+        <div class="modal-body">
+            <div class="grid" id="PrintGridTable" style="max-height:350px;min-height:350px; width:100%; overflow: scroll;">
+                <table id="printgrid" class="zui-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th></th>
+                            <th>Format</th>
+                            <th>StoreProcedure</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.PrintGridList != null)
+                        {
+                            for (int i = 0; i < Model.PrintGridList.Count; i++)
+                            {
+                                <tr style="font-family:Tahoma;font-size:9pt;border: solid 1px lightgray;">
+                                    <td style="width:10%;"><button type="button" class="MultiPrintClass"><img src="/Content/Images/Print.ico" /></button></td>
+                                    <td style="width:10%;" align="center">@Html.CheckBoxFor(m => Model.PrintGridList[i].IsFormatSelected, new { @Style = "width:27px;heigth:27px;" })</td>
+                                    <td style="width:40%;">@Html.DisplayFor(m => Model.PrintGridList[i].Format)</td>
+                                    <td style="width:40%;">@Html.DisplayFor(m => Model.PrintGridList[i].StoreProcedure)</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <input id="PrintDocument" hidden="hidden" />
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;">
+            <button type="button" class="btn btn-warning" data-dismiss="modal" id="btnMultiPrint">Print</button>
+            <button data-dismiss="modal" class="btn btn-danger" type="button">Close</button>
+        </div>
+    </div>
+</div>
+
+
+@*<script type="text/javascript">
+        $(document).ready(function () {
+
+
+
+
+            var values = $('#printformats').val();
+            $("#printformats").val(values);
+            if (values == "") {
+            }
+            else {
+                $.each(values.split(","), function (i, e) {
+                    $(".EmptyViewDataId option[value='" + e + "']").prop("selected", true);
+                });
+            }
+
+
+            $('input:radio[name="ChequeNo"]').filter('[value="Portrait"]').attr('checked', true);
+            $('input:radio[name="Sno"]').filter('[value="Crystal"]').attr('checked', true);
+            $('input:radio[name="CurrName"]').filter('[value="A4"]').attr('checked', true);
+            $('input:radio[name="BillNumber"]').filter('[value="Pdf"]').attr('checked', true);
+            if ($('#repsubject').val() == "") {
+                $('#repsubject').val("Auto Generated Report");
+            }
+            if ($('#message').val() == "") {
+                $('#message').val("Please find herewith Attached the Document");
+            }
+
+            $(".EmptyViewDataId").change(function () {
+                debugger;
+                $('#printformats').val('');
+                var selected = [], Text = [];
+                $(".EmptyViewDataId :selected").each(function () {
+                    selected.push($(this).val());
+                    Text.push($(this).text());
+                });
+                $('#printformats').val(selected);
+            });
+
+
+
+            $('.EmptyViewDataId').multiselect({ includeSelectAllOption: true })
+
+
+        });
+
+        $(document).on('click', '[name="Sno"]', function () {
+            //var radios = this.form.elements['BillNumber'];
+            if ($(this).val() == "SSRS") {
+                $('input:radio[name="BillNumber"]').filter('[value="XLS"]').attr('disabled', false);
+                $('input:radio[name="BillNumber"]').filter('[value="Word"]').attr('disabled', false);
+                $('input:radio[name="BillNumber"]').filter('[value="VIEW"]').attr('disabled', false);
+                $('input:radio[name="BillNumber"]').filter('[value="VIEW"]').attr('checked', true);
+                //document.getElementById("EmailOnly").disabled = false
+            }
+            else {
+                $('input:radio[name="BillNumber"]').filter('[value="Word"]').attr('disabled', true);
+                $('input:radio[name="BillNumber"]').filter('[value="VIEW"]').attr('disabled', true);
+                $('input:radio[name="BillNumber"]').filter('[value="Pdf"]').attr('checked', true);
+                //document.getElementById("EmailOnly").disabled = true
+                //$("#EmailOnly").prop("checked", false);
+            }
+            if ($(this).val() == "Crystal") {
+                //document.getElementById("EmailOnly").disabled = false
+                $('input:radio[name="BillNumber"]').filter('[value="XLS"]').attr('disabled', true);
+            }
+        });
+
+        $('#EmailOnly').on('change', function () {
+            //alert($('#EmailOnly').is(':checked'));
+            if ($('#EmailOnly').is(':checked')){
+                $('input:radio[name="Sno"]').filter('[value="SSRS"]').attr('checked', true);
+                $('input:radio[name="BillNumber"]').filter('[value="Pdf"]').attr('checked', true);
+            }
+        });
+
+
+        function PrintExecute1() {
+            var mDate = ($('#Fromdate').val() + ':' + $('#ToDate').val());
+            var mwhat = "";
+            var mpaper = $("input[name=CurrName]:checked").val()                // paper size
+            var mpageorient = $("input[name=ChequeNo]:checked").val();          // page orient (layout)
+            var moutput = $("input[name=BillNumber]:checked").val();            // output
+            var mtool = $("input[name=Sno]:checked").val();                     // report tool
+            //var mmsg = $('#message').val();
+            //mmsg=mmsg.replace("\n", "<br />");
+            var memaildata = $('#repsubject').val() + "~" + $('#emailid').val() + "~" + $('#message').val();;
+            // special loop for multiple parties
+            var mstr = $('#hiddenvalues').val() + "~";
+            // for reportcentreplus hiddenvalues is blank
+            if (mstr == "~") {
+                mstr = "$X$~";
+            }
+            //alert(mstr);
+            var msel = mstr.split('~');
+            var i;
+            for (i = 0; i < msel.length; ++i)
+            {
+                if (msel[i]!='')
+                {
+                    if (msel[i] = "$X$") {
+                        msel[i] = "";
+                    }
+                    if ($('#EmailOnly').is(':checked')) {
+                        if (moutput=="Pdf"){             // output
+                            //window.open("/SendEmail/Index?Date=" + mDate + "&ViewDataId=" + $("#viewcode").val() + "&mpapersize=" + mpaper + "&mTo=" + $("#emailid").val(), '_blank');
+                            //return;
+                            if (mtool == "Crystal") {
+                                mwhat = "ECRPDF";
+                            } else {
+                                mwhat = "EPDF";
+                            }
+                        }
+                        if (moutput == "XLS") {          // output
+                            mwhat = "EXLS";
+                        }
+                        if (moutput == "Word") {         // output
+                            mwhat = "EWRD";
+                        }
+                    }
+                    else
+                    {
+                        debugger;
+                        if (mtool=="SSRS"){                  // reporttool
+                            if (moutput == "Pdf") {          // output
+                                if (mpageorient=="Portrait"){   // Layout
+                                    mwhat = "RPDF";
+                                }else{
+                                    mwhat = "RPDL";
+                                }
+                            }
+                            if (moutput == "XLS") {          // output
+                                mwhat ="RXLS";
+                            }
+                            if (moutput == "Word") {         // output
+                                mwhat = "RWRD";
+                            }
+                            if (moutput == "VIEW") {         // Report viewer
+                                //$("#hdnparastring") is defined in parent form (e.g. acledger, stock ledger, reportcentreplus etc.
+                                var murl = encodeURI("/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=" + $("#printformats").val() + "&mpageorient=" + mpageorient + "&SelectContent=" + msel[i] + $("#hdnparastring").val() + "&mParaString=" + $("#hdnparastring").val());
+                                //var murl = encodeURI("/ReportViewerCommon/Index?Date=" + mDate + "&ViewDataId=" + $("#hdnformatname").val() + "&mpageorient=" + mpageorient + "&SelectContent=" + msel[i] + $("#hdnparastring").val() + "&mParaString=" + $("#hdnparastring").val());
+                                window.open(murl, '_blank');
+                                return;
+                            }
+                        }
+                        if (mtool=="Crystal"){
+                            mwhat = "CRPDF";
+                        }
+                        if (mtool=="Grid"){
+                            if (moutput == "Pdf") {          // output
+                                if (mpageorient == "Portrait") {   // Layout
+                                    mwhat="PDF";
+                                }else{
+                                    mwhat="PDL";
+                                }
+                            }
+                            if (moutput == "XLS") {          // output
+                                mwhat = "XLS";
+                                if ($("#hdnisreportplus").val() == '!!!') {
+                                    var sUrlPath = '@Url.Action("GetPDFX")?mWhat=' + mwhat + '&Date=' + mDate + '&ViewDataId=' + $("#printformats").val() + '&mwhat=' + mwhat + '&mpageorient=' + mpageorient + '&mpapersize=' + mpaper + '&memaildata=' + memaildata + '&SelectContent=' + msel[i] + $("#hdnparastring").val();
+                                } else {
+                                    var sUrlPath = '@Url.Action("GetPDF")?mWhat=' + mwhat + '&Date=' + mDate + '&ViewDataId=' + $("#printformats").val() + '&mwhat=' + mwhat + '&mpageorient=' + mpageorient + '&mpapersize=' + mpaper + '&memaildata=' + memaildata + '&SelectContent=' + msel[i] + $("#hdnparastring").val();
+                                }
+
+
+                                sUrlpath = window.open(sUrlPath, '_blank');
+                                //var sUrlpath = window.open('@Url.Action("GetExcel")?mWhat=' + mwhat + '&Date=' + mDate + '&ViewDataId=' + $("#viewcode").val() + '&SelectContent=' + msel[i] + $("#hdnparastring").val(), '_blank');
+                                //var sUrlpath = window.open('@Url.Action("GetExcel")?Date=' + mDate + '&ViewDataId=' + $("#viewcode").val()+ '&SelectContent=' + $('#hiddenvalues').val(), '_blank');
+                                return;
+                            }
+                        }
+                    } // emailonly
+                    if ($("#hdnisreportplus").val() == '!!!')
+                    {
+                        var murl = '@Url.Action("GetPDFX")?mWhat=' + mwhat + '&Date=' + mDate + '&ViewDataId=' + $("#printformats").val() + '&mwhat=' + mwhat + '&mpageorient=' + mpageorient + '&mpapersize=' + mpaper + '&memaildata=' + memaildata + '&SelectContent=' + msel[i] + $("#hdnparastring").val();
+                    } else {
+                        var murl = '@Url.Action("GetPDF")?mWhat=' + mwhat + '&Date=' + mDate + '&LocationCode=' + $("#LrNo").val() + '&ViewDataId=' + $("#printformats").val() + '&mwhat=' + mwhat + '&mpageorient=' + mpageorient + '&mpapersize=' + mpaper + '&memaildata=' + memaildata + '&SelectContent=' + msel[i] + $("#hdnparastring").val();
+                    }
+
+
+
+
+                    murl = window.open(murl, '_blank');
+
+
+
+
+
+                }
+            }
+            if (mwhat.startsWith("E"))
+            {
+                alert("Email is Sent..Please Close the other Opened Blank tabs..");
+            }
+        };
+
+
+    </script>
+
+    <div class="modal-content" style="width:600px;padding-bottom:0px;">
+        <div class="modal-header" style="background-color:#cccccc;padding-top:7px;">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+            <h4 class="modal-title"><b>Print Options</b></h4>
+        </div>
+        <div class="modal-body" style="padding-top:-15px;padding-top:5px;padding-bottom:5px;margin-left:15px;">
+            <div class="form-horizontal" id="ItemListupdate">
+                <div class="form-group">
+                    <div class="form-group" id="reporttyperadio">
+                        <div class="col-sm-2 control-label">Report Tool:</div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            Grid @Html.RadioButtonFor(x => x.Sno, "Grid", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            SSRS @Html.RadioButtonFor(x => x.Sno, "SSRS", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-2 control-label" style="padding-top:0px;">
+                            Crystal Report @Html.RadioButtonFor(x => x.Sno, "Crystal", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                    </div>
+                    <div class="form-group" id="layoutradio">
+                        <div class="col-sm-2 control-label">Layout:</div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            Portrait @Html.RadioButtonFor(x => x.ChequeNo, "Portrait", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            Landscape @Html.RadioButtonFor(x => x.ChequeNo, "Landscape", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                    </div>
+                    <div class="form-group" id="papersizeradio">
+                        <div class="col-sm-2 control-label">Paper:</div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            Letter @Html.RadioButtonFor(x => x.CurrName, "Letter", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            A5 @Html.RadioButtonFor(x => x.CurrName, "A5", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            A4 @Html.RadioButtonFor(x => x.CurrName, "A4", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            A3 @Html.RadioButtonFor(x => x.CurrName, "A3", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            A2 @Html.RadioButtonFor(x => x.CurrName, "A2", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            A1 @Html.RadioButtonFor(x => x.CurrName, "A1", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                    </div>
+                    <div class="form-group" id="outputradio" style="margin-bottom:5px;">
+                        <div class="col-sm-2 control-label">Output:</div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            Pdf @Html.RadioButtonFor(x => x.BillNumber, "Pdf", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            XLS @Html.RadioButtonFor(x => x.BillNumber, "XLS", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-1 control-label" style="padding-top:0px;">
+                            Word @Html.RadioButtonFor(x => x.BillNumber, "Word", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                        <div class="col-sm-2 control-label" style="padding-top:0px;">
+                            SSRS Viewer @Html.RadioButtonFor(x => x.BillNumber, "VIEW", new { @style = "padding-left:0px;width:18px;height:18px;" })
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" style="font-family:Verdana;font-size:9pt;padding-top:5px;">Format:</label>
+                        <div class="col-sm-8">
+                            @Html.ListBoxFor(x => Model.EmptyViewDataId, Model.RpoertViewData, new { @class = "EmptyViewDataId", @id = "EmptyViewDataId", @style = "margin-left:10% !important;" })
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer" style="background-color:#cccccc;height:42px;padding-bottom:5px;padding-top:5px;border-radius: 0px 0px 5px 5px;padding-right: 5px;padding-left: 5px;">
+            <button type="button" class="btn btn-success" data-dismiss="modal" style="font-family:Verdana, Geneva, Tahoma, sans-serif" onclick="PrintExecute()" id="btncontinue"><i class="fa fa-print"></i>&nbsp;&nbsp;Continue</button>
+            <button type="button" class="btn btn-danger" data-dismiss="modal" style="font-family:Verdana, Geneva, Tahoma, sans-serif"><i class="fa fa-arrow-left"></i>&nbsp;&nbsp;Cancel</button>
+        </div>
+    </div>
+
+
+    @Html.HiddenFor(x => x.ViewDataId, new { @id = "hdnformatname" })
+    @Html.HiddenFor(x => x.ViewDataId, new { @id = "printformats" })*@ 

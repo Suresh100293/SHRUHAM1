@@ -1,0 +1,620 @@
+﻿@model ALT_ERP3.AdvancePayModel
+@using Common
+
+<div class="form-horizontal" id="ledgerupdate" style="margin-left:30px;">
+    <div class="col-sm-6" id="SelectedLRTable">
+        <table id="lrtabledata" class="zui-table" style="width:100%;word-wrap:break-word">
+            <thead>
+                <tr>
+                    <td style="width:13%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;"></td>
+                    <td style="width:1%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">
+                        Sr.
+                    </td>
+                    <td style="width:45%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">
+                        LR Number
+                    </td>
+                    <td style="width:40%;border-right: solid 1px dimgray;border-bottom: solid 1px dimgray;">
+                        Amount (<label id="lbltxtAmt"></label>)
+                    </td>
+                    <td style="width:1%"></td>
+                </tr>
+                <tr role="row" style="font-family:Tahoma;font-size:9pt;width: 100%;">
+                    <td style="width:13%">
+                        <button type="button" class="btn btn-success" id="btnactivateLRDetails">Add</button>
+                    </td>
+                    <td style="width:1%">
+                        @Html.TextBoxFor(x => x.tempid, new { @class = "form-control", @id = "hdnLRtempid", @Name = "hdnLRtempid", @Value = Model.tempid, @style = "text-align:right;display:none" })
+                    </td>
+                    <td style="width: 45%">
+                        @Html.TextBoxFor(x => x.LRNumber, new { @class = "form-control", @id = "txtLRNumber", @Name = "txtLRNumber", @Value = Model.LRNumber, @disabled = "disabled" })
+                    </td>
+                    <td style="width:40%">
+                        @Html.TextBoxFor(x => x.LRAmt, new { @class = "form-control", @id = "txtLRAmt", @Name = "txtLRAmt", @Value = Model.LRAmt, @style = "text-align:right;", @disabled = "disabled" })
+                    </td>
+                    <td style="width:1%">
+                        <button type="button" class="btn btn-success" id="btnaddLRDetails" style="display:none"><i class="fa fa-save"></i></button>
+                        <button type="button" id="EditSaveLRLedger" class="btn btn-warning" title="EditSave" style="display:none"><i class="fa fa-save"></i></button>
+                    </td>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.LRDetailList != null)
+                {
+                    foreach (var item in @Model.LRDetailList.OrderByDescending(x => x.tempid).ToList())
+                    {
+                        <tr style="font-family:Tahoma;font-size:9pt;">
+                            <td style="vertical-align:inherit;width:13%;">
+                                <button type="button" action="EditLRLedger" class="btn btn-warning btn-sm" value="@item.tempid" title="Edit"><i class="fa fa-edit"></i></button>
+                                <button type="button" action="DeleteLRLedger" class="btn btn-danger btn-sm" value="@item.tempid" title="Delete"><i class="fa fa-trash-o"></i></button>
+                            </td>
+                            <td style="vertical-align:inherit;width:1%;">@item.tempid</td>
+
+                            <td style="vertical-align:inherit;width:45%">@item.LRNumber</td>
+                            <td style="vertical-align:inherit;width:40%">@item.LRAmt</td>
+
+                            <td style="width:1%"></td>
+                            <td class="hidden" style="width:1%">@item.ConsignmentKey</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+
+        </table>
+    </div>
+    <div class="col-sm-6" id="SelectedLRDetailsTable" hidden="hidden">
+        @Html.Partial("LRMasterDetails", Model)
+    </div>
+
+</div>
+
+<script>
+    $(document).ready(function () {
+
+        $("#btnactivateLRDetails").click(function (event) {
+            $("#txtLRNumber").prop('disabled', false);
+            $("#txtLRAmt").prop('disabled', false);
+            $("#btnaddLRDetails").prop('disabled', true);
+            $("#txtLRNumber").focus();
+            $("#btnaddLRDetails").show();
+            $("#EditSaveLRLedger").hide();
+        });
+
+        $("#btnactivateLRDetails").focusout(function (event) {
+            $("#txtLRNumber").prop('disabled', false);
+
+            $("#txtLRAmt").prop('disabled', false);
+            $("#txtLRNumber").focus();
+            $("#btnaddLRDetails").show();
+            $("#EditSaveLRLedger").hide();
+        });
+
+        $('button[action|="DeleteLRLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var myBatchArray = [];
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempid: tds.eq(1).text(),
+                    LRNumber: tds.eq(2).text(),
+                    LRAmt: tds.eq(3).text(),
+                    ConsignmentKey: tds.eq(5).text(),
+                }
+                myBatchArray.push(myDets);
+            })
+            var ModelData = {};
+            ModelData["LRDetailList"] = myBatchArray;
+            ModelData["tempid"] = $(this).val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("DeleteLRDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    $('.spinner').hide();
+                    $('#LRDetailsDialog').html(data.Html);
+                    $('#lbltxtAmt').html(data.Amt);
+                    $('#SelectedLRDetailsTable').hide();
+                },
+                error: function () {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $('button[action|="EditLRLedger"]').click(function (event) {
+            event.preventDefault(event);
+            var myBatchArray = [];
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempid: tds.eq(1).text(),
+                    LRNumber: tds.eq(2).text(),
+                    LRAmt: tds.eq(3).text(),
+                    ConsignmentKey: tds.eq(5).text(),
+
+                }
+                myBatchArray.push(myDets);
+            })
+            var ModelData = {};
+            ModelData["tempid"] = $(this).val();
+            ModelData["LRDetailList"] = myBatchArray;
+            ModelData["SessionFlag"] = "Edit";
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("GetLRDetails")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#LRDetailsDialog').html(data.Html);
+                    $("#btnaddLRDetails").hide();
+                    $('#EditSaveLRLedger').show();
+                    $("#txtLRNumber").prop('disabled', false);
+                    $("#txtLRAmt").prop('disabled', false);
+                    GetConsignmentDetails(data.ConsignmentKey);
+                },
+                error: function (err) {
+                    alert(JSON.stringify(err))
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $("#btnaddLRDetails").click(function (event) {
+            event.preventDefault();
+            var myBatchArray = [];
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempid: tds.eq(1).text(),
+                    LRNumber: tds.eq(2).text(),
+                    LRAmt: tds.eq(3).text(),
+                    ConsignmentKey: tds.eq(5).text(),
+                   }
+                 myBatchArray.push(myDets);
+            })
+            var ModelData = {};
+            ModelData["LRDetailList"] = myBatchArray;
+            ModelData["SessionFlag"] = "Add";
+            ModelData["DocuDate"] = $("#DocuDate").val();
+
+            ModelData["LRNumber"] = $("#txtLRNumber").val();
+            ModelData["LRAmt"] = $("#txtLRAmt").val();
+            ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+            ModelData["Code"] = $("#txtAccount").val();
+            ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+            ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("ConfirmLRSave")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == "ConfirmError")
+                    {
+                        debugger;
+                        $('.spinner').show();
+                        var confrm = confirm(data.Message);
+                        if (confrm == false)
+                        {
+                            $("#txtLRNumber").focus();
+                            return;
+                        }
+                        else
+                        {
+                            debugger;
+                            var myBatchArray = [];
+                            $('#lrtabledata tbody tr').each(function () {
+                                var tds = $(this).find('td');
+                                var myDets = {
+                                    tempid: tds.eq(1).text(),
+                                    LRNumber: tds.eq(2).text(),
+                                    LRAmt: tds.eq(3).text(),
+                                    ConsignmentKey: tds.eq(5).text(),
+                                }
+                                myBatchArray.push(myDets);
+                            });
+                            var ModelData = {};
+                            ModelData["LRDetailList"] = myBatchArray;
+                            ModelData["SessionFlag"] = "Add";
+                            ModelData["LRNumber"] = $("#txtLRNumber").val();
+                            ModelData["LRAmt"] = $("#txtLRAmt").val();
+                            ModelData["Code"] = $("#txtAccount").val();
+                            ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+                            ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                            ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+                            ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+
+                            var DTO = { Model: ModelData }
+                            var url = '@Url.Action("AddLRDetails")';
+                            $.ajax({
+                                type: "POST",
+                                dataType: "json",
+                                data: JSON.stringify(DTO),
+                                cache: false,
+                                url: url,
+                                contentType: "application/json;charset=utf-8",
+                                beforeSend: function () {
+                                    $('.spinner').show();
+                                },
+                                success: function (data)
+                                {
+                                    if (data.Status == "ValidError")
+                                    {
+                                        $('.spinner').hide();
+                                        alert(data.Message)
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        $('#lrmodel').modal('show');
+                                        $('#LRDetailsDialog').html(data.Html);
+                                        $('#lbltxtAmt').html(data.Amt);
+                                        $('.spinner').hide();
+                                    }
+                                    $('#SelectedLRDetailsTable').hide();
+                                },
+                                error: function ()
+                                {
+                                    alert("Error occured while processing your request.");
+                                }
+                            });
+                        }
+                    }
+                    else if (data.Status == "ValidError") {
+                        $('.spinner').hide();
+                        alert(data.Message)
+                        return;
+                    }
+                    else
+                    {
+                        debugger;
+                        var myBatchArray = [];
+                        $('#lrtabledata tbody tr').each(function () {
+                            var tds = $(this).find('td');
+                            var myDets = {
+                                tempid: tds.eq(1).text(),
+                                LRNumber: tds.eq(2).text(),
+                                LRAmt: tds.eq(3).text(),
+                                ConsignmentKey: tds.eq(5).text(),
+                            }
+                            myBatchArray.push(myDets);
+                        });
+                        var ModelData = {};
+                        ModelData["LRDetailList"] = myBatchArray;
+                        ModelData["SessionFlag"] = "Add";
+                        ModelData["LRNumber"] = $("#txtLRNumber").val();
+                        ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+                        ModelData["LRAmt"] = $("#txtLRAmt").val();
+                        ModelData["Code"] = $("#txtAccount").val();
+                        ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                        ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+
+                        var DTO = { Model: ModelData };
+                        var url = '@Url.Action("AddLRDetails")';
+                        $.ajax({
+                            type: "POST",
+                            dataType: "json",
+                            data: JSON.stringify(DTO),
+                            cache: false,
+                            url: url,
+                            contentType: "application/json;charset=utf-8",
+                            beforeSend: function () {
+                                $('.spinner').show();
+                            },
+                            success: function (data)
+                            {
+                                if (data.Status == "ValidError")
+                                {
+                                    $('.spinner').hide();
+                                    alert(data.Message)
+                                    return;
+                                }
+                                else
+                                {
+
+                                    $('#lrmodel').modal('show');
+                                    $('#LRDetailsDialog').html(data.Html);
+                                    $('#lbltxtAmt').html(data.Amt);
+                                    $('.spinner').hide();
+                                }
+                                $('#SelectedLRDetailsTable').hide();
+                            },
+                            error: function ()
+                            {
+                                alert("Error occured while processing your request.");
+                            }
+                        });
+                    }
+                },
+                error: function ()
+                {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $("#EditSaveLRLedger").click(function (event) {
+            event.preventDefault();
+            var myBatchArray = [];
+            $('#lrtabledata tbody tr').each(function () {
+                var tds = $(this).find('td');
+                var myDets = {
+                    tempid: tds.eq(1).text(),
+                    LRNumber: tds.eq(2).text(),
+                    LRAmt: tds.eq(3).text(),
+                    ConsignmentKey: tds.eq(5).text(),
+
+                }
+                myBatchArray.push(myDets);
+            });
+            var ModelData = {};
+            ModelData["LRDetailList"] = myBatchArray;
+            ModelData["SessionFlag"] = "Edit";
+            ModelData["DocuDate"] = $("#DocuDate").val();
+            ModelData["LRNumber"] = $("#txtLRNumber").val();
+            ModelData["LRAmt"] = $("#txtLRAmt").val();
+            ModelData["tempid"] = $("#hdnLRtempid").val();
+            ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+            ModelData["Code"] = $("#txtAccount").val();
+            ModelData["ParentKey"] = $("#hdnParentKey").val();
+            ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+            ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("ConfirmLRSave")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data)
+                {
+                    debugger;
+                    if (data.Status == "ConfirmError")
+                    {
+                        var confrm = confirm(data.Message);
+                        if (confrm == false)
+                        {
+                            return;
+                        }
+                        else
+                        {
+                            debugger;
+                            var myBatchArray = [];
+                            $('#lrtabledata tbody tr').each(function () {
+                                var tds = $(this).find('td');
+                                var myDets = {
+                                    tempid: tds.eq(1).text(),
+                                    LRNumber: tds.eq(2).text(),
+                                    LRAmt: tds.eq(3).text(),
+                                    ConsignmentKey: tds.eq(5).text(),
+
+                                }
+                                myBatchArray.push(myDets);
+                            });
+                            var ModelData = {};
+                            ModelData["LRDetailList"] = myBatchArray;
+                            ModelData["SessionFlag"] = "Edit";
+                            ModelData["LRNumber"] = $("#txtLRNumber").val();
+                            ModelData["LRAmt"] = $("#txtLRAmt").val();
+                            ModelData["tempid"] = $("#hdnLRtempid").val();
+                            ModelData["Code"] = $("#txtAccount").val();
+                            ModelData["ParentKey"] = $("#hdnParentKey").val();
+                            ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                            ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+                            ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+
+                            var DTO = { Model: ModelData };
+                            var url = '@Url.Action("AddLRDetails")';
+                            $.ajax({
+                                type: "POST",
+                                dataType: "json",
+                                data: JSON.stringify(DTO),
+                                cache: false,
+                                url: url,
+                                contentType: "application/json;charset=utf-8",
+                                beforeSend: function () {
+                                    $('.spinner').show();
+                                },
+                                success: function (data)
+                                {
+                                    if (data.Status == "ValidError")
+                                    {
+                                        $('.spinner').hide();
+                                        alert(data.Message)
+                                        return;
+                                    }
+                                    else
+                                    {
+                                        $('#lrmodel').modal('show');
+                                        $('#LRDetailsDialog').html(data.Html);
+                                        $('#lbltxtAmt').html(data.Amt);
+                                        $('.spinner').hide();
+                                        $('#EditSaveLRLedger').hide();
+                                    }
+                                },
+                                error: function () {
+                                    alert("Error occured while processing your request.");
+                                }
+                            });
+                        }
+                    }
+                    else if (data.Status == "ValidError") {
+                        $('.spinner').hide();
+                        alert(data.Message)
+                        return;
+                    }
+                    else
+                    {
+                        debugger;
+                        var myBatchArray = [];
+                        $('#lrtabledata tbody tr').each(function () {
+                            var tds = $(this).find('td');
+                            var myDets = {
+                                tempid: tds.eq(1).text(),
+                                LRNumber: tds.eq(2).text(),
+                                LRAmt: tds.eq(3).text(),
+                                ConsignmentKey: tds.eq(5).text(),
+
+                            }
+                            myBatchArray.push(myDets);
+                        });
+                        var ModelData = {};
+                        ModelData["LRDetailList"] = myBatchArray;
+                        ModelData["SessionFlag"] = "Edit";
+                        ModelData["LRNumber"] = $("#txtLRNumber").val();
+                        ModelData["LRAmt"] = $("#txtLRAmt").val();
+                        ModelData["tempid"] = $("#hdnLRtempid").val();
+                        ModelData["Code"] = $("#txtAccount").val();
+                        ModelData["ParentKey"] = $("#hdnParentKey").val();
+                        ModelData["DuplExpLRFMConfirm"] = $("#hdnDuplExpLRFMConfirm").val();
+                        ModelData["NoDuplExpLRFM"] = $("#hdnNoDuplExpLRFM").val();
+                        ModelData["ConsignmentKey"] = $("#ConsignmentKey").val();
+                        var DTO = { Model: ModelData };
+                        var url = '@Url.Action("AddLRDetails")';
+                        $.ajax({
+                            type: "POST",
+                            dataType: "json",
+                            data: JSON.stringify(DTO),
+                            cache: false,
+                            url: url,
+                            contentType: "application/json;charset=utf-8",
+                            beforeSend: function () {
+                                $('.spinner').show();
+                            },
+                            success: function (data)
+                            {
+                                if (data.Status == "ValidError")
+                                {
+                                    $('.spinner').hide();
+                                    alert(data.Message)
+                                    return;
+                                }
+                                else
+                                {
+                                    $('#lrmodel').modal('show');
+                                    $('#LRDetailsDialog').html(data.Html);
+                                    $('#lbltxtAmt').html(data.Amt);
+                                    $('.spinner').hide();
+                                    $('#EditSaveLRLedger').hide();
+                                }
+                            },
+                            error: function () {
+                                alert("Error occured while processing your request.");
+                            }
+                        });
+                    }
+                },
+                error: function ()
+                {
+                    alert("Error occured while processing your request.");
+                }
+            });
+        });
+        $("#txtLRNumber").blur(function (event) {
+            event.preventDefault();
+            var ModelData = {};
+            if ($("#txtLRNumber").val() != null && $("#txtLRNumber").val()!="") {
+                ModelData["LRNumber"] = $("#txtLRNumber").val();
+                var DTO = { Model: ModelData };
+                var url = '@Url.Action("FetchDocumentList")';
+                $.ajax({
+                    type: "POST",
+                    dataType: "json",
+                    data: JSON.stringify(DTO),
+                    cache: false,
+                    url: url,
+                    contentType: "application/json;charset=utf-8",
+                    beforeSend: function () {
+                        $('.spinner').show();
+                    },
+                    success: function (data)
+                    {
+                        if (data.Status == "ValidError")
+                        {
+                            alert(data.Message);
+                            return;
+                        }
+                        else if (data.Status == "Processed")
+                        {
+                            GetConsignmentDetails(data.Message);
+                        }
+                        else
+                        {
+                            var AttachDoc = $("#consignmentmodels");
+                            AttachDoc.html('');
+                            AttachDoc.html(data.Html);
+                            $('#ConsignmentModels').modal('show');
+                        }
+                    },
+                    error: function () {
+                        alert("Error occured while processing your request.");
+                    }
+                });
+            }
+         });
+    });
+    function GetConsignmentDetails(value)
+    {
+        $("#ConsignmentKey").val(value);
+        $("#btnaddLRDetails").prop('disabled', false);
+        $('#ConsignmentModels').modal('hide');
+        var ModelData = {};
+        ModelData["LRNumber"] = value;
+        var DTO = { Model: ModelData };
+        var url = '@Url.Action("GetLrMasterDetails")';
+        $.ajax({
+            type: "POST",
+            dataType: "json",
+            data: JSON.stringify(DTO),
+            cache: false,
+            url: url,
+            contentType: "application/json;charset=utf-8",
+            beforeSend: function () {
+                $('.spinner').show();
+            },
+            success: function (data)
+            {
+                if (data.Status == "ValidError")
+                {
+                    alert(data.Message)
+                    $('#SelectedLRDetailsTable').hide();
+                    return;
+                }
+                else
+                {
+                    $('#SelectedLRDetailsTable').show();
+                    $('#SelectedLRDetailsTable').html(data.Html)
+                }
+            },
+            error: function () {
+                alert("Error occured while processing your request.");
+            }
+        });
+    }
+</script>
+

@@ -1,0 +1,204 @@
+﻿@model ALT_ERP3.PurchaseVM
+@using Common;
+<style>
+    .modal-header {
+        padding: 10px;
+    }
+
+    .modal-footer {
+        padding: 3px;
+    }
+
+    .modal-header h4.modal-title {
+        font-size: medium;
+        font-family: Tahoma;
+        font-weight: 700;
+    }
+
+    .table > thead > tr > th {
+        padding: unset;
+        text-align: center;
+    }
+
+    .table-bordered > thead > tr > th, .table-bordered > tbody > tr > th, .table-bordered > tfoot > tr > th, .table-bordered > thead > tr > td, .table-bordered > tbody > tr > td, .table-bordered > tfoot > tr > td {
+        border: 1px solid darkgrey;
+    }
+
+    .table-bordered {
+        border: 1px solid darkgrey;
+    }
+
+    .table > tbody > tr > td, .table > tbody > tr > th, .table > tfoot > tr > td, .table > tfoot > tr > th, .table > thead > tr > td, .table > thead > tr > th {
+        padding: unset;
+        font-family: Tahoma;
+        font-size: 9pt;
+        height: 26px;
+    }
+
+    .focus {
+        background-color: #ff00ff;
+        color: #fff;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    .pageNumber {
+        padding: 2px;
+    }
+
+    tr:nth-child(even) {
+        background-color: unset;
+    }
+
+    .form-horizontal .control-label {
+        color: black;
+    }
+</style>
+<script>
+    $(document).ready(function () {
+
+        $("#RefAdjdata tbody").on('click', '.rolemaster_AccessType', function () {
+            var currentRow = $(this).closest("tr");
+            var a = $(this).attr("atr");
+            var checkbool = currentRow.find('td').find('input[type="checkbox"]').is(':checked');
+            var mAmt = 0;
+            var TopAmount = parseFloat($("#txtinvamt").val());
+            var adjsum = 0;
+            var finalamt;
+            var balanceamt = 0;
+            var EnteredMamt = 0;
+            balanceamt = currentRow.find("td:eq(9)").text();
+            $('#RefAdjdata tr:not(:first)').each(function () {
+                var tds = $(this).find('td');
+         
+                    var abc = $('#TxtA_' + tds.eq(0).text() + '').val();
+                    adjsum += (parseFloat(abc));
+            
+            });
+            var already = $('#TxtA_' + a + '').val();
+            if (already == null) {
+                already = 0;
+            }
+            var adjustamt = (parseFloat(TopAmount)) - (parseFloat(adjsum));
+            //mAmt = (parseFloat(balanceamt));
+            if (TopAmount < 1) {
+                mAmt = (parseFloat(balanceamt));
+            }
+            else {
+                mAmt = adjustamt
+            }
+
+            EnteredMamt = (parseFloat(already)) + (parseFloat(mAmt));
+            var checkbal = (parseFloat(balanceamt)) - (parseFloat(EnteredMamt));
+            if (checkbal < 0) {
+                finalamt = parseFloat(balanceamt);
+            }
+            else {
+               finalamt = parseFloat(EnteredMamt);
+            }
+            if (checkbool == true) {
+                $('#TxtA_' + a + '').val(finalamt.toFixed(2));
+            }
+            else {
+                $('#TxtA_' + a + '').val(0);
+            }
+
+        });
+
+    
+        $("#RefAdjdata tbody").on('focusout', '.txtfvalue', function () {
+            var currentRow = $(this).closest("tr");
+            var a = $(this).attr("alt");
+            var finaladj = 0;
+            var TopAmount = parseFloat($("#txtinvamt").val());
+            var adjsum = 0;
+            var balanceamt = 0;
+            balanceamt = currentRow.find("td:eq(9)").text();
+
+            var already = $('#TxtA_' + a + '').val();
+            if (already == null) {
+                already = 0;
+            }
+
+            $('#RefAdjdata tr:not(:first)').each(function () {
+                var tds = $(this).find('td');
+                var abc = $('#TxtA_' + tds.eq(0).text() + '').val();
+                adjsum += (parseFloat(abc));
+            });
+
+
+            if (parseFloat(already) > parseFloat(balanceamt)) {
+                alert('Adjustment Amount Greater than Pending Amount..');
+                $('#TxtA_' + a + '').val(0);
+            }
+            else {
+                var adjustamt = (parseFloat(TopAmount)) - (parseFloat(adjsum));
+
+                if (TopAmount < 1) {
+                }
+                else {
+                    if (adjustamt < 0) {
+                        alert('Adjustments are more than Document Amount..');
+                        $('#TxtA_' + a + '').val(0);
+                    }
+                    else {
+                    }
+                }
+            }
+            
+        });
+   
+    });
+</script>
+
+<div class="grid" style="max-height: 200px; width: auto; overflow: auto;">
+    <table id="RefAdjdata" class="zui-table">
+        <thead>
+            <tr role="row" style="font-family:Tahoma;font-size:9pt;height:25px;">
+                <th style="vertical-align:inherit;width:10%;">Sr.</th>
+                <th style="vertical-align:inherit;width:10%;">Type</th>
+                <th style="vertical-align:inherit;width:0%;" hidden="hidden">Prefix</th>
+                <th style="vertical-align:inherit;width:10%;">Serial</th>
+                <th style="vertical-align:inherit;width:5%;">Sno</th>
+                <th style="vertical-align:inherit;width:20%;">Bill No</th>
+                <th style="vertical-align:inherit;width:20%;">Date</th>
+                <th style="vertical-align:inherit;width:10%;">Curr</th>
+                <th style="vertical-align:inherit;width:10%;">Bill Amt</th>
+                <th style="vertical-align:inherit;width:10%;">Balance</th>
+                <th style="vertical-align:inherit;width:2%;">Full</th>
+                <th style="vertical-align:inherit;width:10%;">Adjustment</th>
+                <th style="vertical-align:inherit;width:10%;" hidden="hidden">Narration</th>
+                <th style="vertical-align:inherit;width:10%;" hidden="hidden">ParentKey</th>
+                <th style="vertical-align:inherit;width:10%;" hidden="hidden">TableKey</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.OSAdjList != null)
+            {
+                for (int i = 0; i < Model.OSAdjList.Count; i++)
+                {
+                    <tr style="font-family:Tahoma;font-size:9pt;height:25px;">
+                        <td style="vertical-align:inherit;width:10%;">@Html.DisplayFor(m => Model.OSAdjList[i].tempId)</td>
+                        <td style="vertical-align:inherit;width:10%;">@Html.DisplayFor(m => Model.OSAdjList[i].Type)</td>
+                        <td style="vertical-align:inherit;width:0%;" hidden="hidden">@Html.DisplayFor(m => Model.OSAdjList[i].Prefix)</td>
+                        <td style="vertical-align:inherit;width:10%;">@Html.DisplayFor(m => Model.OSAdjList[i].Srl)</td>
+                        <td style="vertical-align:inherit;width:10%;">@Html.DisplayFor(m => Model.OSAdjList[i].Sno)</td>
+                        <td style="vertical-align:inherit;width:20%;">@Html.DisplayFor(m => Model.OSAdjList[i].BillNumber)</td>
+                        <td style="vertical-align:inherit;width:20%;">@Html.DisplayFor(m => Model.OSAdjList[i].StrBillDate)</td>
+                        <td style="vertical-align:inherit;width:10%;">@Html.DisplayFor(m => Model.OSAdjList[i].CurrName)</td>
+                        <td style="text-align:right;vertical-align:inherit;width:10%;">@Html.DisplayFor(m => Model.OSAdjList[i].BillAmt)</td>
+                        <td style="text-align:right;vertical-align:inherit;width:10%;">@Html.DisplayFor(m => Model.OSAdjList[i].BalanceAmt)</td>
+                        <td style="text-align:center;width:10%;">@Html.CheckBoxFor(m => Model.OSAdjList[i].OSAdjFlag, new { @class = "rolemaster_AccessType", @atr = Model.OSAdjList[i].tempId })</td>
+                        <td contenteditable="true" class="sum" style="text-align:right;vertical-align:inherit;width:10%;"><input type="text" id="TxtA_@Model.OSAdjList[i].tempId" alt="@Model.OSAdjList[i].tempId" class="txtfvalue" style="text-align:right" value="@Model.OSAdjList[i].AdjustAmt" /></td>
+                        <td style="vertical-align:inherit;width:10%;" hidden="hidden">@Html.DisplayFor(m => Model.OSAdjList[i].Narr)</td>
+                        <td style="vertical-align:inherit;width:10%;" hidden="hidden">@Html.DisplayFor(m => Model.OSAdjList[i].ParentKey)</td>
+                        <td style="vertical-align:inherit;width:10%;" hidden="hidden">@Html.DisplayFor(m => Model.OSAdjList[i].TableKey)</td>
+                        <td style="vertical-align:inherit;width:10%;" hidden="hidden">@Html.DisplayFor(m => Model.OSAdjList[i].MainType)</td>
+                        <td style="vertical-align:inherit;width:10%;" hidden="hidden">@Html.DisplayFor(m => Model.OSAdjList[i].SubType)</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+    <div id="mm"></div>
+</div>

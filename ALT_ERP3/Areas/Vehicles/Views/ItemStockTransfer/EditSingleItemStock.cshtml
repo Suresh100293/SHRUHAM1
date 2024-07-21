@@ -1,0 +1,161 @@
+﻿@model ALT_ERP3.Areas.Vehicles.Models.SparePartTransferVM
+@using Common;
+<script>
+    $(document).ready(function () {
+
+        loadVehicleNo();
+
+        $("#Qty").blur(function () {
+            if (parseInt($("#Qty").val()) <= parseInt($("#BalQty").val()))
+            {
+
+            } else {
+                alert("Item Stock Avalable Only " + $("#BalQty").val() + " Qty...!");
+                $("#Qty").val($("#BalQty").val());
+            }
+        });
+
+        $("#btnAddSave").click(function (event) {
+            event.preventDefault();
+            $("#btnAddSave").prop("disabled", true);
+            var ModelData = {};
+            ModelData["Mode"] = 'Edit';
+            ModelData["Srno"] = $("#Srno").val();
+            ModelData["Qty"] = $("#Qty").val();
+            ModelData["VehicleNo"] = $("#VehicleNo").val();
+            var DTO = { Model: ModelData };
+            var url = '@Url.Action("AddEditSelectedLedger")';
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json;charset=utf-8",
+                beforesend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#ErrorMessage1').hide();
+                    if (data.Status == "Error") {
+                        $("#btnAddSave").prop("disabled", false);
+                        alert(data.Message)
+                        return;
+                    }
+                    $('#addnewbill').modal('hide');
+                    $('#ItemRelatedDialog').html(data.Html);
+                },
+                error: function () {
+                    $('.spinner').hide();
+                    $("#btnAddSave").prop("disabled", false);
+                    alert("error occured while processing your request.");
+                }
+            });
+
+        });
+    });
+
+    function loadVehicleNo() {
+        var url = '@Url.Action("GetVehicle")';
+        $('#VehicleNo').select2({
+            minimumInputLength: 0,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 0,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.VehicleNo', text: '@Model.VehicleNoN' };
+                callback(data);
+            },
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+
+    };
+
+
+</script>
+<div class="modal-content">
+    <div class="modal-header" style="background-color:#cccccc;color: firebrick;padding: 10px;">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"></span></button>
+        <h4 class="modal-title" style="font-weight: 700;">@Model.Mode Record</h4>
+    </div>
+    <div class="modal-body">
+        <div class="form-horizontal" id="ProListupdate">
+            <div class="form-group">
+                @Html.TextBoxFor(x => x.Srno, new { @class = "form-control hidden ", @Name = "Srno", @Id = "Srno", @style = "width:100%;", @disabled = "disabled", @value = Model.Srno })
+                <label class="col-sm-1 control-label">Group:</label>
+                <div class="col-sm-5" style="color: black;font-weight: bold;">
+                    @Html.DisplayFor(x => x.ProductName)
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Name:</label>
+                <div class="col-sm-5" style="color: black;font-weight: bold;">
+                    @Html.DisplayFor(x => x.ItemName)
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Total Qty:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.TotalQty, new { @class = "form-control", @Name = "TotalQty", @Id = "TotalQty", @style = "text-align:right", @value = Model.TotalQty, @disabled = "disabled" })
+                </div>
+                <label class="col-sm-1 control-label">Bal Qty:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.BalQty, new { @class = "form-control", @Name = "BalQty", @Id = "BalQty", @style = "text-align:right", @value = Model.BalQty, @disabled = "disabled" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Use Qty:</label>
+                <div class="col-sm-2">
+                    @Html.TextBoxFor(x => x.Qty, new { @class = "form-control", @Name = "Qty", @Id = "Qty", @style = "text-align:right", @value = Model.Qty })
+                </div>
+                <label class="col-sm-1 control-label">Vehicle:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.VehicleNo, new { @class = "input-large-query", @Name = "VehicleNo", @Id = "VehicleNo", @style = "width:100%", @value = Model.VehicleNo })
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    <div class="modal-footer" style="background-color:#cccccc">
+        @if (Model.Mode == "Edit")
+        {
+            <button type="button" class="btn btn-success" id="btnAddSave">Save</button>
+        }
+        <button type="button" class="btn btn-danger" data-dismiss="modal" id="btnAddSaveCancel">Close</button>
+    </div>
+</div>

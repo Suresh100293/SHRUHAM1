@@ -1,0 +1,601 @@
+﻿@model TFATERPWebApplication.Areas.Accounts.Models.AssetsTransferVM
+@using Common;
+@{
+    ViewBag.Title = "Assets Transfer";
+    Layout = null;
+}
+
+<script type="text/javascript">
+    $(document).ready(function () {
+        $('#AssetTracking_STDate').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#AssetTracking_stTime').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#AssetTracking_EndDate').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#AssetTracking_EndTime').datepicker({
+            format:'dd-mm-yyyy',
+            autoclose: true,
+        });
+        @* iX9: Load List for Autocomplete Inputs i.e. ControlType='A' *@
+        LoadfBranch()
+        LoadfLocation()
+        LoadtBranch()
+        LoadtLocation()
+        LoadAssetID()
+
+        @* iX9: Date Picker Code *@
+        $('#AssetTracking_STDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#AssetTracking_stTime').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#AssetTracking_EndDate').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+        $('#AssetTracking_EndTime').datepicker({
+            format: 'dd-mm-yyyy',
+            autoclose: true,
+        });
+
+        @* iX9: Validation rules for the fields where AllowBlank is False in Definition *@
+        $('#AssetsTransfer').validate({
+            onfocusout: false,
+            errorLabelContainer: $('#ErrorMessage'),
+            wrapper: "li",
+            rules: {
+                AssetTracking_Srl: {required: true,},
+                AssetTracking_fBranch: {required: true,},
+                AssetTracking_tBranch: {required: true,},
+                AssetTracking_AssetID: {required: true,},
+                AssetTracking_Qty: {required: true,},
+                AssetTracking_Qty2: {required: true,},
+               },
+            messages: {
+                AssetTracking_Srl: {required: 'Srl is Required',},
+                AssetTracking_fBranch: {required: 'fBranch is Required',},
+                AssetTracking_tBranch: {required: 'tBranch is Required',},
+                AssetTracking_AssetID: {required: 'AssetID is Required',},
+                AssetTracking_Qty: {required: 'Qty is Required',},
+                AssetTracking_Qty2: {required: 'Qty2 is Required',},
+            }
+        });
+
+        @* iX9: Input Contraints to limit the inputs to required Input Type i.e. String, Numeric etc. *@
+        $("#AssetTracking_Srl").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#AssetTracking_fBranch").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#AssetTracking_fLocation").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetTracking_tBranch").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#AssetTracking_tLocation").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetTracking_AssetID").constrain({ allow: { regex: "[a-zA-Z0-9()#!%$*,.\/:-+<>; ]" } });
+        $("#AssetTracking_Qty").constrain({ allow: { regex: "[0-9.-]" } });
+        $("#AssetTracking_Qty2").constrain({ allow: { regex: "[0-9.-]" } });
+
+        @* iX9: Executed when Save/Submit button is Pressed *@
+        $('#Submit').click(function (event) {
+            event.preventDefault();
+            //if ($("#AssetsTransfer").validate().form() == false)
+            //    return;
+
+            if ($("#AssetTracking_fBranch").val() == null || $("#AssetTracking_fBranch").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('From Branch is Required..');
+                return;
+            }
+            if ($("#AssetTracking_tBranch").val() == null || $("#AssetTracking_tBranch").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('To Branch is Required..');
+                return;
+            }
+            if ($("#AssetTracking_AssetID").val() == null || $("#AssetTracking_AssetID").val() == '')
+            {
+                $("#ErrorMessage").show();
+                $("#ErrorMessage").text('Asset ID is Required..');
+                return;
+            }
+            var url = '@Url.Action("SaveData")';
+            @* iX9: Data from individual field is passed on to the Model and then to Controller for Saving *@
+            var ModelData = {};
+            ModelData["AssetTracking_Srl"] = $("#AssetTracking_Srl").val();
+            ModelData["STDateVM"] = $("#AssetTracking_STDate").val();
+            ModelData["stTimeVM"] = $("#AssetTracking_stTime").val();
+            ModelData["EndDateVM"] = $("#AssetTracking_EndDate").val();
+            ModelData["EndTimeVM"] = $("#AssetTracking_EndTime").val();
+            ModelData["AssetTracking_fBranch"] = $("#AssetTracking_fBranch").val();
+            ModelData["AssetTracking_fLocation"] = $("#AssetTracking_fLocation").val();
+            ModelData["AssetTracking_tBranch"] = $("#AssetTracking_tBranch").val();
+            ModelData["AssetTracking_tLocation"] = $("#AssetTracking_tLocation").val();
+            ModelData["AssetTracking_AssetID"] = $("#AssetTracking_AssetID").val();
+            ModelData["AssetTracking_Qty"] = $("#AssetTracking_Qty").val();
+            ModelData["AssetTracking_Qty2"] = $("#AssetTracking_Qty2").val();
+            ModelData["AssetTracking_operators"] = $("#AssetTracking_operators").val();
+            ModelData["AssetTracking_Narr"] = $("#AssetTracking_Narr").val();
+            ModelData["Mode"] = '@Model.Mode';
+            var DTO = { mModel: ModelData };
+            $.ajax({
+                type: "POST",
+                dataType: "json",
+                data: JSON.stringify(DTO),
+                cache: false,
+                url: url,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    if (data.Status == 'Success') {
+                        $('.spinner').hide();
+                        window.location.href = "/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2";
+                        $("#ErrorMessage").hide();
+                    }
+                    else {
+                        $('.spinner').hide();
+                        $("#ErrorMessage").show();
+                        $("#ErrorMessage").html(data.html);
+                    }
+                },
+            });
+        });
+
+        $("#btnAddOns").click(function (event) {
+            event.preventDefault();
+            @*var url = '@Url.Action("AddOnGrid")?mCode=' + '@Model.AssetTracking_Code';*@
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#dialog').modal('show');
+                    $('#controllername').val(data.Controller);
+                    jQuery("#grid").jqGrid('setGridParam', { url: "/" + data.Controller + "/GetAddOnList?Code=" + null }).trigger("reloadGrid");
+                },
+            });
+        });
+
+        $("#btnAddNote").click(function (event) {
+            event.preventDefault();
+            @*var url = '@Url.Action("AddNote")?mCode=' + '@Model.AssetTracking_Code';*@
+            $.ajax({
+                async: false,
+                cache: false,
+                url: url,
+                type: "POST",
+                dataType: "json",
+                cache: false,
+                contentType: "application/json; charset=utf-8",
+                beforeSend: function () {
+                    $('.spinner').show();
+                },
+                success: function (data) {
+                    $('.spinner').hide();
+                    $('#dialog1').modal('show');
+                    $('#controllername').val(data.Controller);
+                },
+            });
+        });
+    });
+    @* iX9: Autocomplete Code i.e. ControlType='A' and vDepend<>'' *@
+    function LoadfBranch() {
+        var url = '@Url.Action("AutoCompletefBranch")'
+        $('#AssetTracking_fBranch').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetTracking_fBranch', text: '@Model.fBranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadfLocation() {
+        var url = '@Url.Action("AutoCompletefLocation")'
+        $('#AssetTracking_fLocation').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetTracking_fLocation', text: '@Model.fLocationName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadtBranch() {
+        var url = '@Url.Action("AutoCompletetBranch")'
+        $('#AssetTracking_tBranch').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetTracking_tBranch', text: '@Model.tBranchName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadtLocation() {
+        var url = '@Url.Action("AutoCompletetLocation")'
+        $('#AssetTracking_tLocation').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetTracking_tLocation', text: '@Model.tLocationName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+    function LoadAssetID() {
+        var url = '@Url.Action("AutoCompleteAssetID")'
+        $('#AssetTracking_AssetID').select2({
+            minimumInputLength: 2,
+            placeholder: 'Search',
+            ajax: {
+                url: url,
+                dataType: 'json',
+                quietMillis: 100,
+                enableFiltering: true,
+                allowClear: true,
+                minimumInputLength: 2,
+                multiple: true,
+                width: 300,
+                data: function (term, page) {
+                    return {
+                        types: ["exercise"],
+                        limit: -1,
+                        term: term
+                    };
+                },
+                results: function (data, page) {
+                    clientObj = JSON.stringify(data);
+                    return {
+                        results: $.map(data, function (item) {
+                            return {
+                                text: item.Name,
+                                id: item.Code
+                            }
+                        })
+                    };
+                }
+            },
+
+            initSelection: function (element, callback) {
+                var data = { id: '@Model.AssetTracking_AssetID', text: '@Model.AssetIDName' };
+                callback(data);
+            },
+
+            formatResult: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+
+            formatSelection: function (exercise) {
+                return "<div class='row-fluid'><div class=''><span class='span1'><div style='color:" + exercise.alias + "'>" + exercise.text +
+                    "</div></span></div></div>";
+            },
+        })
+    };
+
+</script>
+
+@* iX9: Form Design *@
+<header class="header fixed-top" style="position:fixed;background-color:lightgray;padding:6px;width:100%;margin-top:5px;">
+    <div class="fixhead">
+        <b class="CodeSt">@Model.Header</b>
+        <span class="tools pull-right">
+            <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="color:white;font-weight:bolder;font-size:13px;padding:3px 10px;" id="Cancel2">X</a>
+        </span>
+        <span class="tools pull-right">
+            <b class="CodeSt">@Model.Mode Mode</b>
+        </span>
+    </div>
+</header>
+
+<section class="panel" style="margin-bottom:0px;">
+    <div class="panel-body">
+        <div class="form-horizontal " id="AssetsTransfer" role="form" style="margin-top:15px;">
+            <div id="ErrorMessage" name="ErrorMessage" class="alert alert-danger" style="display: none"></div>
+            <br />
+            @* iX9: -- Code for Header Starts -- *@
+            @* iX9: Tab Body Panels *@
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Srl:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_Srl, new { @maxlength = "15", @class = "form-control", @Name = "AssetTracking_Srl", @Id = "AssetTracking_Srl" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Start Date:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.STDateVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "AssetTracking_STDate", @id = "AssetTracking_STDate", @Value = Model.AssetTracking_STDate.Value.ToString("dd/MM/yyyy") })
+                </div>
+                <label class="col-sm-1 control-label">Start Time:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.stTimeVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "AssetTracking_stTime", @id = "AssetTracking_stTime", @Value = Model.AssetTracking_stTime.Value.ToString("dd/MM/yyyy") })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">End Date:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.EndDateVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "AssetTracking_EndDate", @id = "AssetTracking_EndDate", @Value = Model.AssetTracking_EndDate.Value.ToString("dd/MM/yyyy") })
+                </div>
+                <label class="col-sm-1 control-label">End Time:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.EndTimeVM, new { @type = "text", @class = "form-control", @style = "width:125px;", @Name = "AssetTracking_EndTime", @id = "AssetTracking_EndTime", @Value = Model.AssetTracking_EndTime.Value.ToString("dd/MM/yyyy") })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">From Branch:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_fBranch, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetTracking_fBranch", @Name = "AssetTracking_fBranch" })
+                </div>
+                <label class="col-sm-1 control-label">from Store:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetTracking_fLocation, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetTracking_fLocation", @Name = "AssetTracking_fLocation" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">To Branch:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_tBranch, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetTracking_tBranch", @Name = "AssetTracking_tBranch" })
+                </div>
+                <label class="col-sm-1 control-label">To Location:</label>
+                <div class="col-sm-1">
+                    @Html.TextBoxFor(x => x.AssetTracking_tLocation, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetTracking_tLocation", @Name = "AssetTracking_tLocation" })
+                </div>
+                <div class="col-sm-2"></div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Asset ID:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_AssetID, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetTracking_AssetID", @Name = "AssetTracking_AssetID" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Quantity:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_Qty, new { @maxlength = "10", @class = "form-control", @Name = "AssetTracking_Qty", @Id = "AssetTracking_Qty" })
+                </div>
+                <label class="col-sm-1 control-label">Qty2:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_Qty2, new { @maxlength = "10", @class = "form-control", @Name = "AssetTracking_Qty2", @Id = "AssetTracking_Qty2" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">Users Involved:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_operators, new { @class = "input-large-query", @style = "width:100%;margin-top:2px;", @id = "AssetTracking_operators", @Name = "AssetTracking_operators" })
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-1 control-label">remark:</label>
+                <div class="col-sm-3">
+                    @Html.TextBoxFor(x => x.AssetTracking_Narr, new { @maxlength = "100", @class = "form-control", @Name = "AssetTracking_Narr", @Id = "AssetTracking_Narr" })
+                </div>
+            </div>
+            @* iX9: -- Code for Header Ends -- *@
+        </div>
+    </div>
+</section>
+
+<footer class="footer-section" style="height:33px;position:fixed;background-color:#4B4A4A;padding:3px;color:white;">
+    <div class="row">
+        <div class="col-sm-5">
+            <div class="pull-left">
+                <button class="btn btn-warning" type="submit" style="font-size: 13px;padding:3px 12px;" id="btnAddOns" name="Command">AddOns</button>
+                <button class="btn btn-info" type="submit" style="font-size: 13px;padding:3px 12px;" id="btnAddNote" name="Command">Note</button>
+            </div>
+        </div>
+        <div class="col-sm-3" style="margin-top:4px;color:white;font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            T.FAT ERP-iX9, Suchan Software Private Limited
+        </div>
+        <div class="col-sm-4">
+            <div class="pull-right">
+                <button class="btn btn-success" style="font-size: 13px;padding:3px 12px;" id="Submit">Save</button>
+                <a href="~/Accounts/MasterGrid/Index?ViewDataId=@Model.ViewDataId&Module=@Model.Module&TableName=@Model.TableName&OptionType=@Model.OptionType&OptionCode=@Model.OptionCode&Header=@Model.Header&Controller2=@Model.Controller2" class="btn btn-danger" style="font-size: 13px;padding:3px 12px;" id="Cancel">Cancel</a>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div class="example-modal">
+    <div id="dialog" class="modal modal-primary">
+        <div class="modal-dialog" style="width:650px;margin:70px auto;">
+            <div id="Dialog">
+                @*@Html.Partial("AddOnGrid")*@
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="example-modal">
+    <div id="dialog1" class="modal modal-primary">
+        <div class="modal-dialog" style="width:650px;">
+            <div id="Dialog2">
+                @Html.Partial("AddNote")
+            </div>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="controllername" />
+@*
+    Code Auto Generated on Fri 01-Mar-2019 05:08 PM
+    Engine: iX6Generator, ver: 3.7 Revision: 10
+    by Team Suchan, T.FAT *@
+
