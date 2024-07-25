@@ -1098,7 +1098,8 @@ namespace ALT_ERP3.Areas.Accounts.Controllers
                     ApplCode = mRelateData.Item,
                     QueryText = "Select^" + String.Join("^", mItem.Select(x => x.Name).ToList()),
                     QueryCode = "Select^" + String.Join("^", mItem.Select(x => x.Code).ToList()),
-                    FldType = "C"
+                    FldType = "C",
+                    Types = "Search",
                 });
                 truckaddonlist.Add(new AddOns()
                 {
@@ -2562,6 +2563,7 @@ namespace ALT_ERP3.Areas.Accounts.Controllers
                     QueryText = "Select^" + String.Join("^", mItem.Select(x => x.Name).ToList()),
                     QueryCode = "Select^" + String.Join("^", mItem.Select(x => x.Code).ToList()),
                     FldType = Model.FromType == "Direct" ? "T" : "C",
+                    Types = "Search",
                 });
                 truckaddonlist.Add(new AddOns()
                 {
@@ -5740,6 +5742,7 @@ namespace ALT_ERP3.Areas.Accounts.Controllers
                 QueryText = "Select^" + String.Join("^", mItem.Select(x => x.Name).ToList()),
                 QueryCode = "Select^" + String.Join("^", mItem.Select(x => x.Code).ToList()),
                 FldType = Model.FromType == "Direct" ? "T" : "C",
+                Types = "Search",
             });
             truckaddonlist.Add(new AddOns()
             {
@@ -6538,6 +6541,7 @@ namespace ALT_ERP3.Areas.Accounts.Controllers
                 QueryText = "Select^" + String.Join("^", mItem.Select(x => x.Name).ToList()),
                 QueryCode = "Select^" + String.Join("^", mItem.Select(x => x.Code).ToList()),
                 FldType = Model.FromType == "Direct" ? "T" : "C",
+                Types = "Search",
             });
             truckaddonlist.Add(new AddOns()
             {

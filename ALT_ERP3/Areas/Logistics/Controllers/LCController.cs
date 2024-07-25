@@ -556,7 +556,7 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
 
         public ActionResult SaveData(LCVM mModel)
         {
-            string ErroMsg = "";
+            string ErroMsg = "N";
             using (var transaction = ctxTFAT.Database.BeginTransaction())
             {
                 try
