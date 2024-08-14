@@ -35,5 +35,6 @@ namespace EntitiModel
         public bool ConsoleForUserBranch { get; set; }
         public bool ConsoleForAllBranch { get; set; }
         public string AutoExtendMailID { get; set; }
+        public bool AutoConsole { get; set; }
     }
 }

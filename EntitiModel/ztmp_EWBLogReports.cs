@@ -22,6 +22,8 @@ namespace EntitiModel
         public string Msg { get; set; }
         public string EWBNO { get; set; }
         public string ENTEREDBY { get; set; }
-        public int RECORDKEY { get; set; }
+        public long RECORDKEY { get; set; }
+        public string Mode { get; set; }
+        public string Remark { get; set; }
     }
 }

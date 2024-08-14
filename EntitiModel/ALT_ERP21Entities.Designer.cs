@@ -1,4 +1,4 @@
-﻿// T4 code generation is enabled for model 'F:\ALT_ERP3\ALT_ERP3\EntitiModel\ALT_ERP21Entities.edmx'. 
+﻿// T4 code generation is enabled for model 'F:\GITHUB\SHRUHAM\EntitiModel\ALT_ERP21Entities.edmx'. 
 // To enable legacy code generation, change the value of the 'Code Generation Strategy' designer
 // property to 'Legacy ObjectContext'. This property is available in the Properties Window when the model
 // is open in the designer.

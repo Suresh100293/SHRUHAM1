@@ -51,9 +51,9 @@ namespace EntitiModel
         public string SBDocNo { get; set; }
         public string SBType { get; set; }
         public string SBThrough { get; set; }
-        public System.DateTime SBSubDt { get; set; }
+        public Nullable<System.DateTime> SBSubDt { get; set; }
         public string SBRemark { get; set; }
         public string SBENTEREDBY { get; set; }
-        public System.DateTime SBLASTUPDATEDATE { get; set; }
+        public Nullable<System.DateTime> SBLASTUPDATEDATE { get; set; }
     }
 }

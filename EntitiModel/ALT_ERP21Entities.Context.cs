@@ -164,7 +164,9 @@ namespace EntitiModel
         public virtual DbSet<EmpPostData> EmpPostData { get; set; }
         public virtual DbSet<EmpTraveldet> EmpTraveldet { get; set; }
         public virtual DbSet<ErrorLog> ErrorLog { get; set; }
+        public virtual DbSet<EwayBillLog> EwayBillLog { get; set; }
         public virtual DbSet<EWBLog> EWBLog { get; set; }
+        public virtual DbSet<EWBVehicleDetails> EWBVehicleDetails { get; set; }
         public virtual DbSet<ExpDet> ExpDet { get; set; }
         public virtual DbSet<Expenses> Expenses { get; set; }
         public virtual DbSet<ExpenseTypes> ExpenseTypes { get; set; }
@@ -372,6 +374,7 @@ namespace EntitiModel
         public virtual DbSet<TfatCurrency> TfatCurrency { get; set; }
         public virtual DbSet<TfatDesignHeader> TfatDesignHeader { get; set; }
         public virtual DbSet<TfatDriverStatus> TfatDriverStatus { get; set; }
+        public virtual DbSet<TfatEway> TfatEway { get; set; }
         public virtual DbSet<tfatEwaySetup> tfatEwaySetup { get; set; }
         public virtual DbSet<tfatEWB> tfatEWB { get; set; }
         public virtual DbSet<TfatMenu> TfatMenu { get; set; }
@@ -517,7 +520,7 @@ namespace EntitiModel
         public virtual DbSet<SeasonMaster> SeasonMaster { get; set; }
         public virtual DbSet<ServiceTaxMaster> ServiceTaxMaster { get; set; }
         public virtual DbSet<ServiceTaxRates> ServiceTaxRates { get; set; }
-        public virtual DbSet<suresh> suresh { get; set; }
+        public virtual DbSet<Suresh1> Suresh1 { get; set; }
         public virtual DbSet<SureshV> SureshV { get; set; }
         public virtual DbSet<TaxForms> TaxForms { get; set; }
         public virtual DbSet<TDSBank> TDSBank { get; set; }
@@ -549,6 +552,7 @@ namespace EntitiModel
         public virtual DbSet<TfatUserLevel> TfatUserLevel { get; set; }
         public virtual DbSet<TfatUserOpt> TfatUserOpt { get; set; }
         public virtual DbSet<TfatUserRoles> TfatUserRoles { get; set; }
+        public virtual DbSet<tmpDriverLedgerDetails> tmpDriverLedgerDetails { get; set; }
         public virtual DbSet<Top10Customer> Top10Customer { get; set; }
         public virtual DbSet<TripDetail> TripDetail { get; set; }
         public virtual DbSet<TripMas> TripMas { get; set; }
@@ -602,7 +606,6 @@ namespace EntitiModel
         public virtual DbSet<ztmp_zOS> ztmp_zOS { get; set; }
         public virtual DbSet<ztmpAccountsBalancesS> ztmpAccountsBalancesS { get; set; }
         public virtual DbSet<ztmpMonthlyBillReport_zOS> ztmpMonthlyBillReport_zOS { get; set; }
-        public virtual DbSet<ztmpmothlyLR_zOS> ztmpmothlyLR_zOS { get; set; }
         public virtual DbSet<ztmpmothlyUnbillLR_zOSAge> ztmpmothlyUnbillLR_zOSAge { get; set; }
         public virtual DbSet<ztmpmothlyUnbillLRStock_zOS1> ztmpmothlyUnbillLRStock_zOS1 { get; set; }
     

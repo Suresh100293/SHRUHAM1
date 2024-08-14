@@ -12,6 +12,7 @@ namespace ALT_ERP3.Areas.Logistics.Models
     public class LRVM
     {
         public bool ExtraInfoTab { get; set; }
+        public bool AllowMultiVehicle { get; set; }
 
         public List<LRVM> LRDetailList { get; set; }
 

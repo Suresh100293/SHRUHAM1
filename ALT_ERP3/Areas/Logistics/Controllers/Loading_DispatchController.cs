@@ -33,6 +33,7 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
 
         public ActionResult LoadLC(LoadingDispachVM mModel)
         {
+            var ConsoleResult = string.Empty;
             string LoadLCnoList = "";
             bool RoutFlag = false;
             string Message = "", LCBranch = "";
@@ -40,6 +41,11 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
             {
                 try
                 {
+                    tfatEwaySetup tfatEway = ctxTFAT.tfatEwaySetup.FirstOrDefault();
+                    if (tfatEway == null)
+                    {
+                        tfatEway = new tfatEwaySetup();
+                    }
                     List<LCModal> LoadLCList = TempData.Peek("ExistLC") as List<LCModal>;
                     if (LoadLCList == null)
                     {
@@ -60,6 +66,12 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                         {
                             List<string> LoadindLcList = new List<string>();
                             LoadindLcList = mModel.LcNo.Split(',').ToList();
+
+                            if (tfatEway.AutoConsole)
+                            {
+                                EwayBillController ewayBill = new EwayBillController();
+                                ConsoleResult = ewayBill.GenerateConsole(LoadindLcList, "Loading", fMMaster.TableKey);
+                            }
 
                             #region Add New LC
                             var LastTrnasitEntryOfFM = ctxTFAT.LRStock.Where(x => x.Fmno == fMMaster.FmNo && x.Type == "TRN").OrderByDescending(x => x.RECORDKEY).Select(x => x.TableKey).FirstOrDefault();
@@ -102,7 +114,8 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                                         return Json(new
                                         {
                                             Status = "failure",
-                                            Message = "LC No: " + LCF.LCno + " This LC is Already Loaded So We Cant Load IT Again.\n"
+                                            Message = "LC No: " + LCF.LCno + " This LC is Already Loaded So We Cant Load IT Again.\n",
+                                            EWBmsg = ConsoleResult == string.Empty ? "" : ConsoleResult,
                                         }, JsonRequestBehavior.AllowGet);
                                     }
                                     List<LCDetail> lCDetails = ctxTFAT.LCDetail.Where(x => x.LCRefTablekey == lC.TableKey).ToList();
@@ -118,7 +131,8 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                                             return Json(new
                                             {
                                                 Status = "failure",
-                                                Message = "Not Allowed To Load LC No: " + LCF.LCno + " Due To Negative Stock...!"
+                                                Message = "Not Allowed To Load LC No: " + LCF.LCno + " Due To Negative Stock...!",
+                                                EWBmsg = ConsoleResult == string.Empty ? "" : ConsoleResult,
                                             }, JsonRequestBehavior.AllowGet);
                                         }
 
@@ -250,7 +264,7 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                     }
                     else
                     {
-                        return Json(new { Message = "Error,Route Not Fount..\n", Status = "Error", id = "StateMaster" }, JsonRequestBehavior.AllowGet);
+                        return Json(new { Message = "Error,Route Not Fount..\n",EWBmsg = ConsoleResult == string.Empty ? "" : ConsoleResult, Status = "Error", id = "StateMaster" }, JsonRequestBehavior.AllowGet);
                     }
                 }
                 catch (DbEntityValidationException ex1)
@@ -270,7 +284,7 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                     return Json(new { Message = "Error, While updating the Data..\n" + e.Message, Status = "Error", id = "StateMaster" }, JsonRequestBehavior.AllowGet);
                 }
             }
-            return Json(new { Status = "Success", id = "StateMaster", Message = Message, LCBranch = LCBranch, RoutFlag = RoutFlag }, JsonRequestBehavior.AllowGet);
+            return Json(new { Status = "Success", id = "StateMaster", EWBmsg = ConsoleResult == string.Empty ? "" : ConsoleResult, Message = Message, LCBranch = LCBranch, RoutFlag = RoutFlag }, JsonRequestBehavior.AllowGet);
         }
 
         public List<int> GetOverLoadKGs(FMROUTETable fMROUTETable)

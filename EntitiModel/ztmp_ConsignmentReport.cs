@@ -130,5 +130,6 @@ namespace EntitiModel
         public int ViaCharge { get; set; }
         public int TripTotal { get; set; }
         public string TripTablekey { get; set; }
+        public Nullable<int> BillBalQty { get; set; }
     }
 }

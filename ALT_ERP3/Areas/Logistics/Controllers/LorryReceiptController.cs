@@ -44,6 +44,8 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
         //ITransactionGridOperation mIlst = new TransactionGridOperation();
         public new string StartDate = System.Web.HttpContext.Current.Session["StartDate"].ToString();
         public new string EndDate = System.Web.HttpContext.Current.Session["LastDate"].ToString();
+        EwayBillController ewayBill = new EwayBillController();
+
 
         #region Function List
 
@@ -3318,6 +3320,33 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                         ctxTFAT.Entry(lRMaster).State = EntityState.Modified;
                         ctxTFAT.Entry(lRStock).State = EntityState.Modified;
                     }
+
+                    var TfatEway = ctxTFAT.TfatEway.Where(x => x.ewbNo.ToString() == lRMaster.EwayBill.Trim()).FirstOrDefault();
+                    if (TfatEway == null)
+                    {
+                        var EwayBillStatus = ewayBill.GetEwayBillDetail(lRMaster.EwayBill, lRMaster.TableKey, mModel.Mode, lRMaster.LrNo.ToString());
+                        if (EwayBillStatus != "Sucess")
+                        {
+                            return Json(new { Message = EwayBillStatus, Status = "Error", id = "StateMaster" }, JsonRequestBehavior.AllowGet);
+                        }
+                    }
+                    else
+                    {
+                        if (TfatEway.RefTablekey != lRMaster.TableKey && mModel.AllowMultiVehicle == false)
+                        {
+                            return Json(new { Message = "This Eway BillNo Already Exist...!\nPlease Confirm This Is MultVehicle Eway Bill Or Not?", Status = "Prompt", id = "StateMaster" }, JsonRequestBehavior.AllowGet);
+                        }
+                        else
+                        {
+                            var EwayBillStatus = ewayBill.GetEwayBillDetail(lRMaster.EwayBill, lRMaster.TableKey, mModel.Mode, lRMaster.LrNo.ToString());
+                            if (EwayBillStatus != "Sucess")
+                            {
+                                return Json(new { Message = EwayBillStatus, Status = "Error", id = "StateMaster" }, JsonRequestBehavior.AllowGet);
+                            }
+                        }
+                    }
+
+
 
                     //SavetFatEWB(lRMaster);
                     ctxTFAT.SaveChanges();

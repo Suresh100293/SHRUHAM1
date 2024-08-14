@@ -157,6 +157,8 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                 mModel.UserBranch = mList.UserBranch;
                 mModel.ConsoleForAllBranch = mList.ConsoleForAllBranch;
                 mModel.ConsoleForUserBranch = mList.ConsoleForUserBranch;
+                mModel.AutoConsole = mList.AutoConsole;
+
 
                 mModel.GenSupplyType = mList.GenSupplyType;
                 mModel.GenSubType = mList.GenSubType;
@@ -217,6 +219,7 @@ namespace ALT_ERP3.Areas.Logistics.Controllers
                     mobj.ExtReason = mModel.ExtReason;
                     mobj.CanReason = mModel.CanReason;
                     mobj.AutoExtendMailID = mModel.AutoExtendMailID;
+                    mobj.AutoConsole = mModel.AutoConsole;
 
                     mobj.ENTEREDBY = muserid;
                     mobj.LASTUPDATEDATE = ConvertDDMMYYTOYYMMDD(DateTime.Now.ToString());

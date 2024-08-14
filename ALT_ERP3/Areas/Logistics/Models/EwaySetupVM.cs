@@ -11,6 +11,7 @@ namespace ALT_ERP3.Areas.Logistics.Models
         public bool UserBranch { get; set; }
         public bool ConsoleForAllBranch { get; set; }
         public bool ConsoleForUserBranch { get; set; }
+        public bool AutoConsole { get; set; }
         public string AutoExtendMailID { get; set; }
 
         public string GenSupplyType { get; set; }
